@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.appcompat.widget.LinearLayoutCompat xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".MainActivity">
+
+    <FrameLayout
+        android:id="@+id/frame_container"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="24dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_show_banner"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Show Banner"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintWidth_percent="0.49" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_hide_banner"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Hide Banner"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintWidth_percent="0.49" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_show_native"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Show Native"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/btn_show_banner"
+            app:layout_constraintWidth_percent="0.49" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_hide_native"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Hide Native"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/btn_show_banner"
+            app:layout_constraintWidth_percent="0.49" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_show_interstitial"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Show Interstitial"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/btn_show_native"
+            app:layout_constraintWidth_percent="0.49" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_show_rewarded"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Show Rewarded"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/btn_show_native"
+            app:layout_constraintWidth_percent="0.49" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_show_rewarded_interstitial"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Show Rewarded Interstitial"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/btn_show_interstitial"
+            app:layout_constraintWidth_percent="0.49" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.appcompat.widget.LinearLayoutCompat>
