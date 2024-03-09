@@ -10,10 +10,12 @@ import androidx.annotation.Nullable;
 import androidx.core.util.Pair;
 
 import com.google.android.gms.ads.MobileAds;
+import com.mct.app.helper.admob.ads.AppOpenAds;
 import com.mct.app.helper.admob.ads.BaseAds;
 import com.mct.app.helper.admob.ads.BaseFullScreenAds;
 import com.mct.app.helper.admob.ads.BaseRewardedAds;
 import com.mct.app.helper.admob.ads.BaseViewAds;
+import com.mct.app.helper.admob.ads.InterstitialAds;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -44,7 +46,7 @@ public class AdsManager {
             invokeCallback(callback);
             return;
         }
-        mAds.putAll(provider.getAds());
+        putAds(provider.getAds());
         AtomicBoolean invokeFlag = new AtomicBoolean(false);
         GoogleMobileAdsConsentManager manager = GoogleMobileAdsConsentManager.getInstance(activity.getApplicationContext());
         manager.gatherConsent(activity, consentError -> {
@@ -107,6 +109,12 @@ public class AdsManager {
         return mAds.containsKey(id);
     }
 
+    private void putAds(@NonNull Map<String, BaseAds<?>> ads) {
+        for (Map.Entry<String, BaseAds<?>> entry : ads.entrySet()) {
+            putAds(entry.getKey(), entry.getValue());
+        }
+    }
+
     public void putAds(BaseAds<?> ads) {
         if (ads != null) {
             putAds(ads.getAdsUnitId(), ads);
@@ -114,6 +122,12 @@ public class AdsManager {
     }
 
     public void putAds(String id, BaseAds<?> ads) {
+        if (isInterstitialOrOpenAd(ads)) {
+            ((BaseFullScreenAds<?>) ads).setOnDismissListener(a -> mAds.values().stream()
+                    .filter(this::isInterstitialOrOpenAd)
+                    .forEach(i -> ((BaseFullScreenAds<?>) i).postDelayShowFlag())
+            );
+        }
         mAds.put(id, ads);
     }
 
@@ -127,6 +141,10 @@ public class AdsManager {
             return clazz.cast(ads);
         }
         return null;
+    }
+
+    private boolean isInterstitialOrOpenAd(BaseAds<?> ads) {
+        return ads instanceof InterstitialAds || ads instanceof AppOpenAds;
     }
 
     /* --- Static methods --- */

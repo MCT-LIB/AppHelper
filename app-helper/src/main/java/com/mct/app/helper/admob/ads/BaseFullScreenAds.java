@@ -14,6 +14,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public abstract class BaseFullScreenAds<Ads> extends BaseAds<Ads> {
 
+    private OnDismissListener<Ads> onDismissListener;
+
     public BaseFullScreenAds(String adsUnitId, long adsInterval) {
         super(adsUnitId, adsInterval);
     }
@@ -36,6 +38,20 @@ public abstract class BaseFullScreenAds<Ads> extends BaseAds<Ads> {
         }
     }
 
+    public void setOnDismissListener(OnDismissListener<Ads> onDismissListener) {
+        this.onDismissListener = onDismissListener;
+    }
+
+    private void onAdDismissedFullScreen() {
+        if (onDismissListener != null) {
+            onDismissListener.onDismiss(this);
+        }
+    }
+
+    public interface OnDismissListener<Ads> {
+        void onDismiss(BaseFullScreenAds<Ads> fullScreenAds);
+    }
+
     protected static class FullScreenContentCallbackImpl extends FullScreenContentCallback {
 
         private final AtomicBoolean dispose;
@@ -56,6 +72,7 @@ public abstract class BaseFullScreenAds<Ads> extends BaseAds<Ads> {
                 return;
             }
             Log.d(TAG, "onAdDismissedFullScreenContent");
+            ads.onAdDismissedFullScreen();
             ads.postDelayShowFlag();
             ads.setAds(null);
             ads.setShowing(false);
