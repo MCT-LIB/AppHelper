@@ -21,7 +21,7 @@ public class InterstitialAds extends BaseFullScreenAds<InterstitialAd> {
     protected void onLoadAds(@NonNull Context context, @NonNull AdLoadCallback<InterstitialAd> callback) {
         InterstitialAd.load(
                 context,
-                getAdsUnitId(),
+                getLoadAdsUnitId(),
                 getAdRequest(),
                 new InterstitialAdLoadCallback() {
                     @Override

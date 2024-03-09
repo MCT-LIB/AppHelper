@@ -20,7 +20,7 @@ public class BannerAds extends BaseViewAds<AdView> {
     @Override
     protected void onLoadAds(@NonNull Context context, @NonNull AdLoadCallback<AdView> callback) {
         AdView adView = new AdView(context);
-        adView.setAdUnitId(getAdsUnitId());
+        adView.setAdUnitId(getLoadAdsUnitId());
         adView.setAdSize(getAdSize(context));
         adView.loadAd(getAdRequest());
         adView.setAdListener(new AdListener() {

@@ -46,7 +46,7 @@ public class NativeAds extends BaseViewAds<NativeAdView> {
     @SuppressLint("InflateParams")
     @Override
     protected void onLoadAds(@NonNull Context context, @NonNull AdLoadCallback<NativeAdView> callback) {
-        new AdLoader.Builder(context, getAdsUnitId())
+        new AdLoader.Builder(context, getLoadAdsUnitId())
                 .withNativeAdOptions(new NativeAdOptions.Builder()
                         .setVideoOptions(new VideoOptions.Builder().setStartMuted(true).build())
                         .build())

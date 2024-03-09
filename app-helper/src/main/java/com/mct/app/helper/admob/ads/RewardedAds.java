@@ -24,7 +24,7 @@ public class RewardedAds extends BaseRewardedAds<RewardedAd> {
     protected void onLoadAds(@NonNull Context context, @NonNull AdLoadCallback<RewardedAd> callback) {
         RewardedAd.load(
                 context,
-                getAdsUnitId(),
+                getLoadAdsUnitId(),
                 getAdRequest(),
                 new RewardedAdLoadCallback() {
                     @Override

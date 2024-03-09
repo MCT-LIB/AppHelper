@@ -32,8 +32,8 @@ public abstract class BaseAds<Ads> {
     private final Runnable delayShowFlagRunnable = () -> isCanShow = true;
 
     public BaseAds(String adsUnitId, long adsInterval) {
-        this.adsUnitId = BuildConfig.DEBUG ? AdsUtils.getAdsUnitIdTest(this) : adsUnitId;
-        this.adsInterval = BuildConfig.DEBUG ? AdsUtils.getIntervalTest(this) : adsInterval;
+        this.adsUnitId = adsUnitId;
+        this.adsInterval = adsInterval;
     }
 
     protected abstract void onLoadAds(@NonNull Context context, @NonNull AdLoadCallback<Ads> callback);
@@ -50,7 +50,7 @@ public abstract class BaseAds<Ads> {
     public final void postDelayShowFlag() {
         isCanShow = false;
         handler.removeCallbacks(delayShowFlagRunnable);
-        handler.postDelayed(delayShowFlagRunnable, adsInterval);
+        handler.postDelayed(delayShowFlagRunnable, getLoadAdsInterval());
     }
 
     public final boolean isCanLoadAds() {
@@ -94,12 +94,32 @@ public abstract class BaseAds<Ads> {
         return new AdRequest.Builder().build();
     }
 
+    /**
+     * @return real ads unit id
+     */
     public String getAdsUnitId() {
         return adsUnitId;
     }
 
+    /**
+     * @return real ads interval
+     */
     public long getAdsInterval() {
         return adsInterval;
+    }
+
+    /**
+     * @return ads unit id to load based on debug
+     */
+    protected String getLoadAdsUnitId() {
+        return BuildConfig.DEBUG ? AdsUtils.getAdsUnitIdTest(this) : adsUnitId;
+    }
+
+    /**
+     * @return ads interval to load based on debug
+     */
+    protected long getLoadAdsInterval() {
+        return BuildConfig.DEBUG ? AdsUtils.getIntervalTest(this) : adsInterval;
     }
 
     public long getLoadTimeAd() {

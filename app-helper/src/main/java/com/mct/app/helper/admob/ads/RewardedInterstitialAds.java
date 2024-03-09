@@ -24,7 +24,7 @@ public class RewardedInterstitialAds extends BaseRewardedAds<RewardedInterstitia
     protected void onLoadAds(@NonNull Context context, @NonNull AdLoadCallback<RewardedInterstitialAd> callback) {
         RewardedInterstitialAd.load(
                 context,
-                getAdsUnitId(),
+                getLoadAdsUnitId(),
                 getAdRequest(),
                 new RewardedInterstitialAdLoadCallback() {
                     @Override

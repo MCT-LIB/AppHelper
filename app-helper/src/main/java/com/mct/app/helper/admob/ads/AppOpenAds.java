@@ -20,7 +20,7 @@ public class AppOpenAds extends BaseFullScreenAds<AppOpenAd> {
     protected void onLoadAds(@NonNull Context context, @NonNull AdLoadCallback<AppOpenAd> callback) {
         AppOpenAd.load(
                 context,
-                getAdsUnitId(),
+                getLoadAdsUnitId(),
                 getAdRequest(),
                 new AppOpenAd.AppOpenAdLoadCallback() {
                     @Override
