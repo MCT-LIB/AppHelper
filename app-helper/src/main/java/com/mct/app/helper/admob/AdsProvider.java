@@ -28,8 +28,8 @@ public class AdsProvider {
 
     public static class Builder {
 
-        private static final long INTERSTITIAL_ADS_INTERVAL = 30 * 1000;
         private static final long APP_OPEN_ADS_INTERVAL = 60 * 1000;
+        private static final long INTERSTITIAL_ADS_INTERVAL = 30 * 1000;
         private static final long REWARDED_ADS_INTERVAL = 0;
         private static final long REWARDED_INTERSTITIAL_ADS_INTERVAL = 0;
 
@@ -37,6 +37,14 @@ public class AdsProvider {
 
         public Builder() {
             ads = new HashMap<>();
+        }
+
+        public Builder putAppOpenAds(String adsUnitId) {
+            return putAds(new AppOpenAds(adsUnitId, APP_OPEN_ADS_INTERVAL));
+        }
+
+        public Builder putAppOpenAds(String adsUnitId, long adsInterval) {
+            return putAds(new AppOpenAds(adsUnitId, adsInterval));
         }
 
         public Builder putBannerAds(String adsUnitId) {
@@ -57,14 +65,6 @@ public class AdsProvider {
 
         public Builder putNativeAds(String adsUnitId, @LayoutRes int nativeLayout) {
             return putAds(new NativeAds(adsUnitId, nativeLayout));
-        }
-
-        public Builder putAppOpenAds(String adsUnitId) {
-            return putAds(new AppOpenAds(adsUnitId, APP_OPEN_ADS_INTERVAL));
-        }
-
-        public Builder putAppOpenAds(String adsUnitId, long adsInterval) {
-            return putAds(new AppOpenAds(adsUnitId, adsInterval));
         }
 
         public Builder putRewardedAds(String adsUnitId) {
