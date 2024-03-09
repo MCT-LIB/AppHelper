@@ -32,7 +32,8 @@ android {
 
 dependencies {
 
-    implementation 'com.google.android.gms:play-services-ads-lite:22.6.0'
+    implementation 'com.google.android.gms:play-services-ads-lite:23.0.0'
+    implementation 'com.google.android.play:review:2.0.1'
     implementation 'androidx.lifecycle:lifecycle-process:2.7.0'
 
     testImplementation 'junit:junit:4.14-SNAPSHOT'
