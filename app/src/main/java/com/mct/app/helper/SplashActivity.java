@@ -27,6 +27,7 @@ public class SplashActivity extends AppCompatActivity {
                         .putRewardedAds(Constant.REWARDED_ID)
                         .putRewardedInterstitialAds(Constant.REWARDED_INTERSTITIAL_ID)
                         .build(),
+                null,
                 () -> AdsManager.getInstance().show(Constant.APP_OPEN_ID, this, this::gotoMain));
 
         AppOpenAds ads = AdsManager.getInstance().getAds(Constant.APP_OPEN_ID, AppOpenAds.class);

@@ -26,6 +26,7 @@ public class BannerAds extends BaseViewAds<AdView> {
         adView.setAdListener(new AdListener() {
             @Override
             public void onAdLoaded() {
+                adView.setOnPaidEventListener(getOnPaidEventListener());
                 callback.onAdLoaded(adView);
             }
 

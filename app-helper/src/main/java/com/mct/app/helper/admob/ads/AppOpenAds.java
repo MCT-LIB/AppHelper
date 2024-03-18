@@ -25,6 +25,7 @@ public class AppOpenAds extends BaseFullScreenAds<AppOpenAd> {
                 new AppOpenAd.AppOpenAdLoadCallback() {
                     @Override
                     public void onAdLoaded(@NonNull AppOpenAd openAd) {
+                        openAd.setOnPaidEventListener(getOnPaidEventListener());
                         callback.onAdLoaded(openAd);
                     }
 

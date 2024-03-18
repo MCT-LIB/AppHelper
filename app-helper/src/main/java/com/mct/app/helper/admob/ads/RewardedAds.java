@@ -29,6 +29,7 @@ public class RewardedAds extends BaseRewardedAds<RewardedAd> {
                 new RewardedAdLoadCallback() {
                     @Override
                     public void onAdLoaded(@NonNull RewardedAd rewardedAd) {
+                        rewardedAd.setOnPaidEventListener(getOnPaidEventListener());
                         callback.onAdLoaded(rewardedAd);
                     }
 

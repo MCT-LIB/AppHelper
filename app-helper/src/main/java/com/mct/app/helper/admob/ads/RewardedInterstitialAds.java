@@ -29,6 +29,7 @@ public class RewardedInterstitialAds extends BaseRewardedAds<RewardedInterstitia
                 new RewardedInterstitialAdLoadCallback() {
                     @Override
                     public void onAdLoaded(@NonNull RewardedInterstitialAd rewardedInterstitialAd) {
+                        rewardedInterstitialAd.setOnPaidEventListener(getOnPaidEventListener());
                         callback.onAdLoaded(rewardedInterstitialAd);
                     }
 

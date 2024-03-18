@@ -60,6 +60,7 @@ public class NativeAds extends BaseViewAds<NativeAdView> {
                     LayoutInflater inflater = LayoutInflater.from(context);
                     NativeAdView nativeAdView = (NativeAdView) inflater.inflate(layoutRes, null);
                     populateNativeAdView(nativeAd, nativeAdView);
+                    nativeAd.setOnPaidEventListener(getOnPaidEventListener());
                     callback.onAdLoaded(nativeAdView);
                 })
                 .build()

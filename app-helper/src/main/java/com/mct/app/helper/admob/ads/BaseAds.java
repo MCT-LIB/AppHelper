@@ -10,6 +10,7 @@ import androidx.annotation.NonNull;
 import com.google.android.gms.ads.AdLoadCallback;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.LoadAdError;
+import com.google.android.gms.ads.OnPaidEventListener;
 import com.mct.app.helper.BuildConfig;
 import com.mct.app.helper.admob.AdsUtils;
 import com.mct.app.helper.admob.Callback;
@@ -23,6 +24,7 @@ public abstract class BaseAds<Ads> {
     private final String adsUnitId;
     private final long adsInterval;
     private Ads ads;
+    private OnPaidEventListener onPaidEventListener;
 
     private long loadTimeAd = 0;
     private boolean isLoading = false;
@@ -45,6 +47,14 @@ public abstract class BaseAds<Ads> {
         } else {
             invokeCallback(failure);
         }
+    }
+
+    public void setOnPaidEventListener(OnPaidEventListener listener) {
+        this.onPaidEventListener = listener;
+    }
+
+    public OnPaidEventListener getOnPaidEventListener() {
+        return onPaidEventListener;
     }
 
     public final void postDelayShowFlag() {

@@ -9,7 +9,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.util.Pair;
 
+import com.google.android.gms.ads.AdValue;
 import com.google.android.gms.ads.MobileAds;
+import com.google.android.gms.ads.OnPaidEventListener;
 import com.mct.app.helper.admob.ads.AppOpenAds;
 import com.mct.app.helper.admob.ads.BaseAds;
 import com.mct.app.helper.admob.ads.BaseFullScreenAds;
@@ -30,6 +32,7 @@ public class AdsManager {
     private final AtomicBoolean mIsPremium = new AtomicBoolean(false);
     private final Map<String, BaseAds<?>> mAds = new LinkedHashMap<>();
     private final AppOpenLifecycleObserver mAppOpenObserver = new AppOpenLifecycleObserver();
+    private OnPaidEventListener mOnPaidEventListener;
 
     public static AdsManager getInstance() {
         if (instance == null) {
@@ -41,11 +44,14 @@ public class AdsManager {
     private AdsManager() {
     }
 
-    public void init(@NonNull Activity activity, @NonNull AdsProvider provider, @Nullable Callback callback) {
+    public void init(@NonNull Activity activity, @NonNull AdsProvider provider,
+                     @Nullable OnPaidEventListener onPaidEventListener,
+                     @Nullable Callback callback) {
         if (mIsInitialized.getAndSet(true)) {
             invokeCallback(callback);
             return;
         }
+        mOnPaidEventListener = onPaidEventListener;
         putAds(provider.getAds());
         AtomicBoolean invokeFlag = new AtomicBoolean(false);
         GoogleMobileAdsConsentManager manager = GoogleMobileAdsConsentManager.getInstance(activity.getApplicationContext());
@@ -125,9 +131,10 @@ public class AdsManager {
         if (isInterstitialOrOpenAd(ads)) {
             ((BaseFullScreenAds<?>) ads).setOnDismissListener(a -> mAds.values().stream()
                     .filter(this::isInterstitialOrOpenAd)
-                    .forEach(i -> ((BaseFullScreenAds<?>) i).postDelayShowFlag())
+                    .forEach(BaseAds::postDelayShowFlag)
             );
         }
+        ads.setOnPaidEventListener(this::onPaidEvent);
         mAds.put(id, ads);
     }
 
@@ -145,6 +152,12 @@ public class AdsManager {
 
     private boolean isInterstitialOrOpenAd(BaseAds<?> ads) {
         return ads instanceof InterstitialAds || ads instanceof AppOpenAds;
+    }
+
+    private void onPaidEvent(AdValue adValue) {
+        if (mOnPaidEventListener != null) {
+            mOnPaidEventListener.onPaidEvent(adValue);
+        }
     }
 
     /* --- Static methods --- */
