@@ -1,7 +1,6 @@
 package com.mct.app.helper.apprater;
 
 
-import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
@@ -10,11 +9,6 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.core.util.Supplier;
-
-import com.google.android.gms.tasks.Task;
-import com.google.android.play.core.review.ReviewInfo;
-import com.google.android.play.core.review.ReviewManager;
-import com.google.android.play.core.review.ReviewManagerFactory;
 
 /**
  * @noinspection unused
@@ -194,35 +188,7 @@ public class AppRater {
     /**
      * Call this method directly if you want to show the rate prompt immediately
      */
-    public static void rateNow(@NonNull final Context context) {
-        if (context instanceof Activity) {
-            ReviewManager manager = ReviewManagerFactory.create(context);
-            Task<ReviewInfo> request = manager.requestReviewFlow();
-            request.addOnCompleteListener(task -> {
-                if (task.isSuccessful()) {
-                    // We can get the ReviewInfo object
-                    ReviewInfo reviewInfo = task.getResult();
-                    Task<Void> flow = manager.launchReviewFlow((Activity) context, reviewInfo);
-                    flow.addOnCompleteListener(task1 -> {
-                        // The flow has finished. The API does not indicate whether the user
-                        // reviewed or not, or even whether the review dialog was shown. Thus, no
-                        // matter the result, we continue our app flow.
-                    });
-                } else {
-                    // There was some problem, log or handle the error code.
-                    Log.e(TAG, "rateNow: ", task.getException());
-                    rateNow2(context);
-                }
-            });
-        } else {
-            rateNow2(context);
-        }
-    }
-
-    /**
-     * Call this method directly if you want to show the rate prompt immediately
-     */
-    public static void rateNow2(@NonNull Context context) {
+    public static void rateNow(@NonNull Context context) {
         try {
             context.startActivity(new Intent(Intent.ACTION_VIEW, market.getMarketURI(context)));
         } catch (ActivityNotFoundException e) {
