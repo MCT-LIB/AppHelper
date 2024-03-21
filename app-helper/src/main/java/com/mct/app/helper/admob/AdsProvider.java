@@ -19,7 +19,7 @@ public class AdsProvider {
     private final Map<String, BaseAds<?>> ads;
 
     private AdsProvider(@NonNull Builder builder) {
-        ads = new HashMap<>(builder.ads);
+        ads = new HashMap<>(builder.adsMaps);
     }
 
     public Map<String, BaseAds<?>> getAds() {
@@ -33,10 +33,16 @@ public class AdsProvider {
         private static final long REWARDED_ADS_INTERVAL = 0;
         private static final long REWARDED_INTERSTITIAL_ADS_INTERVAL = 0;
 
-        private final Map<String, BaseAds<?>> ads;
+        private final boolean forceTestAds;
+        private final Map<String, BaseAds<?>> adsMaps;
 
         public Builder() {
-            ads = new HashMap<>();
+            this(false);
+        }
+
+        public Builder(boolean forceTestAds) {
+            this.forceTestAds = forceTestAds;
+            this.adsMaps = new HashMap<>();
         }
 
         public Builder putAppOpenAds(String adsUnitId) {
@@ -84,17 +90,19 @@ public class AdsProvider {
         }
 
         public Builder putAds(@NonNull BaseAds<?> ads) {
-            this.ads.put(ads.getAdsUnitId(), ads);
+            ads.setForceTestAds(forceTestAds);
+            adsMaps.put(ads.getAdsUnitId(), ads);
             return this;
         }
 
         public Builder putAds(@NonNull String id, @NonNull BaseAds<?> ads) {
-            this.ads.put(id, ads);
+            ads.setForceTestAds(forceTestAds);
+            adsMaps.put(id, ads);
             return this;
         }
 
         public Builder removeAds(@NonNull String id) {
-            ads.remove(id);
+            adsMaps.remove(id);
             return this;
         }
 

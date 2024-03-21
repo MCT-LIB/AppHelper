@@ -59,9 +59,7 @@ public class AdsManager {
             if (invokeFlag.get()) {
                 return;
             }
-            if (manager.canRequestAds()) {
-                MobileAds.initialize(activity.getApplicationContext());
-            }
+            MobileAds.initialize(activity.getApplicationContext());
             invokeCallback(callback);
         });
         if (manager.canRequestAds()) {
@@ -95,12 +93,12 @@ public class AdsManager {
         hide(getAds(id, BaseViewAds.class));
     }
 
-    public boolean isCanLoadAds(String id, Context context) {
-        return isCanLoadAds(getAds(id, BaseAds.class), context);
+    public boolean isCanLoadAds(String id) {
+        return isCanLoadAds(getAds(id, BaseAds.class));
     }
 
-    public boolean isCanShowAds(String id, Context context) {
-        return isCanShowAds(getAds(id, BaseAds.class), context);
+    public boolean isCanShowAds(String id) {
+        return isCanShowAds(getAds(id, BaseAds.class));
     }
 
     public boolean isPremium() {
@@ -163,25 +161,25 @@ public class AdsManager {
     /* --- Static methods --- */
 
     public static void load(BaseAds<?> ads, Context context, Callback success, Callback failure) {
-        if (checkAdsCondition(context, ads, failure)) {
+        if (checkAdsCondition(ads, failure)) {
             ads.load(context, success, failure);
         }
     }
 
     public static void show(BaseFullScreenAds<?> ads, @NonNull Activity activity, Callback callback) {
-        if (checkAdsCondition(activity.getApplicationContext(), ads, callback)) {
+        if (checkAdsCondition(ads, callback)) {
             ads.show(activity, handleFullScreenCallback(callback));
         }
     }
 
     public static void show(BaseRewardedAds<?> ads, @NonNull Activity activity, Callback callback, Callback onUserEarnedReward) {
-        if (checkAdsCondition(activity.getApplicationContext(), ads, callback)) {
+        if (checkAdsCondition(ads, callback)) {
             ads.show(activity, handleFullScreenCallback(callback), onUserEarnedReward);
         }
     }
 
     public static void show(BaseViewAds<?> ads, @NonNull ViewGroup container) {
-        if (checkAdsCondition(container.getContext(), ads, null)) {
+        if (checkAdsCondition(ads, null)) {
             ads.show(container);
         }
     }
@@ -193,30 +191,26 @@ public class AdsManager {
         ads.hide();
     }
 
-    public static boolean isCanLoadAds(BaseAds<?> ads, Context context) {
-        if (checkAdsCondition(context, ads, null)) {
+    public static boolean isCanLoadAds(BaseAds<?> ads) {
+        if (checkAdsCondition(ads, null)) {
             return ads.isCanLoadAds();
         }
         return false;
     }
 
-    public static boolean isCanShowAds(BaseAds<?> ads, Context context) {
-        if (checkAdsCondition(context, ads, null)) {
+    public static boolean isCanShowAds(BaseAds<?> ads) {
+        if (checkAdsCondition(ads, null)) {
             return ads.isCanShowAds();
         }
         return false;
     }
 
-    private static boolean checkAdsCondition(Context context, BaseAds<?> ads, Callback callback) {
+    private static boolean checkAdsCondition(BaseAds<?> ads, Callback callback) {
         if (ads == null) {
             invokeCallback(callback);
             return false;
         }
         if (getInstance().isPremium()) {
-            invokeCallback(callback);
-            return false;
-        }
-        if (!GoogleMobileAdsConsentManager.getInstance(context).canRequestAds()) {
             invokeCallback(callback);
             return false;
         }

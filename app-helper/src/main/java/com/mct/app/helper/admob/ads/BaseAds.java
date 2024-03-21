@@ -23,8 +23,9 @@ public abstract class BaseAds<Ads> {
 
     private final String adsUnitId;
     private final long adsInterval;
-    private Ads ads;
+    private boolean forceTestAds;
     private OnPaidEventListener onPaidEventListener;
+    private Ads ads;
 
     private long loadTimeAd = 0;
     private boolean isLoading = false;
@@ -47,6 +48,10 @@ public abstract class BaseAds<Ads> {
         } else {
             invokeCallback(failure);
         }
+    }
+
+    public void setForceTestAds(boolean forceTestAds) {
+        this.forceTestAds = forceTestAds;
     }
 
     public void setOnPaidEventListener(OnPaidEventListener listener) {
@@ -122,14 +127,14 @@ public abstract class BaseAds<Ads> {
      * @return ads unit id to load based on debug
      */
     protected String getLoadAdsUnitId() {
-        return BuildConfig.DEBUG ? AdsUtils.getAdsUnitIdTest(this) : adsUnitId;
+        return BuildConfig.DEBUG || forceTestAds ? AdsUtils.getAdsUnitIdTest(this) : adsUnitId;
     }
 
     /**
      * @return ads interval to load based on debug
      */
     protected long getLoadAdsInterval() {
-        return BuildConfig.DEBUG ? AdsUtils.getIntervalTest(this) : adsInterval;
+        return BuildConfig.DEBUG || forceTestAds ? AdsUtils.getIntervalTest(this) : adsInterval;
     }
 
     public long getLoadTimeAd() {
