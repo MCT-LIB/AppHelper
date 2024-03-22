@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Iap_AlertDialog" parent="@style/ThemeOverlay.AppCompat.Dialog.Alert">
+        <item name="android:windowBackground">@android:color/transparent</item>
+    </style>
+
+    <style name="Iap_AlertDialog.FullScreen">
+        <item name="android:colorBackgroundCacheHint">@null</item>
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:windowFrame">@null</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowIsTranslucent">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
+
+    <item name="iap_component_sys_bar_status" type="id" />
+    <item name="iap_component_sys_bar_nav" type="id" />
+    <item name="iap_component_billing" type="id" />
+
+    <string name="iap_period_day">day</string>
+    <string name="iap_period_week">week</string>
+    <string name="iap_period_month">month</string>
+    <string name="iap_period_quarter">3 month</string>
+    <string name="iap_period_half_year">6 month</string>
+    <string name="iap_period_year">year</string>
+    <string name="iap_period_life_time">life time</string>
+
+</resources>

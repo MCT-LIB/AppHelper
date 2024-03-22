@@ -32,10 +32,15 @@ android {
 
 dependencies {
 
-    implementation 'com.google.android.gms:play-services-ads-lite:23.0.0'
-    implementation 'androidx.lifecycle:lifecycle-process:2.7.0'
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'androidx.lifecycle:lifecycle-process:2.7.0'
+
+    implementation 'com.google.android.gms:play-services-ads-lite:23.0.0'
+    implementation 'com.android.billingclient:billing:6.2.0'
+
+    implementation 'io.reactivex.rxjava3:rxjava:3.1.7'
+    implementation 'io.reactivex.rxjava3:rxandroid:3.0.2'
 
     testImplementation 'junit:junit:4.14-SNAPSHOT'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'

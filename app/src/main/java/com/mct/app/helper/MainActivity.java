@@ -41,6 +41,7 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btn_show_native_medium).setOnClickListener(this::clickButton);
         findViewById(R.id.btn_show_native_large).setOnClickListener(this::clickButton);
         findViewById(R.id.btn_hide_native).setOnClickListener(this::clickButton);
+        findViewById(R.id.btn_show_paywall).setOnClickListener(this::clickButton);
     }
 
     private void clickButton(@NonNull View view) {
@@ -83,6 +84,10 @@ public class MainActivity extends AppCompatActivity {
             AdsManager.getInstance().hide(NATIVE_SMALL);
             AdsManager.getInstance().hide(NATIVE_MEDIUM);
             AdsManager.getInstance().hide(NATIVE_LARGE);
+            return;
+        }
+        if (view.getId() == R.id.btn_show_paywall) {
+            Paywall.show(this);
         }
     }
 }
