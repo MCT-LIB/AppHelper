@@ -1,20 +1,36 @@
 package com.mct.app.helper.admob.ads;
 
 import android.content.Context;
+import android.os.Bundle;
 import android.util.DisplayMetrics;
 
 import androidx.annotation.NonNull;
 
+import com.google.ads.mediation.admob.AdMobAdapter;
 import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdLoadCallback;
+import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdSize;
 import com.google.android.gms.ads.AdView;
 import com.google.android.gms.ads.LoadAdError;
 
+import java.util.UUID;
+
 public class BannerAds extends BaseViewAds<AdView> {
 
+    private final boolean collapsible;
+
     public BannerAds(String adsUnitId) {
+        this(adsUnitId, false);
+    }
+
+    public BannerAds(String adsUnitId, boolean collapsible) {
         super(adsUnitId);
+        this.collapsible = collapsible;
+    }
+
+    public boolean isCollapsible() {
+        return collapsible;
     }
 
     @Override
@@ -35,6 +51,19 @@ public class BannerAds extends BaseViewAds<AdView> {
                 callback.onAdFailedToLoad(loadAdError);
             }
         });
+    }
+
+    @Override
+    public AdRequest getAdRequest() {
+        if (collapsible) {
+            Bundle extras = new Bundle();
+            extras.putString("collapsible", "bottom");
+            extras.putString("collapsible_request_id", UUID.randomUUID().toString());
+            return new AdRequest.Builder()
+                    .addNetworkExtrasBundle(AdMobAdapter.class, extras)
+                    .build();
+        }
+        return super.getAdRequest();
     }
 
     @NonNull

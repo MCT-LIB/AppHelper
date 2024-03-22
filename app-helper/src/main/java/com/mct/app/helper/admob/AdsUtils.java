@@ -2,7 +2,6 @@ package com.mct.app.helper.admob;
 
 import androidx.annotation.Nullable;
 
-import com.mct.app.helper.R;
 import com.mct.app.helper.admob.ads.AppOpenAds;
 import com.mct.app.helper.admob.ads.BannerAds;
 import com.mct.app.helper.admob.ads.InterstitialAds;
@@ -12,9 +11,9 @@ import com.mct.app.helper.admob.ads.RewardedInterstitialAds;
 
 public class AdsUtils {
 
-    public static final int NATIVE_LAYOUT = R.layout.layout_ad_native_default;
     public static final String APP_OPEN_ID = "ca-app-pub-3940256099942544/9257395921";
     public static final String BANNER_ID = "ca-app-pub-3940256099942544/6300978111";
+    public static final String BANNER_COLLAPSE_ID = "ca-app-pub-3940256099942544/2014213617";
     public static final String INTERSTITIAL_ID = "ca-app-pub-3940256099942544/1033173712";
     public static final String NATIVE_ID = "ca-app-pub-3940256099942544/2247696110";
     public static final String REWARDED_ID = "ca-app-pub-3940256099942544/5224354917";
@@ -26,7 +25,7 @@ public class AdsUtils {
             return APP_OPEN_ID;
         }
         if (object instanceof BannerAds) {
-            return BANNER_ID;
+            return ((BannerAds) object).isCollapsible() ? BANNER_COLLAPSE_ID : BANNER_ID;
         }
         if (object instanceof InterstitialAds) {
             return INTERSTITIAL_ID;

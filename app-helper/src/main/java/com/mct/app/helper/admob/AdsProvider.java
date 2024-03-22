@@ -10,6 +10,7 @@ import com.mct.app.helper.admob.ads.InterstitialAds;
 import com.mct.app.helper.admob.ads.NativeAds;
 import com.mct.app.helper.admob.ads.RewardedAds;
 import com.mct.app.helper.admob.ads.RewardedInterstitialAds;
+import com.mct.app.helper.admob.ads.natives.NativeTemplate;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -57,6 +58,10 @@ public class AdsProvider {
             return putAds(new BannerAds(adsUnitId));
         }
 
+        public Builder putBannerAds(String adsUnitId, boolean collapsible) {
+            return putAds(new BannerAds(adsUnitId, collapsible));
+        }
+
         public Builder putInterstitialAds(String adsUnitId) {
             return putAds(new InterstitialAds(adsUnitId, INTERSTITIAL_ADS_INTERVAL));
         }
@@ -66,11 +71,15 @@ public class AdsProvider {
         }
 
         public Builder putNativeAds(String adsUnitId) {
-            return putAds(new NativeAds(adsUnitId, AdsUtils.NATIVE_LAYOUT));
+            return putAds(new NativeAds(adsUnitId));
         }
 
         public Builder putNativeAds(String adsUnitId, @LayoutRes int nativeLayout) {
             return putAds(new NativeAds(adsUnitId, nativeLayout));
+        }
+
+        public Builder putNativeAds(String adsUnitId, NativeTemplate nativeTemplate) {
+            return putAds(new NativeAds(adsUnitId, nativeTemplate));
         }
 
         public Builder putRewardedAds(String adsUnitId) {

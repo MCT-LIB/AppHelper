@@ -32,7 +32,6 @@ public class SplashActivity extends AppCompatActivity {
 
         AppOpenAds ads = AdsManager.getInstance().getAds(Constant.APP_OPEN_ID, AppOpenAds.class);
         AdsManager.getInstance().getAppOpenObserver().init(getApplication(), ads);
-
     }
 
     private void gotoMain() {
@@ -40,6 +39,5 @@ public class SplashActivity extends AppCompatActivity {
         startActivity(intent);
         finish();
     }
-
 
 }
