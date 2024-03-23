@@ -7,8 +7,6 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.color.MaterialColors;
 import com.mct.app.helper.admob.AdsManager;
-import com.mct.app.helper.admob.AdsProvider;
-import com.mct.app.helper.admob.ads.AppOpenAds;
 
 @SuppressLint("CustomSplashScreen")
 public class SplashActivity extends AppCompatActivity {
@@ -19,27 +17,22 @@ public class SplashActivity extends AppCompatActivity {
         getWindow().setStatusBarColor(MaterialColors.getColor(this, android.R.attr.colorBackground, 0));
         setContentView(R.layout.activity_splash);
 
-        AdsManager.getInstance()
-                .setPremium(false)
-                .setDebug(BuildConfig.DEBUG)
-                .setOnPaidEventListener(null)
-                .init(this, new AdsProvider.Builder()
-                                .putBannerAds(Constant.BANNER_ID)
-                                .putInterstitialAds(Constant.INTERSTITIAL_ID)
-                                .putNativeAds(Constant.NATIVE_ID)
-                                .putAppOpenAds(Constant.APP_OPEN_ID)
-                                .putRewardedAds(Constant.REWARDED_ID)
-                                .putRewardedInterstitialAds(Constant.REWARDED_INTERSTITIAL_ID)
-                                .build(),
-                        () -> {
-                            AdsManager.getInstance().load(Constant.INTERSTITIAL_ID, this, null, null);
-                            AdsManager.getInstance().load(Constant.NATIVE_ID, this, null, null);
-                            AdsManager.getInstance().show(Constant.APP_OPEN_ID, this, this::gotoMain);
-                        }
-                );
+        AdsManager.getInstance().init(this)
+                .premium(false)
+                .debug(BuildConfig.DEBUG)
+                .onPaidEventListener(null)
+                .appOpenObserverBlackListActivity(SplashActivity.class)
+                .bannerAds(Constant.BANNER_ID).and()
+                .interstitialAds(Constant.INTERSTITIAL_ID).and()
+                .nativeAds(Constant.NATIVE_ID).and()
+                .appOpenAds(Constant.APP_OPEN_ID).and()
+                .rewardedAds(Constant.REWARDED_ID).and()
+                .rewardedInterstitialAds(Constant.REWARDED_INTERSTITIAL_ID).and()
+                .apply();
 
-        AppOpenAds ads = AdsManager.getInstance().getAds(Constant.APP_OPEN_ID, AppOpenAds.class);
-        AdsManager.getInstance().getAppOpenObserver().init(getApplication(), ads);
+        AdsManager.getInstance().load(Constant.INTERSTITIAL_ID, this, null, null);
+        AdsManager.getInstance().load(Constant.NATIVE_ID, this, null, null);
+        AdsManager.getInstance().show(Constant.APP_OPEN_ID, this, this::gotoMain);
     }
 
     private void gotoMain() {

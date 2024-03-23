@@ -9,14 +9,12 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.util.Pair;
 
-import com.google.android.gms.ads.AdValue;
 import com.google.android.gms.ads.MobileAds;
 import com.mct.app.helper.admob.ads.AppOpenAds;
 import com.mct.app.helper.admob.ads.BaseAds;
 import com.mct.app.helper.admob.ads.BaseFullScreenAds;
 import com.mct.app.helper.admob.ads.BaseRewardedAds;
 import com.mct.app.helper.admob.ads.BaseViewAds;
-import com.mct.app.helper.admob.ads.InterstitialAds;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -24,15 +22,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class AdsManager {
+public final class AdsManager {
 
     private static AdsManager instance;
     private final AtomicBoolean mIsInitialized = new AtomicBoolean(false);
     private final AtomicBoolean mIsPremium = new AtomicBoolean(false);
-    private final AtomicBoolean mIsDebug = new AtomicBoolean(false);
     private final Map<String, BaseAds<?>> mAds = new LinkedHashMap<>();
     private final AppOpenLifecycleObserver mAppOpenObserver = new AppOpenLifecycleObserver();
-    private OnPaidEventListener mOnPaidEventListener;
 
     public static AdsManager getInstance() {
         if (instance == null) {
@@ -44,48 +40,37 @@ public class AdsManager {
     private AdsManager() {
     }
 
-    public AdsManager setPremium(boolean isPremium) {
-        mIsPremium.set(isPremium);
-        return this;
-    }
+    /* --- config methods --- */
 
-    public AdsManager setDebug(boolean isDebug) {
-        mIsDebug.set(isDebug);
-        return this;
-    }
-
-    public AdsManager setOnPaidEventListener(OnPaidEventListener listener) {
-        mOnPaidEventListener = listener;
-        return this;
-    }
-
-    public void init(@NonNull Activity activity,
-                     @NonNull AdsProvider provider,
-                     @Nullable Callback callback) {
+    @NonNull
+    public AdsConfigurator init(Activity activity) {
         if (mIsInitialized.getAndSet(true)) {
-            invokeCallback(callback);
-            return;
+            throw new IllegalStateException("Ads already configured");
         }
-        putAds(provider.getAds());
         AtomicBoolean invokeFlag = new AtomicBoolean(false);
-        GoogleMobileAdsConsentManager manager = GoogleMobileAdsConsentManager.getInstance(activity.getApplicationContext());
-        manager.gatherConsent(activity, consentError -> {
-            if (invokeFlag.get()) {
-                return;
+        return new AdsConfigurator(this, () -> {
+            GoogleMobileAdsConsentManager manager = GoogleMobileAdsConsentManager.getInstance(activity.getApplicationContext());
+            manager.gatherConsent(activity, consentError -> {
+                if (invokeFlag.get()) {
+                    return;
+                }
+                mAppOpenObserver.init(activity.getApplication());
+                MobileAds.initialize(activity.getApplicationContext());
+            });
+            if (manager.canRequestAds()) {
+                invokeFlag.set(true);
+                mAppOpenObserver.init(activity.getApplication());
+                MobileAds.initialize(activity.getApplicationContext());
             }
-            MobileAds.initialize(activity.getApplicationContext());
-            invokeCallback(callback);
         });
-        if (manager.canRequestAds()) {
-            MobileAds.initialize(activity.getApplicationContext());
-            invokeFlag.set(true);
-            invokeCallback(callback);
-        }
     }
 
-    public AppOpenLifecycleObserver getAppOpenObserver() {
-        return mAppOpenObserver;
+    @NonNull
+    public AdsConfigurator config() {
+        return new AdsConfigurator(this, null);
     }
+
+    /* --- actions methods --- */
 
     public void load(String id, Context context, Callback success, Callback failure) {
         AdsManager.load(getAds(id, BaseAds.class), context, success, failure);
@@ -115,39 +100,11 @@ public class AdsManager {
         return isCanShowAds(getAds(id, BaseAds.class));
     }
 
-    public boolean isPremium() {
-        return mIsPremium.get();
-    }
-
-    public boolean isDebug() {
-        return mIsDebug.get();
-    }
-
     public boolean containsAds(String id) {
         return mAds.containsKey(id);
     }
 
-    private void putAds(@NonNull Map<String, BaseAds<?>> ads) {
-        for (Map.Entry<String, BaseAds<?>> entry : ads.entrySet()) {
-            putAds(entry.getKey(), entry.getValue());
-        }
-    }
-
-    public void putAds(BaseAds<?> ads) {
-        if (ads != null) {
-            putAds(ads.getAdsUnitId(), ads);
-        }
-    }
-
     public void putAds(String id, BaseAds<?> ads) {
-        if (isInterstitialOrOpenAd(ads)) {
-            ((BaseFullScreenAds<?>) ads).setOnDismissListener(a -> mAds.values().stream()
-                    .filter(this::isInterstitialOrOpenAd)
-                    .forEach(BaseAds::postDelayShowFlag)
-            );
-        }
-        ads.setDebugSupplier(mIsDebug::get);
-        ads.setOnPaidEventConsumer(this::onPaidEvent);
         mAds.put(id, ads);
     }
 
@@ -155,6 +112,12 @@ public class AdsManager {
         mAds.remove(id);
     }
 
+    @NonNull
+    public List<BaseAds<?>> getAdsList() {
+        return new ArrayList<>(mAds.values());
+    }
+
+    @Nullable
     public <A extends BaseAds<?>> A getAds(String id, @NonNull Class<A> clazz) {
         BaseAds<?> ads = mAds.get(id);
         if (clazz.isInstance(ads)) {
@@ -163,14 +126,36 @@ public class AdsManager {
         return null;
     }
 
-    private boolean isInterstitialOrOpenAd(BaseAds<?> ads) {
-        return ads instanceof InterstitialAds || ads instanceof AppOpenAds;
+    public boolean isPremium() {
+        return mIsPremium.get();
     }
 
-    private void onPaidEvent(AdValue adValue) {
-        if (mOnPaidEventListener != null) {
-            mOnPaidEventListener.onPaidEvent(AdsValue.of(adValue));
-        }
+    public void setPremium(boolean isPremium) {
+        mIsPremium.set(isPremium);
+    }
+
+    public void enableAppOpenObserver() {
+        mAppOpenObserver.setEnabled(true);
+    }
+
+    public void disableAppOpenObserver() {
+        mAppOpenObserver.setEnabled(false);
+    }
+
+    public void pendingAppOpenObserver() {
+        mAppOpenObserver.pendingShowAd();
+    }
+
+    public void removePendingAppOpenObserver() {
+        mAppOpenObserver.removePendingShowAd();
+    }
+
+    public void setAppOpenObserverBlackListActivity(Class<?>... classes) {
+        mAppOpenObserver.setBlackListActivity(classes);
+    }
+
+    public void setAppOpenObserverAds(AppOpenAds ads) {
+        mAppOpenObserver.setAppOpenAds(ads);
     }
 
     /* --- Static methods --- */

@@ -13,20 +13,23 @@ import androidx.lifecycle.ProcessLifecycleOwner;
 import com.mct.app.helper.admob.ads.AppOpenAds;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
-public class AppOpenLifecycleObserver {
+class AppOpenLifecycleObserver {
 
     private AppOpenAds appOpenAds;
     private Activity currentActivity;
 
     private final LifecycleImpl lifecycleImpl = new LifecycleImpl();
-    private final AtomicBoolean pendingShowAd = new AtomicBoolean();
-    private final List<Class<? extends Activity>> blackListActivity = new ArrayList<>();
+    private final AtomicBoolean pendingShowAd = new AtomicBoolean(false);
+    private final AtomicBoolean enabledObserved = new AtomicBoolean(true);
+    private final List<Class<?>> blackListActivity = new ArrayList<>();
 
-    public void init(@NonNull Application application, @NonNull AppOpenAds appOpenAds) {
-        this.appOpenAds = appOpenAds;
+    public void init(@NonNull Application application) {
         registerLifecycle(application);
     }
 
@@ -34,8 +37,8 @@ public class AppOpenLifecycleObserver {
         unregisterLifecycle(application);
     }
 
-    public boolean isPendingShowAd() {
-        return pendingShowAd.get();
+    public void setAppOpenAds(AppOpenAds appOpenAds) {
+        this.appOpenAds = appOpenAds;
     }
 
     public void pendingShowAd() {
@@ -46,13 +49,19 @@ public class AppOpenLifecycleObserver {
         pendingShowAd.set(false);
     }
 
-    public void addBlackListActivity(Class<? extends Activity> activity) {
-        blackListActivity.add(activity);
+    public void setEnabled(boolean enabled) {
+        enabledObserved.set(enabled);
     }
 
-    public void setBlackListActivity(List<Class<? extends Activity>> activity) {
+    public void setBlackListActivity(Class<?>... classes) {
         blackListActivity.clear();
-        blackListActivity.addAll(activity);
+        if (classes != null) {
+            blackListActivity.addAll(Arrays.stream(classes)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .collect(Collectors.toList())
+            );
+        }
     }
 
     private void registerLifecycle(@NonNull Application application) {
@@ -72,11 +81,15 @@ public class AppOpenLifecycleObserver {
          */
         @Override
         public void onStart(@NonNull LifecycleOwner owner) {
+            if (!enabledObserved.get()) {
+                // Don't show app open ad when the observer is not enabled
+                return;
+            }
             if (appOpenAds == null || currentActivity == null) {
                 // Ads is not ready or activity is not resumed yet.
                 return;
             }
-            for (Class<? extends Activity> activity : blackListActivity) {
+            for (Class<?> activity : blackListActivity) {
                 if (activity.isInstance(currentActivity)) {
                     // Don't show app open ad when current activity is in the black list
                     return;

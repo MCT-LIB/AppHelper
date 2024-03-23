@@ -10,7 +10,6 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.color.MaterialColors;
 import com.mct.app.helper.admob.AdsManager;
-import com.mct.app.helper.admob.ads.NativeAds;
 import com.mct.app.helper.admob.ads.natives.NativeTemplate;
 
 public class MainActivity extends AppCompatActivity {
@@ -27,9 +26,11 @@ public class MainActivity extends AppCompatActivity {
         getWindow().setStatusBarColor(MaterialColors.getColor(this, android.R.attr.colorBackground, 0));
         setContentView(R.layout.activity_main);
 
-        AdsManager.getInstance().putAds(NATIVE_SMALL, new NativeAds(Constant.NATIVE_ID, NativeTemplate.SMALL));
-        AdsManager.getInstance().putAds(NATIVE_MEDIUM, new NativeAds(Constant.NATIVE_ID, NativeTemplate.MEDIUM));
-        AdsManager.getInstance().putAds(NATIVE_LARGE, new NativeAds(Constant.NATIVE_ID, NativeTemplate.LARGE));
+        AdsManager.getInstance().config()
+                .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.SMALL).alias(NATIVE_SMALL).and()
+                .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.MEDIUM).alias(NATIVE_MEDIUM).and()
+                .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.LARGE).alias(NATIVE_LARGE).and()
+                .apply();
 
         container = findViewById(R.id.frame_container);
         findViewById(R.id.btn_show_banner).setOnClickListener(this::clickButton);
