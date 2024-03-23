@@ -11,7 +11,6 @@ import androidx.core.util.Pair;
 
 import com.google.android.gms.ads.AdValue;
 import com.google.android.gms.ads.MobileAds;
-import com.google.android.gms.ads.OnPaidEventListener;
 import com.mct.app.helper.admob.ads.AppOpenAds;
 import com.mct.app.helper.admob.ads.BaseAds;
 import com.mct.app.helper.admob.ads.BaseFullScreenAds;
@@ -30,6 +29,7 @@ public class AdsManager {
     private static AdsManager instance;
     private final AtomicBoolean mIsInitialized = new AtomicBoolean(false);
     private final AtomicBoolean mIsPremium = new AtomicBoolean(false);
+    private final AtomicBoolean mIsDebug = new AtomicBoolean(false);
     private final Map<String, BaseAds<?>> mAds = new LinkedHashMap<>();
     private final AppOpenLifecycleObserver mAppOpenObserver = new AppOpenLifecycleObserver();
     private OnPaidEventListener mOnPaidEventListener;
@@ -44,14 +44,28 @@ public class AdsManager {
     private AdsManager() {
     }
 
-    public void init(@NonNull Activity activity, @NonNull AdsProvider provider,
-                     @Nullable OnPaidEventListener onPaidEventListener,
+    public AdsManager setPremium(boolean isPremium) {
+        mIsPremium.set(isPremium);
+        return this;
+    }
+
+    public AdsManager setDebug(boolean isDebug) {
+        mIsDebug.set(isDebug);
+        return this;
+    }
+
+    public AdsManager setOnPaidEventListener(OnPaidEventListener listener) {
+        mOnPaidEventListener = listener;
+        return this;
+    }
+
+    public void init(@NonNull Activity activity,
+                     @NonNull AdsProvider provider,
                      @Nullable Callback callback) {
         if (mIsInitialized.getAndSet(true)) {
             invokeCallback(callback);
             return;
         }
-        mOnPaidEventListener = onPaidEventListener;
         putAds(provider.getAds());
         AtomicBoolean invokeFlag = new AtomicBoolean(false);
         GoogleMobileAdsConsentManager manager = GoogleMobileAdsConsentManager.getInstance(activity.getApplicationContext());
@@ -105,8 +119,8 @@ public class AdsManager {
         return mIsPremium.get();
     }
 
-    public void setPremium(boolean isPremium) {
-        mIsPremium.set(isPremium);
+    public boolean isDebug() {
+        return mIsDebug.get();
     }
 
     public boolean containsAds(String id) {
@@ -132,7 +146,8 @@ public class AdsManager {
                     .forEach(BaseAds::postDelayShowFlag)
             );
         }
-        ads.setOnPaidEventListener(this::onPaidEvent);
+        ads.setDebugSupplier(mIsDebug::get);
+        ads.setOnPaidEventConsumer(this::onPaidEvent);
         mAds.put(id, ads);
     }
 
@@ -154,7 +169,7 @@ public class AdsManager {
 
     private void onPaidEvent(AdValue adValue) {
         if (mOnPaidEventListener != null) {
-            mOnPaidEventListener.onPaidEvent(adValue);
+            mOnPaidEventListener.onPaidEvent(AdsValue.of(adValue));
         }
     }
 

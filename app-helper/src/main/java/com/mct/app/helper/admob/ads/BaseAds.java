@@ -6,12 +6,14 @@ import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.core.util.Consumer;
+import androidx.core.util.Supplier;
 
 import com.google.android.gms.ads.AdLoadCallback;
 import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdValue;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.OnPaidEventListener;
-import com.mct.app.helper.BuildConfig;
 import com.mct.app.helper.admob.AdsUtils;
 import com.mct.app.helper.admob.Callback;
 
@@ -23,8 +25,8 @@ public abstract class BaseAds<Ads> {
 
     private final String adsUnitId;
     private final long adsInterval;
-    private boolean forceTestAds;
-    private OnPaidEventListener onPaidEventListener;
+    private Supplier<Boolean> debugSupplier;
+    private Consumer<AdValue> onPaidEventConsumer;
     private Ads ads;
 
     private long loadTimeAd = 0;
@@ -50,16 +52,12 @@ public abstract class BaseAds<Ads> {
         }
     }
 
-    public void setForceTestAds(boolean forceTestAds) {
-        this.forceTestAds = forceTestAds;
+    public void setDebugSupplier(Supplier<Boolean> debugSupplier) {
+        this.debugSupplier = debugSupplier;
     }
 
-    public void setOnPaidEventListener(OnPaidEventListener listener) {
-        this.onPaidEventListener = listener;
-    }
-
-    public OnPaidEventListener getOnPaidEventListener() {
-        return onPaidEventListener;
+    public void setOnPaidEventConsumer(Consumer<AdValue> onPaidEventConsumer) {
+        this.onPaidEventConsumer = onPaidEventConsumer;
     }
 
     public final void postDelayShowFlag() {
@@ -123,18 +121,28 @@ public abstract class BaseAds<Ads> {
         return adsInterval;
     }
 
+    protected OnPaidEventListener getOnPaidEventListener() {
+        return onPaidEventConsumer != null
+                ? adValue -> onPaidEventConsumer.accept(adValue)
+                : null;
+    }
+
     /**
      * @return ads unit id to load based on debug
      */
     protected String getLoadAdsUnitId() {
-        return BuildConfig.DEBUG || forceTestAds ? AdsUtils.getAdsUnitIdTest(this) : adsUnitId;
+        return debugSupplier != null && debugSupplier.get()
+                ? AdsUtils.getAdsUnitIdTest(this)
+                : adsUnitId;
     }
 
     /**
      * @return ads interval to load based on debug
      */
     protected long getLoadAdsInterval() {
-        return BuildConfig.DEBUG || forceTestAds ? AdsUtils.getIntervalTest(this) : adsInterval;
+        return debugSupplier != null && debugSupplier.get()
+                ? AdsUtils.getIntervalTest(this)
+                : adsInterval;
     }
 
     public long getLoadTimeAd() {

@@ -5,7 +5,6 @@ import android.view.View;
 
 import androidx.annotation.NonNull;
 
-import com.mct.app.helper.BuildConfig;
 import com.mct.app.helper.R;
 import com.mct.app.helper.iap.banner.IapBanner;
 import com.mct.app.helper.iap.banner.component.BaseComponentAdapter;
@@ -58,7 +57,6 @@ public class BillingComponent extends BaseComponentAdapter {
      * The ID for the billing component.
      */
     public static final int ID = R.id.iap_component_billing;
-    public static final boolean LOG_ENABLE = BuildConfig.DEBUG;
 
     private final Activity activity;
     private final BillingConnector connector;
@@ -87,9 +85,6 @@ public class BillingComponent extends BaseComponentAdapter {
         this.activity = activity;
         this.connector = new BillingConnector(activity, base64Key);
         this.listeners = new ArrayList<>();
-        if (LOG_ENABLE) {
-            enableLogging();
-        }
     }
 
     /**
