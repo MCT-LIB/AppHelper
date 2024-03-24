@@ -26,11 +26,11 @@ public class MainActivity extends AppCompatActivity {
         getWindow().setStatusBarColor(MaterialColors.getColor(this, android.R.attr.colorBackground, 0));
         setContentView(R.layout.activity_main);
 
-        AdsManager.getInstance().config()
+        AdsManager.getInstance().config(adsConfigurator -> adsConfigurator
                 .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.SMALL).alias(NATIVE_SMALL).and()
                 .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.MEDIUM).alias(NATIVE_MEDIUM).and()
                 .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.LARGE).alias(NATIVE_LARGE).and()
-                .apply();
+                .apply());
 
         container = findViewById(R.id.frame_container);
         findViewById(R.id.btn_show_banner).setOnClickListener(this::clickButton);

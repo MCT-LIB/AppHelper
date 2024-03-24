@@ -7,6 +7,7 @@ import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.util.Consumer;
 import androidx.core.util.Pair;
 
 import com.google.android.gms.ads.MobileAds;
@@ -42,13 +43,13 @@ public final class AdsManager {
 
     /* --- config methods --- */
 
-    @NonNull
-    public AdsConfigurator init(Activity activity) {
+    public void init(@NonNull Activity activity, @NonNull Consumer<AdsConfigurator> configuratorConsumer) {
         if (mIsInitialized.getAndSet(true)) {
-            throw new IllegalStateException("Ads already configured");
+            // already initialized
+            return;
         }
         AtomicBoolean invokeFlag = new AtomicBoolean(false);
-        return new AdsConfigurator(this, () -> {
+        configuratorConsumer.accept(new AdsConfigurator(this, () -> {
             GoogleMobileAdsConsentManager manager = GoogleMobileAdsConsentManager.getInstance(activity.getApplicationContext());
             manager.gatherConsent(activity, consentError -> {
                 if (invokeFlag.get()) {
@@ -62,12 +63,11 @@ public final class AdsManager {
                 mAppOpenObserver.init(activity.getApplication());
                 MobileAds.initialize(activity.getApplicationContext());
             }
-        });
+        }));
     }
 
-    @NonNull
-    public AdsConfigurator config() {
-        return new AdsConfigurator(this, null);
+    public void config(@NonNull Consumer<AdsConfigurator> configuratorConsumer) {
+        configuratorConsumer.accept(new AdsConfigurator(this));
     }
 
     /* --- actions methods --- */

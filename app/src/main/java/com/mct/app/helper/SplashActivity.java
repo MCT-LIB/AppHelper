@@ -17,7 +17,7 @@ public class SplashActivity extends AppCompatActivity {
         getWindow().setStatusBarColor(MaterialColors.getColor(this, android.R.attr.colorBackground, 0));
         setContentView(R.layout.activity_splash);
 
-        AdsManager.getInstance().init(this)
+        AdsManager.getInstance().init(this, adsConfigurator -> adsConfigurator
                 .premium(false)
                 .debug(BuildConfig.DEBUG)
                 .onPaidEventListener(null)
@@ -28,7 +28,7 @@ public class SplashActivity extends AppCompatActivity {
                 .appOpenAds(Constant.APP_OPEN_ID).and()
                 .rewardedAds(Constant.REWARDED_ID).and()
                 .rewardedInterstitialAds(Constant.REWARDED_INTERSTITIAL_ID).and()
-                .apply();
+                .apply());
 
         AdsManager.getInstance().load(Constant.INTERSTITIAL_ID, this, null, null);
         AdsManager.getInstance().load(Constant.NATIVE_ID, this, null, null);

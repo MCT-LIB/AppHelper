@@ -30,6 +30,10 @@ public class AdsConfigurator {
     private boolean mDebug;
     private OnPaidEventListener mOnPaidEventListener;
 
+    AdsConfigurator(AdsManager adsManager) {
+        this(adsManager, null);
+    }
+
     AdsConfigurator(AdsManager adsManager, Callback callback) {
         this.mAdsManager = adsManager;
         this.mCallback = callback;
