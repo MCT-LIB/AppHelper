@@ -6,7 +6,7 @@ import com.mct.app.helper.admob.ads.BaseAds;
 @SuppressWarnings("unchecked")
 public abstract class BaseAdsConfigurator<C extends BaseAdsConfigurator<C, Ads>, Ads extends BaseAds<?>> {
 
-    private AdsConfigurator configurator;
+    private final AdsConfigurator configurator;
     private String alias;
     private String adsUnitId;
     private long adsInterval;
@@ -34,20 +34,11 @@ public abstract class BaseAdsConfigurator<C extends BaseAdsConfigurator<C, Ads>,
     public AdsConfigurator and() {
         String id = alias != null ? alias : adsUnitId;
         BaseAds<?> ads = makeAds(adsUnitId, adsInterval);
-        return obtain().putAds(id, ads);
+        return configurator.putAds(id, ads);
     }
 
     public void apply() {
         and().apply();
-    }
-
-    private AdsConfigurator obtain() {
-        if (configurator == null) {
-            throw new IllegalStateException("configurator is null");
-        }
-        AdsConfigurator c = configurator;
-        configurator = null;
-        return c;
     }
 
     protected abstract Ads makeAds(String adsUnitId, long adsInterval);

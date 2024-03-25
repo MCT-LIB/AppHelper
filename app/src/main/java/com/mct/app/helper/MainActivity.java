@@ -34,6 +34,7 @@ public class MainActivity extends AppCompatActivity {
 
         container = findViewById(R.id.frame_container);
         findViewById(R.id.btn_show_banner).setOnClickListener(this::clickButton);
+        findViewById(R.id.btn_show_banner_collapse).setOnClickListener(this::clickButton);
         findViewById(R.id.btn_hide_banner).setOnClickListener(this::clickButton);
         findViewById(R.id.btn_show_interstitial).setOnClickListener(this::clickButton);
         findViewById(R.id.btn_show_rewarded).setOnClickListener(this::clickButton);
@@ -45,9 +46,67 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btn_show_paywall).setOnClickListener(this::clickButton);
     }
 
+    // TODO: 3/25/2024 handle banner collapse is showing
+
+//    private void logRootViews() {
+//        try {
+//            Class<?> wmgClass = Class.forName("android.view.WindowManagerGlobal");
+//            Object wmgInstance = wmgClass.getMethod("getInstance").invoke(null, (Object[]) null);
+//
+//            Method getViewRootNames = wmgClass.getMethod("getViewRootNames");
+//            Method getRootView = wmgClass.getMethod("getRootView", String.class);
+//            String[] rootViewNames = (String[]) getViewRootNames.invoke(wmgInstance, (Object[]) null);
+//
+//            for (String viewName : rootViewNames) {
+//                View rootView = (View) getRootView.invoke(wmgInstance, viewName);
+//                Log.e("ddd", "Found root view: " + viewName + ": " + rootView);
+//            }
+//
+//            Log.e("ddd", "logRootViews: "+getWindowManagerViews() );
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//    }
+//
+//    public static List<View> getWindowManagerViews() {
+//        try {
+//            // get the list from WindowManagerGlobal.mViews
+//            Class<?>  wmgClass = Class.forName("android.view.WindowManagerGlobal");
+//            Object wmgInstance = wmgClass.getMethod("getInstance").invoke(null);
+//            return viewsFromWM(wmgClass, wmgInstance);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//        return new ArrayList<>();
+//    }
+//
+//    private static List<View> viewsFromWM(Class wmClass, Object wmInstance) throws Exception {
+//        Field viewsField = wmClass.getDeclaredField("mViews");
+//        viewsField.setAccessible(true);
+//        Object views = viewsField.get(wmInstance);
+//
+//        if (views instanceof List) {
+//            return (List<View>) viewsField.get(wmInstance);
+//        } else if (views instanceof View[]) {
+//            return Arrays.asList((View[])viewsField.get(wmInstance));
+//        }
+//
+//        return new ArrayList<View>();
+//    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        container.getHandler().removeCallbacksAndMessages(null);
+    }
+
     private void clickButton(@NonNull View view) {
         if (view.getId() == R.id.btn_show_banner) {
             AdsManager.getInstance().show(Constant.BANNER_ID, container);
+            return;
+        }
+        if (view.getId() == R.id.btn_show_banner_collapse) {
+            AdsManager.getInstance().forceLoadAndShow(Constant.BANNER_COLLAPSE_ID, container);
             return;
         }
         if (view.getId() == R.id.btn_hide_banner) {

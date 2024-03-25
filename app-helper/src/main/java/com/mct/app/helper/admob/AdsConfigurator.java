@@ -1,5 +1,7 @@
 package com.mct.app.helper.admob;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 
 import com.mct.app.helper.admob.ads.AppOpenAds;
@@ -20,6 +22,7 @@ import java.util.Map;
 
 public class AdsConfigurator {
 
+    private static final String TAG = "AdsConfigurator";
     private static final long APP_OPEN_ADS_INTERVAL = 60 * 1000;
     private static final long INTERSTITIAL_ADS_INTERVAL = 30 * 1000;
 
@@ -123,7 +126,9 @@ public class AdsConfigurator {
             if (ads instanceof AppOpenAds) {
                 mAdsManager.setAppOpenObserverAds((AppOpenAds) ads);
             }
-            mAdsManager.putAds(alias, ads);
+            if (!mAdsManager.putAds(alias, ads)) {
+                Log.e(TAG, "Failed to put ads: " + ads + " with alias: " + alias + " already exists");
+            }
         }
         if (mCallback != null) {
             mCallback.callback();

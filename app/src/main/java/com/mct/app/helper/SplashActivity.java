@@ -22,17 +22,21 @@ public class SplashActivity extends AppCompatActivity {
                 .debug(BuildConfig.DEBUG)
                 .onPaidEventListener(null)
                 .appOpenObserverBlackListActivity(SplashActivity.class)
+                .appOpenAds(Constant.APP_OPEN_ID).and()
                 .bannerAds(Constant.BANNER_ID).and()
+                .bannerAds(Constant.BANNER_COLLAPSE_ID).collapsible(true).and()
                 .interstitialAds(Constant.INTERSTITIAL_ID).and()
                 .nativeAds(Constant.NATIVE_ID).and()
-                .appOpenAds(Constant.APP_OPEN_ID).and()
                 .rewardedAds(Constant.REWARDED_ID).and()
                 .rewardedInterstitialAds(Constant.REWARDED_INTERSTITIAL_ID).and()
                 .apply());
 
-        AdsManager.getInstance().load(Constant.INTERSTITIAL_ID, this, null, null);
-        AdsManager.getInstance().load(Constant.NATIVE_ID, this, null, null);
-        AdsManager.getInstance().show(Constant.APP_OPEN_ID, this, this::gotoMain);
+//        AdsManager.getInstance().load(Constant.INTERSTITIAL_ID, this, null, null);
+//        AdsManager.getInstance().load(Constant.NATIVE_ID, this, null, null);
+//        AdsManager.getInstance().show(Constant.APP_OPEN_ID, this, this::gotoMain);
+
+        AdsManager.getInstance().pendingAppOpenObserver();
+        gotoMain();
     }
 
     private void gotoMain() {

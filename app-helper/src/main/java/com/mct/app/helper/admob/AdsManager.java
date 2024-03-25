@@ -88,6 +88,10 @@ public final class AdsManager {
         show(getAds(id, BaseViewAds.class), container);
     }
 
+    public void forceLoadAndShow(String id, ViewGroup container) {
+        forceLoadAndShow(getAds(id, BaseViewAds.class), container);
+    }
+
     public void hide(String id) {
         hide(getAds(id, BaseViewAds.class));
     }
@@ -104,8 +108,12 @@ public final class AdsManager {
         return mAds.containsKey(id);
     }
 
-    public void putAds(String id, BaseAds<?> ads) {
+    public boolean putAds(String id, BaseAds<?> ads) {
+        if (containsAds(id)) {
+            return false;
+        }
         mAds.put(id, ads);
+        return true;
     }
 
     public void removeAds(String id) {
@@ -166,21 +174,27 @@ public final class AdsManager {
         }
     }
 
-    public static void show(BaseFullScreenAds<?> ads, @NonNull Activity activity, Callback callback) {
+    public static void show(BaseFullScreenAds<?> ads, Activity activity, Callback callback) {
         if (checkAdsCondition(ads, callback)) {
             ads.show(activity, handleFullScreenCallback(callback));
         }
     }
 
-    public static void show(BaseRewardedAds<?> ads, @NonNull Activity activity, Callback callback, Callback onUserEarnedReward) {
+    public static void show(BaseRewardedAds<?> ads, Activity activity, Callback callback, Callback onUserEarnedReward) {
         if (checkAdsCondition(ads, callback)) {
             ads.show(activity, handleFullScreenCallback(callback), onUserEarnedReward);
         }
     }
 
-    public static void show(BaseViewAds<?> ads, @NonNull ViewGroup container) {
+    public static void show(BaseViewAds<?> ads, ViewGroup container) {
         if (checkAdsCondition(ads, null)) {
             ads.show(container);
+        }
+    }
+
+    public static void forceLoadAndShow(BaseViewAds<?> ads, ViewGroup container) {
+        if (checkAdsCondition(ads, null)) {
+            ads.forceLoadAndShow(container);
         }
     }
 

@@ -25,6 +25,12 @@
                 android:text="S banner" />
 
             <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_show_banner_collapse"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:text="S banner collapse" />
+
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_hide_banner"
                 android:layout_width="match_parent"
                 android:layout_height="40dp"

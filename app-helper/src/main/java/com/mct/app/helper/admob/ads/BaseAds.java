@@ -16,10 +16,13 @@ import com.mct.app.helper.admob.Callback;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import io.reactivex.rxjava3.disposables.Disposable;
+
 public abstract class BaseAds<Ads> {
 
     protected static final String TAG = "BaseAds";
 
+    private final Object lockLoadAds = new Object();
     private final String adsUnitId;
     private final long adsInterval;
     private boolean debugMode;
@@ -30,6 +33,7 @@ public abstract class BaseAds<Ads> {
     private boolean isLoading = false;
     private boolean isShowing = false;
     private boolean isCanShow = true;
+    private Disposable adsLoadDisposable;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable delayShowFlagRunnable = () -> isCanShow = true;
 
@@ -175,13 +179,27 @@ public abstract class BaseAds<Ads> {
         isShowing = showing;
     }
 
+    /**
+     * cancel current ads load if have
+     */
+    protected void disposeAdsLoadIfNeed() {
+        synchronized (lockLoadAds) {
+            if (adsLoadDisposable != null && !adsLoadDisposable.isDisposed()) {
+                setAds(null);
+                setLoading(false);
+                adsLoadDisposable.dispose();
+                adsLoadDisposable = null;
+            }
+        }
+    }
+
     protected static void invokeCallback(Callback callback) {
         if (callback != null) {
             callback.callback();
         }
     }
 
-    protected static class AdLoadCallbackImpl<Ads> extends AdLoadCallback<Ads> {
+    protected static class AdLoadCallbackImpl<Ads> extends AdLoadCallback<Ads> implements Disposable {
 
         private final AtomicBoolean dispose;
         private BaseAds<Ads> ads;
@@ -191,43 +209,57 @@ public abstract class BaseAds<Ads> {
         public AdLoadCallbackImpl(BaseAds<Ads> ads, Callback success, Callback failure) {
             this.dispose = new AtomicBoolean(false);
             this.ads = ads;
+            this.ads.adsLoadDisposable = this;
             this.success = success;
             this.failure = failure;
         }
 
         @Override
         public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-            if (isDispose()) {
+            if (isDisposed()) {
                 return;
             }
-            Log.d(TAG, "onAdFailedToLoad: " + loadAdError);
-            ads.setAds(null);
-            ads.setLoading(false);
-            invokeCallback(failure);
-            dispose();
+            synchronized (ads.lockLoadAds) {
+                if (isDisposed()) {
+                    return;
+                }
+                Log.d(TAG, "onAdFailedToLoad: " + loadAdError);
+                ads.setAds(null);
+                ads.setLoading(false);
+                invokeCallback(failure);
+                dispose();
+            }
         }
 
         @Override
-        public void onAdLoaded(@NonNull Ads ads) {
-            if (isDispose()) {
+        public void onAdLoaded(@NonNull Ads adsModel) {
+            if (isDisposed()) {
                 return;
             }
-            Log.d(TAG, "onAdLoaded: " + this.ads.getClass().getSimpleName());
-            this.ads.setAds(ads);
-            this.ads.setLoading(false);
-            this.ads.setLoadTimeAd(System.currentTimeMillis());
-            invokeCallback(success);
-            dispose();
+            synchronized (ads.lockLoadAds) {
+                if (isDisposed()) {
+                    return;
+                }
+                Log.d(TAG, "onAdLoaded: " + ads.getClass().getSimpleName());
+                ads.setAds(adsModel);
+                ads.setLoading(false);
+                ads.setLoadTimeAd(System.currentTimeMillis());
+                invokeCallback(success);
+                dispose();
+            }
         }
 
-        private boolean isDispose() {
+        @Override
+        public boolean isDisposed() {
             return dispose.get();
         }
 
-        private void dispose() {
-            if (dispose.getAndSet(true)) {
+        @Override
+        public void dispose() {
+            if (isDisposed()) {
                 return;
             }
+            dispose.set(true);
             ads = null;
             success = null;
             failure = null;
