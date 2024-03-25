@@ -22,14 +22,8 @@ import androidx.annotation.NonNull;
  * ProductConfiguration configWithOffer = ProductConfiguration.of("your_product_id", 10.0f, 1);
  * </pre>
  * </code>
- * <p>
- * {@link ProductConfiguration#FREE_TRIAL} Offer have free trial.<br/>
- * {@link ProductConfiguration#NO_FREE_TRIAL} Offer no have free trial.
  */
 public class ProductConfiguration {
-
-    public static final int FREE_TRIAL = 1;     // Offer have free trial
-    public static final int NO_FREE_TRIAL = 0;  // Offer no have free trial
 
     private final String productId;
     private final float discountPercent;

@@ -17,6 +17,9 @@ import androidx.annotation.NonNull;
 
 import com.mct.app.helper.iap.banner.IapBanner;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
 /**
  * TextComponent - A component for displaying styled text within an IapBanner.
  * <p>
@@ -44,6 +47,7 @@ public class TextComponent<C extends TextComponent<C>> extends Component<C> {
             TextFlag.NORMAL, TextFlag.BOLD, TextFlag.ITALIC,
             TextFlag.STRIKE_THRU, TextFlag.UNDERLINE, TextFlag.HIGHLIGHT
     })
+    @Retention(RetentionPolicy.SOURCE)
     private @interface TextFlag {
         int NORMAL = 0;
         int BOLD = 1;

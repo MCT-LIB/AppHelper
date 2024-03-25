@@ -9,6 +9,9 @@ import com.mct.app.helper.iap.banner.IapBanner;
 import com.mct.app.helper.iap.banner.countdown.Countdown;
 import com.mct.app.helper.iap.banner.utils.FormatUtils;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
 /**
  * TimeComponent - A component for displaying countdown time within an IapBanner.
  * <p>
@@ -21,6 +24,7 @@ public class TimeComponent<C extends TimeComponent<C>> extends TextComponent<C>
 
     // Constants for time style flags
     @IntDef({TimeStyle.UNSET, TimeStyle.HOUR, TimeStyle.MINUTE, TimeStyle.SECOND, TimeStyle.MILLISECOND})
+    @Retention(RetentionPolicy.SOURCE)
     private @interface TimeStyle {
         int UNSET = 0;
         int HOUR = 1;
