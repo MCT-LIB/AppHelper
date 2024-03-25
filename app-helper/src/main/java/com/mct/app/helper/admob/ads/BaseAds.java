@@ -11,7 +11,7 @@ import com.google.android.gms.ads.AdLoadCallback;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.OnPaidEventListener;
-import com.mct.app.helper.admob.AdsUtils;
+import com.mct.app.helper.admob.utils.AdsUtils;
 import com.mct.app.helper.admob.Callback;
 
 import java.util.concurrent.atomic.AtomicBoolean;

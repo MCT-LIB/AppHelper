@@ -1,4 +1,4 @@
-package com.mct.app.helper.admob;
+package com.mct.app.helper.admob.utils;
 
 import androidx.annotation.Nullable;
 

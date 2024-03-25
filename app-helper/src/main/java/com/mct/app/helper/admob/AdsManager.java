@@ -88,8 +88,8 @@ public final class AdsManager {
         show(getAds(id, BaseViewAds.class), container);
     }
 
-    public void forceLoadAndShow(String id, ViewGroup container) {
-        forceLoadAndShow(getAds(id, BaseViewAds.class), container);
+    public void forceShow(String id, ViewGroup container, boolean multiContainer) {
+        forceShow(getAds(id, BaseViewAds.class), container, multiContainer);
     }
 
     public void hide(String id) {
@@ -176,13 +176,13 @@ public final class AdsManager {
 
     public static void show(BaseFullScreenAds<?> ads, Activity activity, Callback callback) {
         if (checkAdsCondition(ads, callback)) {
-            ads.show(activity, handleFullScreenCallback(callback));
+            ads.show(activity, ads.isCanShow() ? handleFullScreenCallback(callback) : callback);
         }
     }
 
     public static void show(BaseRewardedAds<?> ads, Activity activity, Callback callback, Callback onUserEarnedReward) {
         if (checkAdsCondition(ads, callback)) {
-            ads.show(activity, handleFullScreenCallback(callback), onUserEarnedReward);
+            ads.show(activity, ads.isCanShow() ? handleFullScreenCallback(callback) : callback, onUserEarnedReward);
         }
     }
 
@@ -192,9 +192,9 @@ public final class AdsManager {
         }
     }
 
-    public static void forceLoadAndShow(BaseViewAds<?> ads, ViewGroup container) {
+    public static void forceShow(BaseViewAds<?> ads, ViewGroup container, boolean multiContainer) {
         if (checkAdsCondition(ads, null)) {
-            ads.forceLoadAndShow(container);
+            ads.forceShow(container, multiContainer);
         }
     }
 

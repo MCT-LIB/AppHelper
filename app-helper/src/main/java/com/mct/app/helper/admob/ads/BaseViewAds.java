@@ -11,11 +11,23 @@ public abstract class BaseViewAds<AdsView extends View> extends BaseAds<AdsView>
         super(adsUnitId, 0);
     }
 
-    public final void forceLoadAndShow(@NonNull ViewGroup container) {
+    public final void forceShow(@NonNull ViewGroup container, boolean multiContainer) {
+        loading:
         if (isLoading()) {
+            if (multiContainer) {
+                // allow multi container so reset state
+                setLoading(false);
+                break loading;
+            }
             disposeAdsLoadIfNeed();
         }
+        showing:
         if (isShowing()) {
+            if (multiContainer) {
+                // allow multi container so reset state
+                setShowing(false);
+                break showing;
+            }
             AdsView ads = getAds();
             if (ads != null && ads.getParent() == container) {
                 // already showing in the same container
