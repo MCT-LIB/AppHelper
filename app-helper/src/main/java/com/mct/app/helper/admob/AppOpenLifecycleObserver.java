@@ -99,7 +99,7 @@ class AppOpenLifecycleObserver {
                 pendingShowAd.set(false);
                 return;
             }
-            AdsManager.show(appOpenAds, currentActivity, null);
+            AdsManager.getInstance().show(appOpenAds, currentActivity, null);
         }
 
         /* --- ActivityLifecycleCallback methods. --- */
