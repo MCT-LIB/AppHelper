@@ -1,5 +1,6 @@
 package com.mct.app.helper;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.color.MaterialColors;
 import com.mct.app.helper.admob.AdsManager;
 import com.mct.app.helper.admob.ads.natives.NativeTemplate;
+import com.mct.app.helper.native_rcv.NativeRecyclerActivity;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -44,6 +46,7 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btn_show_native_large).setOnClickListener(this::clickButton);
         findViewById(R.id.btn_hide_native).setOnClickListener(this::clickButton);
         findViewById(R.id.btn_show_paywall).setOnClickListener(this::clickButton);
+        findViewById(R.id.btn_test_native_recycler).setOnClickListener(this::clickButton);
     }
 
     @Override
@@ -101,6 +104,10 @@ public class MainActivity extends AppCompatActivity {
         }
         if (view.getId() == R.id.btn_show_paywall) {
             Paywall.show(this);
+            return;
+        }
+        if (view.getId() == R.id.btn_test_native_recycler) {
+            startActivity(new Intent(getApplicationContext(), NativeRecyclerActivity.class));
         }
     }
 }

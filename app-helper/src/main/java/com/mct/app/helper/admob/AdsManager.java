@@ -177,6 +177,15 @@ public final class AdsManager {
     }
 
     /**
+     * Get on paid event listener
+     *
+     * @return on paid event listener
+     */
+    public OnPaidEventListener getOnPaidEventListener() {
+        return mOnPaidEventListener.get();
+    }
+
+    /**
      * Set on paid event listener
      *
      * @param listener on paid event listener
