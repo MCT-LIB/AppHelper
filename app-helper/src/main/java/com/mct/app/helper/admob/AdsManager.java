@@ -2,6 +2,7 @@ package com.mct.app.helper.admob;
 
 import android.app.Activity;
 import android.content.Context;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -11,6 +12,7 @@ import androidx.core.util.Consumer;
 import androidx.core.util.Pair;
 
 import com.google.android.gms.ads.MobileAds;
+import com.google.android.gms.ads.OnPaidEventListener;
 import com.mct.app.helper.admob.ads.AppOpenAds;
 import com.mct.app.helper.admob.ads.BannerAds;
 import com.mct.app.helper.admob.ads.BaseAds;
@@ -26,13 +28,18 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 public final class AdsManager {
 
+    private static final String TAG = "AdsManager";
     private static AdsManager instance;
     private final AtomicBoolean mIsInitialized = new AtomicBoolean(false);
     private final AtomicBoolean mIsPremium = new AtomicBoolean(false);
+    private final AtomicBoolean mDebug = new AtomicBoolean(false);
+    private final AtomicReference<OnPaidEventListener> mOnPaidEventListener = new AtomicReference<>();
     private final Map<String, BaseAds<?>> mAds = new LinkedHashMap<>();
     private final AppOpenLifecycleObserver mAppOpenObserver = new AppOpenLifecycleObserver();
 
@@ -111,6 +118,24 @@ public final class AdsManager {
     }
 
     /**
+     * Get debug mode
+     *
+     * @return true if debug
+     */
+    public boolean isDebug() {
+        return mDebug.get();
+    }
+
+    /**
+     * Set debug mode
+     *
+     * @param debug true if debug
+     */
+    public void setDebug(boolean debug) {
+        mDebug.set(debug);
+    }
+
+    /**
      * Pending app open observer one time
      */
     public void pendingAppOpenObserver() {
@@ -149,6 +174,15 @@ public final class AdsManager {
      */
     public void setAppOpenObserverAds(AppOpenAds ads) {
         mAppOpenObserver.setAppOpenAds(ads);
+    }
+
+    /**
+     * Set on paid event listener
+     *
+     * @param listener on paid event listener
+     */
+    public void setOnPaidEventListener(OnPaidEventListeners listener) {
+        mOnPaidEventListener.set(Optional.ofNullable(listener).map(OnPaidEventListeners::toGms).orElse(null));
     }
 
     /* --- Ads actions methods --- */
@@ -388,12 +422,23 @@ public final class AdsManager {
     /**
      * Put ads to manager. Used in {@link AdsConfigurator}
      */
-    boolean putAds(String alias, BaseAds<?> ads) {
+    public void putAds(String alias, BaseAds<?> ads) {
         if (containsAds(alias)) {
-            return false;
+            Log.e(TAG, "Failed to put ads: " + ads + " with alias: " + alias + " already exists");
+            return;
+        }
+        ads.setDebugSupplier(mDebug::get);
+        ads.setOnPaidEventListenerSupplier(mOnPaidEventListener::get);
+        if (isInterstitialOrOpenAd(ads)) {
+            ((BaseFullScreenAds<?>) ads).setOnDismissListener(a -> getAdsList().stream()
+                    .filter(AdsManager::isInterstitialOrOpenAd)
+                    .forEach(BaseAds::postDelayShowFlag)
+            );
+        }
+        if (ads instanceof AppOpenAds) {
+            setAppOpenObserverAds((AppOpenAds) ads);
         }
         mAds.put(alias, ads);
-        return true;
     }
 
     /**
@@ -461,7 +506,7 @@ public final class AdsManager {
     @NonNull
     private List<Pair<View, Integer>> getBannerAndNativeViews() {
         List<Pair<View, Integer>> viewAds = new ArrayList<>();
-        for (BaseAds<?> ads : getInstance().mAds.values()) {
+        for (BaseAds<?> ads : mAds.values()) {
             if (ads instanceof BaseViewAds) {
                 BaseViewAds<?> baseViewAds = (BaseViewAds<?>) ads;
                 if (baseViewAds.getAds() != null) {
@@ -473,6 +518,10 @@ public final class AdsManager {
             }
         }
         return viewAds;
+    }
+
+    private static boolean isInterstitialOrOpenAd(BaseAds<?> ads) {
+        return ads instanceof InterstitialAds || ads instanceof AppOpenAds;
     }
 
     private static void invokeCallback(Callback callback) {

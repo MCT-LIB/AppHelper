@@ -6,14 +6,16 @@ import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.core.util.Supplier;
 
 import com.google.android.gms.ads.AdLoadCallback;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.OnPaidEventListener;
-import com.mct.app.helper.admob.utils.AdsUtils;
 import com.mct.app.helper.admob.Callback;
+import com.mct.app.helper.admob.utils.AdsUtils;
 
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.reactivex.rxjava3.disposables.Disposable;
@@ -25,8 +27,8 @@ public abstract class BaseAds<Ads> {
     private final Object lockLoadAds = new Object();
     private final String adsUnitId;
     private final long adsInterval;
-    private boolean debugMode;
-    private OnPaidEventListener onPaidEventListener;
+    private Supplier<Boolean> debugSupplier;
+    private Supplier<OnPaidEventListener> onPaidEventListenerSupplier;
     private Ads ads;
 
     private long loadTimeAd = 0;
@@ -42,12 +44,12 @@ public abstract class BaseAds<Ads> {
         this.adsInterval = adsInterval;
     }
 
-    public void setDebugMode(boolean debug) {
-        this.debugMode = debug;
+    public void setDebugSupplier(Supplier<Boolean> supplier) {
+        this.debugSupplier = supplier;
     }
 
-    public void setOnPaidEventListener(OnPaidEventListener onPaidEventListener) {
-        this.onPaidEventListener = onPaidEventListener;
+    public void setOnPaidEventListenerSupplier(Supplier<OnPaidEventListener> supplier) {
+        this.onPaidEventListenerSupplier = supplier;
     }
 
     protected abstract void onLoadAds(@NonNull Context context, @NonNull AdLoadCallback<Ads> callback);
@@ -126,21 +128,25 @@ public abstract class BaseAds<Ads> {
      * @return on paid event listener
      */
     protected OnPaidEventListener getOnPaidEventListener() {
-        return onPaidEventListener;
+        return Optional.ofNullable(onPaidEventListenerSupplier).map(Supplier::get).orElse(null);
     }
 
     /**
      * @return ads unit id to load based on debug
      */
     protected String getLoadAdsUnitId() {
-        return debugMode ? AdsUtils.getAdsUnitIdTest(this) : adsUnitId;
+        return Optional.ofNullable(debugSupplier).map(Supplier::get).orElse(false)
+                ? AdsUtils.getAdsUnitIdTest(this)
+                : adsUnitId;
     }
 
     /**
      * @return ads interval to load based on debug
      */
     protected long getLoadAdsInterval() {
-        return debugMode ? AdsUtils.getIntervalTest(this) : adsInterval;
+        return Optional.ofNullable(debugSupplier).map(Supplier::get).orElse(false)
+                ? AdsUtils.getIntervalTest(this)
+                : adsInterval;
     }
 
     public long getLoadTimeAd() {

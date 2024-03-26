@@ -1,13 +1,8 @@
 package com.mct.app.helper.admob;
 
-import android.util.Log;
-
 import androidx.annotation.NonNull;
 
-import com.mct.app.helper.admob.ads.AppOpenAds;
 import com.mct.app.helper.admob.ads.BaseAds;
-import com.mct.app.helper.admob.ads.BaseFullScreenAds;
-import com.mct.app.helper.admob.ads.InterstitialAds;
 import com.mct.app.helper.admob.ads.natives.NativeTemplate;
 import com.mct.app.helper.admob.configurator.AppOpenAdsConfigurator;
 import com.mct.app.helper.admob.configurator.BannerAdsConfigurator;
@@ -21,7 +16,6 @@ import java.util.Map;
 
 public class AdsConfigurator {
 
-    private static final String TAG = "AdsConfigurator";
     private static final long APP_OPEN_ADS_INTERVAL = 60 * 1000;
     private static final long INTERSTITIAL_ADS_INTERVAL = 30 * 1000;
 
@@ -33,7 +27,7 @@ public class AdsConfigurator {
     private Boolean mDebug;
     private Boolean mAppOpenObserverEnabled;
     private Class<?>[] mAppOpenObserverBlackListActivity;
-    private OnPaidEventListener mOnPaidEventListener;
+    private OnPaidEventListeners mOnPaidEventListener;
 
     AdsConfigurator(AdsManager adsManager) {
         this(adsManager, null);
@@ -70,11 +64,11 @@ public class AdsConfigurator {
     /**
      * Sets the listener for paid events
      *
-     * @param onPaidEventListener The listener for paid events
+     * @param listener The listener for paid events
      * @return This AdsConfigurator instance for method chaining
      */
-    public AdsConfigurator onPaidEventListener(OnPaidEventListener onPaidEventListener) {
-        mOnPaidEventListener = onPaidEventListener;
+    public AdsConfigurator onPaidEventListener(OnPaidEventListeners listener) {
+        mOnPaidEventListener = listener;
         return this;
     }
 
@@ -179,41 +173,24 @@ public class AdsConfigurator {
         if (mPremium != null) {
             mAdsManager.setPremium(mPremium);
         }
+        if (mDebug != null) {
+            mAdsManager.setDebug(mDebug);
+        }
         if (mAppOpenObserverEnabled != null) {
             mAdsManager.setAppOpenObserverEnabled(mAppOpenObserverEnabled);
         }
         if (mAppOpenObserverBlackListActivity != null) {
             mAdsManager.setAppOpenObserverBlackListActivity(mAppOpenObserverBlackListActivity);
         }
-        final OnPaidEventListener paidEventListener = mOnPaidEventListener;
-        for (Map.Entry<String, BaseAds<?>> adsEntry : mAds.entrySet()) {
-            String alias = adsEntry.getKey();
-            BaseAds<?> ads = adsEntry.getValue();
-            if (mDebug != null) {
-                ads.setDebugMode(mDebug);
-            }
-            if (paidEventListener != null) {
-                ads.setOnPaidEventListener(adValue -> paidEventListener.onPaidEvent(AdsValue.of(adValue)));
-            }
-            if (isInterstitialOrOpenAd(ads)) {
-                ((BaseFullScreenAds<?>) ads).setOnDismissListener(a -> mAdsManager.getAdsList().stream()
-                        .filter(AdsConfigurator::isInterstitialOrOpenAd)
-                        .forEach(BaseAds::postDelayShowFlag)
-                );
-            }
-            if (ads instanceof AppOpenAds) {
-                mAdsManager.setAppOpenObserverAds((AppOpenAds) ads);
-            }
-            if (!mAdsManager.putAds(alias, ads)) {
-                Log.e(TAG, "Failed to put ads: " + ads + " with alias: " + alias + " already exists");
-            }
+        if (mOnPaidEventListener != null) {
+            mAdsManager.setOnPaidEventListener(mOnPaidEventListener);
+        }
+        if (mAds.size() > 0) {
+            mAds.forEach(mAdsManager::putAds);
         }
         if (mCallback != null) {
             mCallback.callback();
         }
     }
 
-    private static boolean isInterstitialOrOpenAd(BaseAds<?> ads) {
-        return ads instanceof InterstitialAds || ads instanceof AppOpenAds;
-    }
 }
