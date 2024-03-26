@@ -4,9 +4,9 @@ import com.mct.app.helper.R;
 
 public enum NativeTemplate {
 
-    SMALL(R.layout.gnt_small_template_view),
-    MEDIUM(R.layout.gnt_medium_template_view),
-    LARGE(R.layout.gnt_large_template_view);
+    SMALL(R.layout.gnt_template_view_small),
+    MEDIUM(R.layout.gnt_template_view_medium),
+    LARGE(R.layout.gnt_template_view_large);
 
     public final int layoutRes;
 
