@@ -1,5 +1,7 @@
 package com.mct.app.helper.native_rcv;
 
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.view.View;
 
@@ -13,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.mct.app.helper.Constant;
 import com.mct.app.helper.R;
 import com.mct.app.helper.admob.ads.natives.NativeTemplate;
+import com.mct.app.helper.admob.ads.natives.NativeTemplateStyle;
 import com.mct.app.helper.admob.ads.natives.adapter.NativeAdsAdapter;
 import com.mct.app.helper.admob.ads.natives.adapter.NativeAdsPool;
 import com.mct.app.helper.native_rcv.adapter.GridSpacingItemDecoration;
@@ -88,8 +91,14 @@ public class NativeRecyclerActivity extends AppCompatActivity {
             return;
         }
         if (view.getId() == R.id.btn_style_4) {
+            NativeTemplateStyle style = new NativeTemplateStyle.Builder()
+                    .withMainBackgroundColor(Color.parseColor("#dddddd"))
+                    .withCallToActionBackgroundColor(Color.parseColor("#ff0063"))
+                    .withCallToActionCornerRadius(16)
+                    .build();
             adapter = new NativeAdsAdapter.Builder(new UserAdapter(R.layout.item_user_square, getListUser()), pool)
                     .setNativeTemplate(NativeTemplate.SMALL_SQUARE)
+                    .setNativeTemplateStyle(style)
                     .setAdsItemConfig(5, 3)
                     .build();
             rcvData.setAdapter(adapter);

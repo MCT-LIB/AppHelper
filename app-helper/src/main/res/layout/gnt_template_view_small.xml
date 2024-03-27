@@ -70,7 +70,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="36dp"
                 android:layout_gravity="center_vertical"
-                android:background="@color/gnt_blue"
+                android:background="@drawable/gnt_cta_background"
                 android:gravity="center"
                 android:minWidth="80dp"
                 android:paddingHorizontal="8dp"

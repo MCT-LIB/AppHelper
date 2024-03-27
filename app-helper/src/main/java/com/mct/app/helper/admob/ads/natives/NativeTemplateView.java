@@ -1,9 +1,14 @@
 package com.mct.app.helper.admob.ads.natives;
 
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.content.res.TypedArray;
+import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
 import android.os.Build;
 import android.text.TextUtils;
 import android.util.AttributeSet;
@@ -162,17 +167,17 @@ public class NativeTemplateView extends FrameLayout {
 
     private void applyStyles() {
 
-        Drawable mainBackground = styles.getMainBackgroundColor();
+        Integer mainBackground = styles.getMainBackgroundColor();
         if (mainBackground != null) {
-            background.setBackground(mainBackground);
+            background.setBackground(new ColorDrawable(mainBackground));
             if (primaryView != null) {
-                primaryView.setBackground(mainBackground);
+                primaryView.setBackground(new ColorDrawable(mainBackground));
             }
             if (secondaryView != null) {
-                secondaryView.setBackground(mainBackground);
+                secondaryView.setBackground(new ColorDrawable(mainBackground));
             }
             if (tertiaryView != null) {
-                tertiaryView.setBackground(mainBackground);
+                tertiaryView.setBackground(new ColorDrawable(mainBackground));
             }
         }
 
@@ -232,34 +237,73 @@ public class NativeTemplateView extends FrameLayout {
             tertiaryView.setTextSize(tertiaryTextSize);
         }
 
-        Drawable ctaBackground = styles.getCallToActionBackgroundColor();
-        if (ctaBackground != null && callToActionView != null) {
-            callToActionView.setBackground(ctaBackground);
+        Integer ctaBackgroundColor = styles.getCallToActionBackgroundColor();
+        if (ctaBackgroundColor != null && callToActionView != null) {
+            Integer ctaRippleColor = styles.getCallToActionRippleColor();
+            Integer ctaCornerRadius = styles.getCallToActionCornerRadius();
+
+            if (ctaRippleColor == null) {
+                ctaRippleColor = Color.parseColor("#80FFFFFF");
+            }
+            if (ctaCornerRadius == null) {
+                ctaCornerRadius = 0;
+            }
+            callToActionView.setBackground(getRippleDrawable(ctaBackgroundColor, ctaRippleColor, ctaCornerRadius));
         }
 
-        Drawable primaryBackground = styles.getPrimaryTextBackgroundColor();
+        Integer primaryBackground = styles.getPrimaryTextBackgroundColor();
         if (primaryBackground != null && primaryView != null) {
-            primaryView.setBackground(primaryBackground);
+            primaryView.setBackground(new ColorDrawable(primaryBackground));
         }
 
-        Drawable secondaryBackground = styles.getSecondaryTextBackgroundColor();
+        Integer secondaryBackground = styles.getSecondaryTextBackgroundColor();
         if (secondaryBackground != null && secondaryView != null) {
-            secondaryView.setBackground(secondaryBackground);
+            secondaryView.setBackground(new ColorDrawable(secondaryBackground));
         }
 
-        Drawable tertiaryBackground = styles.getTertiaryTextBackgroundColor();
+        Integer tertiaryBackground = styles.getTertiaryTextBackgroundColor();
         if (tertiaryBackground != null && tertiaryView != null) {
-            tertiaryView.setBackground(tertiaryBackground);
+            tertiaryView.setBackground(new ColorDrawable(tertiaryBackground));
         }
 
         invalidate();
         requestLayout();
     }
 
-    private boolean adHasOnlyStore(NativeAd nativeAd) {
+    private boolean adHasOnlyStore(@NonNull NativeAd nativeAd) {
         String store = nativeAd.getStore();
         String advertiser = nativeAd.getAdvertiser();
         return !TextUtils.isEmpty(store) && TextUtils.isEmpty(advertiser);
+    }
+
+    @NonNull
+    private static RippleDrawable getRippleDrawable(int normalColor, int pressedColor, int cornerRadius) {
+        return new RippleDrawable(
+                getPressedColorSelector(normalColor, pressedColor),
+                getDrawableFromColorAndCornerRadius(normalColor, cornerRadius), null);
+    }
+
+    @NonNull
+    private static ColorStateList getPressedColorSelector(int normalColor, int pressedColor) {
+        return new ColorStateList(new int[][]{
+                new int[]{android.R.attr.state_pressed},
+                new int[]{android.R.attr.state_focused},
+                new int[]{android.R.attr.state_activated},
+                new int[]{}
+        }, new int[]{
+                pressedColor,
+                pressedColor,
+                pressedColor,
+                normalColor
+        });
+    }
+
+    @NonNull
+    private static Drawable getDrawableFromColorAndCornerRadius(int color, int cornerRadius) {
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setColor(color);
+        drawable.setCornerRadius(cornerRadius);
+        return drawable;
     }
 
 }

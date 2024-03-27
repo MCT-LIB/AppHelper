@@ -1,9 +1,6 @@
 package com.mct.app.helper.admob.ads.natives;
 
 import android.graphics.Typeface;
-import android.graphics.drawable.ColorDrawable;
-
-import androidx.annotation.Nullable;
 
 /**
  * A class containing the optional styling options for the Native NativeTemplate.
@@ -17,11 +14,14 @@ public class NativeTemplateStyle {
     private float callToActionTextSize;
 
     // Call to action typeface color in the form 0xAARRGGBB.
-    @Nullable
     private Integer callToActionTypefaceColor;
 
     // Call to action background color.
-    private ColorDrawable callToActionBackgroundColor;
+    private Integer callToActionBackgroundColor;
+    // Call to action ripple color.
+    private Integer callToActionRippleColor;
+    // Call to action corner radius.
+    private Integer callToActionCornerRadius;
 
     // All templates have a primary text area which is populated by the native ad's headline.
 
@@ -32,11 +32,10 @@ public class NativeTemplateStyle {
     private float primaryTextSize;
 
     // Primary text typeface color in the form 0xAARRGGBB.
-    @Nullable
     private Integer primaryTextTypefaceColor;
 
     // Primary text background color.
-    private ColorDrawable primaryTextBackgroundColor;
+    private Integer primaryTextBackgroundColor;
 
     // The typeface, typeface color, and background color for the second row of text in the template.
     // All templates have a secondary text area which is populated either by the body of the ad or
@@ -49,11 +48,10 @@ public class NativeTemplateStyle {
     private float secondaryTextSize;
 
     // Secondary text typeface color in the form 0xAARRGGBB.
-    @Nullable
     private Integer secondaryTextTypefaceColor;
 
     // Secondary text background color.
-    private ColorDrawable secondaryTextBackgroundColor;
+    private Integer secondaryTextBackgroundColor;
 
     // The typeface, typeface color, and background color for the third row of text in the template.
     // The third row is used to display store name or the default tertiary text.
@@ -65,14 +63,16 @@ public class NativeTemplateStyle {
     private float tertiaryTextSize;
 
     // Tertiary text typeface color in the form 0xAARRGGBB.
-    @Nullable
     private Integer tertiaryTextTypefaceColor;
 
     // Tertiary text background color.
-    private ColorDrawable tertiaryTextBackgroundColor;
+    private Integer tertiaryTextBackgroundColor;
 
     // The background color for the bulk of the ad.
-    private ColorDrawable mainBackgroundColor;
+    private Integer mainBackgroundColor;
+
+    private NativeTemplateStyle() {
+    }
 
     public Typeface getCallToActionTextTypeface() {
         return callToActionTextTypeface;
@@ -82,13 +82,20 @@ public class NativeTemplateStyle {
         return callToActionTextSize;
     }
 
-    @Nullable
     public Integer getCallToActionTypefaceColor() {
         return callToActionTypefaceColor;
     }
 
-    public ColorDrawable getCallToActionBackgroundColor() {
+    public Integer getCallToActionBackgroundColor() {
         return callToActionBackgroundColor;
+    }
+
+    public Integer getCallToActionRippleColor() {
+        return callToActionRippleColor;
+    }
+
+    public Integer getCallToActionCornerRadius() {
+        return callToActionCornerRadius;
     }
 
     public Typeface getPrimaryTextTypeface() {
@@ -99,12 +106,11 @@ public class NativeTemplateStyle {
         return primaryTextSize;
     }
 
-    @Nullable
     public Integer getPrimaryTextTypefaceColor() {
         return primaryTextTypefaceColor;
     }
 
-    public ColorDrawable getPrimaryTextBackgroundColor() {
+    public Integer getPrimaryTextBackgroundColor() {
         return primaryTextBackgroundColor;
     }
 
@@ -116,12 +122,11 @@ public class NativeTemplateStyle {
         return secondaryTextSize;
     }
 
-    @Nullable
     public Integer getSecondaryTextTypefaceColor() {
         return secondaryTextTypefaceColor;
     }
 
-    public ColorDrawable getSecondaryTextBackgroundColor() {
+    public Integer getSecondaryTextBackgroundColor() {
         return secondaryTextBackgroundColor;
     }
 
@@ -133,16 +138,15 @@ public class NativeTemplateStyle {
         return tertiaryTextSize;
     }
 
-    @Nullable
     public Integer getTertiaryTextTypefaceColor() {
         return tertiaryTextTypefaceColor;
     }
 
-    public ColorDrawable getTertiaryTextBackgroundColor() {
+    public Integer getTertiaryTextBackgroundColor() {
         return tertiaryTextBackgroundColor;
     }
 
-    public ColorDrawable getMainBackgroundColor() {
+    public Integer getMainBackgroundColor() {
         return mainBackgroundColor;
     }
 
@@ -172,8 +176,18 @@ public class NativeTemplateStyle {
             return this;
         }
 
-        public Builder withCallToActionBackgroundColor(ColorDrawable callToActionBackgroundColor) {
+        public Builder withCallToActionBackgroundColor(int callToActionBackgroundColor) {
             this.styles.callToActionBackgroundColor = callToActionBackgroundColor;
+            return this;
+        }
+
+        public Builder withCallToActionRippleColor(int callToActionRippleColor) {
+            this.styles.callToActionRippleColor = callToActionRippleColor;
+            return this;
+        }
+
+        public Builder withCallToActionCornerRadius(int callToActionCornerRadius) {
+            this.styles.callToActionCornerRadius = callToActionCornerRadius;
             return this;
         }
 
@@ -192,7 +206,7 @@ public class NativeTemplateStyle {
             return this;
         }
 
-        public Builder withPrimaryTextBackgroundColor(ColorDrawable primaryTextBackgroundColor) {
+        public Builder withPrimaryTextBackgroundColor(int primaryTextBackgroundColor) {
             this.styles.primaryTextBackgroundColor = primaryTextBackgroundColor;
             return this;
         }
@@ -212,7 +226,7 @@ public class NativeTemplateStyle {
             return this;
         }
 
-        public Builder withSecondaryTextBackgroundColor(ColorDrawable secondaryTextBackgroundColor) {
+        public Builder withSecondaryTextBackgroundColor(int secondaryTextBackgroundColor) {
             this.styles.secondaryTextBackgroundColor = secondaryTextBackgroundColor;
             return this;
         }
@@ -232,12 +246,12 @@ public class NativeTemplateStyle {
             return this;
         }
 
-        public Builder withTertiaryTextBackgroundColor(ColorDrawable tertiaryTextBackgroundColor) {
+        public Builder withTertiaryTextBackgroundColor(int tertiaryTextBackgroundColor) {
             this.styles.tertiaryTextBackgroundColor = tertiaryTextBackgroundColor;
             return this;
         }
 
-        public Builder withMainBackgroundColor(ColorDrawable mainBackgroundColor) {
+        public Builder withMainBackgroundColor(int mainBackgroundColor) {
             this.styles.mainBackgroundColor = mainBackgroundColor;
             return this;
         }

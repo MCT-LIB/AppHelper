@@ -131,7 +131,7 @@
                 android:id="@+id/cta"
                 android:layout_width="match_parent"
                 android:layout_height="@dimen/gnt_no_size"
-                android:background="@color/gnt_blue"
+                android:background="@drawable/gnt_cta_background"
                 android:gravity="center"
                 android:lines="1"
                 android:textColor="@color/gnt_white"
