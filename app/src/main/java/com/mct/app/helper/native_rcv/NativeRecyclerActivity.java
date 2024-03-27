@@ -1,7 +1,6 @@
 package com.mct.app.helper.native_rcv;
 
 import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.view.View;
 
@@ -14,10 +13,9 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.mct.app.helper.Constant;
 import com.mct.app.helper.R;
+import com.mct.app.helper.admob.ads.natives.NativeAdsAdapter;
 import com.mct.app.helper.admob.ads.natives.NativeTemplate;
 import com.mct.app.helper.admob.ads.natives.NativeTemplateStyle;
-import com.mct.app.helper.admob.ads.natives.adapter.NativeAdsAdapter;
-import com.mct.app.helper.admob.ads.natives.adapter.NativeAdsPool;
 import com.mct.app.helper.native_rcv.adapter.GridSpacingItemDecoration;
 import com.mct.app.helper.native_rcv.adapter.UserAdapter;
 
@@ -27,7 +25,6 @@ import java.util.List;
 public class NativeRecyclerActivity extends AppCompatActivity {
 
     NativeAdsAdapter adapter;
-    NativeAdsPool pool;
 
     private RecyclerView rcvData;
 
@@ -37,9 +34,6 @@ public class NativeRecyclerActivity extends AppCompatActivity {
         setContentView(R.layout.activity_native_recycler);
 
         rcvData = findViewById(R.id.rcv_data);
-        pool = new NativeAdsPool(Constant.NATIVE_ID);
-        pool.init(getApplicationContext());
-        pool.load(3);
 
         findViewById(R.id.btn_style_1).setOnClickListener(this::onClick);
         findViewById(R.id.btn_style_2).setOnClickListener(this::onClick);
@@ -49,8 +43,10 @@ public class NativeRecyclerActivity extends AppCompatActivity {
     }
 
     private void onClick(@NonNull View view) {
+        String adsUnitId = Constant.NATIVE_ID;
+        int numberOfAds = 3;
         if (view.getId() == R.id.btn_style_1) {
-            adapter = new NativeAdsAdapter.Builder(new UserAdapter(R.layout.item_user, getListUser()), pool)
+            adapter = new NativeAdsAdapter.Builder(new UserAdapter(R.layout.item_user, getListUser()), adsUnitId, numberOfAds)
                     .setNativeTemplate(NativeTemplate.SMALL)
                     .setAdsItemConfig(3, 3)
                     .build();
@@ -60,7 +56,7 @@ public class NativeRecyclerActivity extends AppCompatActivity {
             return;
         }
         if (view.getId() == R.id.btn_style_2) {
-            adapter = new NativeAdsAdapter.Builder(new UserAdapter(R.layout.item_user, getListUser()), pool)
+            adapter = new NativeAdsAdapter.Builder(new UserAdapter(R.layout.item_user, getListUser()), adsUnitId, numberOfAds)
                     .setNativeTemplate(NativeTemplate.MEDIUM)
                     .setAdsItemConfig(6, 1)
                     .build();
@@ -69,7 +65,7 @@ public class NativeRecyclerActivity extends AppCompatActivity {
             grid.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
                 @Override
                 public int getSpanSize(int position) {
-                    if (adapter.isAdsItem(position)) {
+                    if (adapter.isAdPosition(position)) {
                         return grid.getSpanCount();
                     }
                     return 1;
@@ -80,7 +76,7 @@ public class NativeRecyclerActivity extends AppCompatActivity {
             return;
         }
         if (view.getId() == R.id.btn_style_3) {
-            adapter = new NativeAdsAdapter.Builder(new UserAdapter(R.layout.item_user_a4, getListUser()), pool)
+            adapter = new NativeAdsAdapter.Builder(new UserAdapter(R.layout.item_user_a4, getListUser()), adsUnitId, numberOfAds)
                     .setNativeTemplate(NativeTemplate.SMALL_A4)
                     .setAdsItemConfig(5, 3)
                     .build();
@@ -96,7 +92,7 @@ public class NativeRecyclerActivity extends AppCompatActivity {
                     .withCallToActionBackgroundColor(Color.parseColor("#ff0063"))
                     .withCallToActionCornerRadius(16)
                     .build();
-            adapter = new NativeAdsAdapter.Builder(new UserAdapter(R.layout.item_user_square, getListUser()), pool)
+            adapter = new NativeAdsAdapter.Builder(new UserAdapter(R.layout.item_user_square, getListUser()), adsUnitId, numberOfAds)
                     .setNativeTemplate(NativeTemplate.SMALL_SQUARE)
                     .setNativeTemplateStyle(style)
                     .setAdsItemConfig(5, 3)

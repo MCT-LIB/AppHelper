@@ -1,4 +1,4 @@
-package com.mct.app.helper.admob.ads.natives.adapter;
+package com.mct.app.helper.admob.ads.natives;
 
 import static androidx.recyclerview.widget.RecyclerView.AdapterDataObserver;
 
