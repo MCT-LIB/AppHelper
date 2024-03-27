@@ -6,105 +6,6 @@
     android:orientation="vertical"
     tools:context=".MainActivity">
 
-    <androidx.appcompat.widget.LinearLayoutCompat
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:padding="8dp">
-
-        <androidx.appcompat.widget.LinearLayoutCompat
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_show_banner"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:text="S banner" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_show_banner_collapse"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:text="S banner collapse" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_hide_banner"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:text="H banner" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_show_interstitial"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:text="S interstitial" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_show_rewarded"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:text="S rewarded" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_show_rewarded_interstitial"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:text="S rewarded interstitial" />
-
-        </androidx.appcompat.widget.LinearLayoutCompat>
-
-        <Space
-            android:layout_width="8dp"
-            android:layout_height="0dp" />
-
-        <androidx.appcompat.widget.LinearLayoutCompat
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_show_native_small"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:text="S native small" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_show_native_medium"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:text="S native medium" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_show_native_large"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:text="S native large" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_hide_native"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:text="H native" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_show_paywall"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:text="S paywall" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_test_native_recycler"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:text="T native recycler" />
-
-        </androidx.appcompat.widget.LinearLayoutCompat>
-
-    </androidx.appcompat.widget.LinearLayoutCompat>
-
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -114,6 +15,130 @@
             android:id="@+id/frame_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="center" />
+            android:layout_gravity="bottom|center" />
     </FrameLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="256dp"
+        android:padding="8dp">
+
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <androidx.appcompat.widget.LinearLayoutCompat
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_show_banner"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="S banner" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_show_banner_collapse"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="S banner collapse" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_hide_banner"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="H banner" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_show_interstitial"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="S interstitial" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_show_rewarded"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="S rewarded" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_show_rewarded_interstitial"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="S rewarded interstitial" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_show_paywall"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="S paywall" />
+
+            </androidx.appcompat.widget.LinearLayoutCompat>
+
+            <Space
+                android:layout_width="8dp"
+                android:layout_height="0dp" />
+
+            <androidx.appcompat.widget.LinearLayoutCompat
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_show_native_small"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="S native small" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_show_native_medium"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="S native medium" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_show_native_large"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="S native large" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_show_native_small_a4"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="S native small a4" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_show_native_small_rect"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="S native small rect" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_show_native_small_square"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="S native small square" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_hide_native"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="H native" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_test_native_recycler"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="T native recycler" />
+
+            </androidx.appcompat.widget.LinearLayoutCompat>
+
+        </androidx.appcompat.widget.LinearLayoutCompat>
+
+    </ScrollView>
+
 </androidx.appcompat.widget.LinearLayoutCompat>

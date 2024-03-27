@@ -1,4 +1,4 @@
-package com.mct.app.helper.native_rcv;
+package com.mct.app.helper.native_rcv.adapter;
 
 import android.view.LayoutInflater;
 import android.view.View;
@@ -10,6 +10,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.mct.app.helper.R;
+import com.mct.app.helper.native_rcv.User;
 
 import java.util.List;
 

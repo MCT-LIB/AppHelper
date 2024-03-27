@@ -1,8 +1,9 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <!-- Base application theme. -->
     <style name="Base.Theme.AppHelperKit" parent="Theme.Material3.Dark.NoActionBar">
         <!-- Customize your light theme here. -->
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <item name="android:statusBarColor">?android:attr/colorBackground</item>
     </style>
 
     <style name="Theme.AppHelperKit" parent="Base.Theme.AppHelperKit" />

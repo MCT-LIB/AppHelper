@@ -30,7 +30,7 @@
                     android:layout_height="match_parent"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintDimensionRatio="H,1:1"
-                    app:layout_constraintEnd_toStartOf="@+id/content"
+                    app:layout_constraintEnd_toStartOf="@id/content"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
                     tools:src="@tools:sample/avatars" />
@@ -48,8 +48,9 @@
                     <androidx.appcompat.widget.LinearLayoutCompat
                         android:id="@+id/headline"
                         android:layout_width="match_parent"
-                        android:layout_height="@dimen/gnt_no_size"
-                        app:layout_constraintBottom_toTopOf="@+id/row_two"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        app:layout_constraintBottom_toTopOf="@id/row_two"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent">
@@ -64,6 +65,20 @@
                             android:textSize="@dimen/gnt_text_size_large"
                             android:textStyle="bold"
                             tools:text="@tools:sample/lorem" />
+
+                        <androidx.appcompat.widget.AppCompatTextView
+                            android:id="@+id/body"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:maxLines="2"
+                            android:textColor="@color/gnt_gray"
+                            android:textSize="@dimen/gnt_text_size_extra_small"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toEndOf="@id/icon"
+                            app:layout_constraintTop_toBottomOf="@id/primary"
+                            tools:text="@tools:sample/lorem/random" />
+
                     </androidx.appcompat.widget.LinearLayoutCompat>
 
                     <androidx.appcompat.widget.LinearLayoutCompat
@@ -71,30 +86,21 @@
                         android:layout_width="match_parent"
                         android:layout_height="@dimen/gnt_no_size"
                         android:gravity="center_vertical"
-                        app:layout_constraintBottom_toTopOf="@+id/cta"
+                        app:layout_constraintBottom_toTopOf="@id/cta"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@id/headline">
 
                         <androidx.appcompat.widget.AppCompatTextView
                             android:id="@+id/ad_notification_view"
-                            android:layout_width="@dimen/gnt_ad_indicator_width"
-                            android:layout_height="@dimen/gnt_ad_indicator_height"
-                            android:layout_marginEnd="@dimen/gnt_small_margin"
-                            android:background="@drawable/gnt_rounded_corners_shape"
-                            android:gravity="center"
-                            android:text="Ad"
-                            android:textColor="@color/gnt_ad_green"
-                            android:textSize="@dimen/gnt_ad_indicator_text_size"
-                            android:textStyle="bold"
-                            tools:ignore="HardcodedText" />
+                            style="@style/GntAdIndicator" />
 
                         <RatingBar
                             android:id="@+id/rating_bar"
                             style="?android:attr/ratingBarStyleSmall"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginEnd="@dimen/gnt_small_margin"
+                            android:layout_marginHorizontal="@dimen/gnt_small_margin"
                             android:isIndicator="true"
                             android:progressBackgroundTint="@color/gnt_yellow"
                             android:progressTint="@color/gnt_yellow"
@@ -123,6 +129,7 @@
                         android:gravity="center"
                         android:lines="1"
                         android:textColor="@color/gnt_white"
+                        android:textSize="@dimen/gnt_text_size_small"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toStartOf="parent"

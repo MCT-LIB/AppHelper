@@ -5,13 +5,26 @@
         <attr name="gnt_template" format="reference" />
     </declare-styleable>
 
+    <style name="GntAdIndicator">
+        <item name="android:layout_width">@dimen/gnt_ad_indicator_width</item>
+        <item name="android:layout_height">@dimen/gnt_ad_indicator_height</item>
+        <item name="android:background">@drawable/gnt_rounded_corners_shape</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">@color/gnt_ad_green</item>
+        <item name="android:textSize">@dimen/gnt_ad_indicator_text_size</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:text">Ad</item>
+    </style>
+
+    <dimen name="gnt_text_size_extra_small">10sp</dimen>
     <dimen name="gnt_text_size_small">12sp</dimen>
-    <dimen name="gnt_text_size_large">15sp</dimen>
+    <dimen name="gnt_text_size_large">14sp</dimen>
     <dimen name="gnt_ad_indicator_width">25dp</dimen>
     <dimen name="gnt_ad_indicator_height">20dp</dimen>
     <dimen name="gnt_ad_indicator_text_size">10sp</dimen>
     <dimen name="gnt_default_margin">10dp</dimen>
     <dimen name="gnt_small_margin">5dp</dimen>
+    <dimen name="gnt_extra_small_margin">2.5dp</dimen>
     <dimen name="gnt_no_margin">0dp</dimen>
     <dimen name="gnt_no_size">0dp</dimen>
 

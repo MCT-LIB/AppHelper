@@ -26,21 +26,14 @@
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="8dp">
+                android:layout_marginHorizontal="8dp"
+                android:layout_weight="1">
 
                 <androidx.appcompat.widget.AppCompatTextView
                     android:id="@+id/ad_notification_view"
-                    android:layout_width="@dimen/gnt_ad_indicator_width"
-                    android:layout_height="@dimen/gnt_ad_indicator_height"
-                    android:background="@drawable/gnt_rounded_corners_shape"
-                    android:gravity="center"
-                    android:text="Ad"
-                    android:textColor="@color/gnt_ad_green"
-                    android:textSize="@dimen/gnt_ad_indicator_text_size"
-                    android:textStyle="bold"
+                    style="@style/GntAdIndicator"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    tools:ignore="HardcodedText" />
+                    app:layout_constraintTop_toTopOf="parent" />
 
                 <androidx.appcompat.widget.AppCompatTextView
                     android:id="@+id/primary"

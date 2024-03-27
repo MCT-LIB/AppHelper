@@ -7,7 +7,9 @@ public enum NativeTemplate {
     SMALL(R.layout.gnt_template_view_small),
     MEDIUM(R.layout.gnt_template_view_medium),
     LARGE(R.layout.gnt_template_view_large),
-    A4_PAGE(R.layout.gnt_template_view_a4);
+    SMALL_A4(R.layout.gnt_template_view_small_a4),
+    SMALL_RECT(R.layout.gnt_template_view_small_rect),
+    SMALL_SQUARE(R.layout.gnt_template_view_small_square);
 
     public final int layoutRes;
 

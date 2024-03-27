@@ -19,34 +19,53 @@
         android:paddingTop="12dp"
         android:paddingBottom="24dp">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_linear"
-            android:layout_width="match_parent"
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Linear" />
+            android:orientation="vertical">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_style_1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Style 1" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_style_3"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Style 3" />
+
+        </androidx.appcompat.widget.LinearLayoutCompat>
 
         <Space
             android:layout_width="8dp"
             android:layout_height="0dp" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_grid_1"
-            android:layout_width="match_parent"
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Grid 1" />
+            android:orientation="vertical">
 
-        <Space
-            android:layout_width="8dp"
-            android:layout_height="0dp" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_style_2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Style 2" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_grid_2"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Grid 2" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_style_4"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Style 4" />
+
+        </androidx.appcompat.widget.LinearLayoutCompat>
 
     </androidx.appcompat.widget.LinearLayoutCompat>
 
