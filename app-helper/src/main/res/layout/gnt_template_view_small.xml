@@ -67,16 +67,11 @@
 
             <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/cta"
+                style="@style/GntCtaButton"
                 android:layout_width="wrap_content"
                 android:layout_height="36dp"
                 android:layout_gravity="center_vertical"
-                android:background="@drawable/gnt_cta_background"
-                android:gravity="center"
                 android:minWidth="80dp"
-                android:paddingHorizontal="8dp"
-                android:textColor="@color/gnt_white"
-                android:textSize="@dimen/gnt_text_size_small"
-                android:textStyle="bold"
                 tools:text="@tools:sample/lorem" />
 
         </androidx.appcompat.widget.LinearLayoutCompat>

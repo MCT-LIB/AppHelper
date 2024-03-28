@@ -5,21 +5,32 @@
         <attr name="gnt_template" format="reference" />
     </declare-styleable>
 
-    <style name="GntAdIndicator">
+    <style name="GntAdIndicator" parent="Widget.AppCompat.TextView">
         <item name="android:layout_width">@dimen/gnt_ad_indicator_width</item>
         <item name="android:layout_height">@dimen/gnt_ad_indicator_height</item>
         <item name="android:background">@drawable/gnt_rounded_corners_shape</item>
         <item name="android:gravity">center</item>
-        <item name="android:textColor">@color/gnt_ad_green</item>
+        <item name="android:textColor">@color/gnt_ad_indicator_foreground</item>
         <item name="android:textSize">@dimen/gnt_ad_indicator_text_size</item>
         <item name="android:textStyle">bold</item>
         <item name="android:text">Ad</item>
     </style>
 
+    <style name="GntCtaButton" parent="Widget.AppCompat.Button.Borderless">
+        <item name="android:background">@drawable/gnt_cta_background</item>
+        <item name="android:gravity">center</item>
+        <item name="android:lines">1</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textColor">@color/gnt_white</item>
+        <item name="android:textSize">@dimen/gnt_text_size_small</item>
+        <item name="android:paddingStart">@dimen/gnt_default_margin</item>
+        <item name="android:paddingEnd">@dimen/gnt_default_margin</item>
+    </style>
+
     <dimen name="gnt_text_size_extra_small">10sp</dimen>
     <dimen name="gnt_text_size_small">12sp</dimen>
     <dimen name="gnt_text_size_large">14sp</dimen>
-    <dimen name="gnt_ad_indicator_width">25dp</dimen>
+    <dimen name="gnt_ad_indicator_width">24dp</dimen>
     <dimen name="gnt_ad_indicator_height">20dp</dimen>
     <dimen name="gnt_ad_indicator_text_size">10sp</dimen>
     <dimen name="gnt_default_margin">10dp</dimen>
@@ -28,13 +39,14 @@
     <dimen name="gnt_no_margin">0dp</dimen>
     <dimen name="gnt_no_size">0dp</dimen>
 
+    <color name="gnt_ad_indicator_foreground">#3A6728</color>
+    <color name="gnt_ad_indicator_background">#EFFFF1</color>
     <color name="gnt_black">#000000</color>
     <color name="gnt_white">#FFFFFF</color>
     <color name="gnt_red">#FF0000</color>
     <color name="gnt_yellow">#FBC02D</color>
     <color name="gnt_green">#00FF00</color>
     <color name="gnt_blue">#4285f4</color>
-    <color name="gnt_ad_green">#3A6728</color>
     <color name="gnt_gray">#808080</color>
     <color name="gnt_outline">#E0E0E0</color>
 </resources>
