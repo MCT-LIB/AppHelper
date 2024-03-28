@@ -18,10 +18,16 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.ViewHolder> {
 
     private final int layoutRes;
     private final List<User> users;
+    private final OnItemClickListener onItemClickListener;
 
     public UserAdapter(int layoutRes, List<User> users) {
+        this(layoutRes, users, null);
+    }
+
+    public UserAdapter(int layoutRes, List<User> users, OnItemClickListener onItemClickListener) {
         this.layoutRes = layoutRes;
         this.users = users;
+        this.onItemClickListener = onItemClickListener;
     }
 
     @NonNull
@@ -38,6 +44,11 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.ViewHolder> {
             return;
         }
         holder.tvName.setText(user.getName());
+        holder.imgAvatar.setOnClickListener(v -> {
+            if (onItemClickListener != null) {
+                onItemClickListener.onItemClick(user, holder.getBindingAdapterPosition());
+            }
+        });
     }
 
     @Override
@@ -55,5 +66,9 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.ViewHolder> {
             imgAvatar = itemView.findViewById(R.id.img_avatar);
             tvName = itemView.findViewById(R.id.tv_name);
         }
+    }
+
+    public interface OnItemClickListener {
+        void onItemClick(User user, int position);
     }
 }

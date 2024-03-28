@@ -2,7 +2,9 @@ package com.mct.app.helper.native_rcv;
 
 import android.graphics.Color;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -24,16 +26,17 @@ import java.util.List;
 
 public class NativeRecyclerActivity extends AppCompatActivity {
 
-    NativeAdsAdapter adapter;
-
-    private RecyclerView rcvData;
+    private List<User> users;
+    private RecyclerView rcvUser;
+    private NativeAdsAdapter adapter;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_native_recycler);
 
-        rcvData = findViewById(R.id.rcv_data);
+        users = getListUser();
+        rcvUser = findViewById(R.id.rcv_user);
 
         findViewById(R.id.btn_style_1).setOnClickListener(this::onClick);
         findViewById(R.id.btn_style_2).setOnClickListener(this::onClick);
@@ -46,21 +49,35 @@ public class NativeRecyclerActivity extends AppCompatActivity {
         String adsUnitId = Constant.NATIVE_ID;
         int numberOfAds = 3;
         if (view.getId() == R.id.btn_style_1) {
-            adapter = new NativeAdsAdapter.Builder(new UserAdapter(R.layout.item_user, getListUser()), adsUnitId, numberOfAds)
+            UserAdapter userAdapter = new UserAdapter(R.layout.item_user, users, (user, position) -> {
+                String msg = "Clicked " + user.getName()
+                        + " position in rcv " + position
+                        + " position in list " + adapter.convertAdPositionToOriginPosition(position);
+                showToast(msg);
+                Log.e("ddd", msg);
+            });
+            adapter = new NativeAdsAdapter.Builder(userAdapter, adsUnitId, numberOfAds)
                     .setNativeTemplate(NativeTemplate.SMALL)
                     .setAdsItemConfig(3, 3)
                     .build();
-            rcvData.setAdapter(adapter);
-            rcvData.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
+            rcvUser.setAdapter(adapter);
+            rcvUser.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
             setItemDecoration(null);
             return;
         }
         if (view.getId() == R.id.btn_style_2) {
-            adapter = new NativeAdsAdapter.Builder(new UserAdapter(R.layout.item_user, getListUser()), adsUnitId, numberOfAds)
+            UserAdapter userAdapter = new UserAdapter(R.layout.item_user, users, (user, position) -> {
+                String msg = "Clicked " + user.getName()
+                        + " position in rcv " + position
+                        + " position in list " + adapter.convertAdPositionToOriginPosition(position);
+                showToast(msg);
+                Log.e("ddd", msg);
+            });
+            adapter = new NativeAdsAdapter.Builder(userAdapter, adsUnitId, numberOfAds)
                     .setNativeTemplate(NativeTemplate.MEDIUM)
                     .setAdsItemConfig(6, 1)
                     .build();
-            rcvData.setAdapter(adapter);
+            rcvUser.setAdapter(adapter);
             GridLayoutManager grid = new GridLayoutManager(getApplicationContext(), 2);
             grid.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
                 @Override
@@ -71,18 +88,25 @@ public class NativeRecyclerActivity extends AppCompatActivity {
                     return 1;
                 }
             });
-            rcvData.setLayoutManager(grid);
+            rcvUser.setLayoutManager(grid);
             setItemDecoration(null);
             return;
         }
         if (view.getId() == R.id.btn_style_3) {
-            adapter = new NativeAdsAdapter.Builder(new UserAdapter(R.layout.item_user_a4, getListUser()), adsUnitId, numberOfAds)
+            UserAdapter userAdapter = new UserAdapter(R.layout.item_user_a4, users, (user, position) -> {
+                String msg = "Clicked " + user.getName()
+                        + " position in rcv " + position
+                        + " position in list " + adapter.convertAdPositionToOriginPosition(position);
+                showToast(msg);
+                Log.e("ddd", msg);
+            });
+            adapter = new NativeAdsAdapter.Builder(userAdapter, adsUnitId, numberOfAds)
                     .setNativeTemplate(NativeTemplate.SMALL_A4)
                     .setAdsItemConfig(5, 3)
                     .build();
-            rcvData.setAdapter(adapter);
+            rcvUser.setAdapter(adapter);
             GridLayoutManager grid = new GridLayoutManager(getApplicationContext(), 2);
-            rcvData.setLayoutManager(grid);
+            rcvUser.setLayoutManager(grid);
             setItemDecoration(new GridSpacingItemDecoration(2, 24, true, 0));
             return;
         }
@@ -92,14 +116,21 @@ public class NativeRecyclerActivity extends AppCompatActivity {
                     .withCallToActionBackgroundColor(Color.parseColor("#ff0063"))
                     .withCallToActionCornerRadius(16)
                     .build();
-            adapter = new NativeAdsAdapter.Builder(new UserAdapter(R.layout.item_user_square, getListUser()), adsUnitId, numberOfAds)
+            UserAdapter userAdapter = new UserAdapter(R.layout.item_user_square, users, (user, position) -> {
+                String msg = "Clicked " + user.getName()
+                        + " position in rcv " + position
+                        + " position in list " + adapter.convertAdPositionToOriginPosition(position);
+                showToast(msg);
+                Log.e("ddd", msg);
+            });
+            adapter = new NativeAdsAdapter.Builder(userAdapter, adsUnitId, numberOfAds)
                     .setNativeTemplate(NativeTemplate.SMALL_SQUARE)
                     .setNativeTemplateStyle(style)
                     .setAdsItemConfig(5, 3)
                     .build();
-            rcvData.setAdapter(adapter);
+            rcvUser.setAdapter(adapter);
             GridLayoutManager grid = new GridLayoutManager(getApplicationContext(), 2);
-            rcvData.setLayoutManager(grid);
+            rcvUser.setLayoutManager(grid);
             setItemDecoration(new GridSpacingItemDecoration(2, 24, true, 0));
             return;
         }
@@ -108,15 +139,25 @@ public class NativeRecyclerActivity extends AppCompatActivity {
     private void setItemDecoration(RecyclerView.ItemDecoration decoration) {
         removeAllItemDecoration();
         if (decoration != null) {
-            rcvData.addItemDecoration(decoration);
-            rcvData.invalidateItemDecorations();
+            rcvUser.addItemDecoration(decoration);
+            rcvUser.invalidateItemDecorations();
         }
     }
 
     private void removeAllItemDecoration() {
-        for (int i = 0; i < rcvData.getItemDecorationCount(); i++) {
-            rcvData.removeItemDecorationAt(i);
+        for (int i = 0; i < rcvUser.getItemDecorationCount(); i++) {
+            rcvUser.removeItemDecorationAt(i);
         }
+    }
+
+    private Toast toast;
+
+    private void showToast(String message) {
+        if (toast != null) {
+            toast.cancel();
+        }
+        toast = Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT);
+        toast.show();
     }
 
     @NonNull

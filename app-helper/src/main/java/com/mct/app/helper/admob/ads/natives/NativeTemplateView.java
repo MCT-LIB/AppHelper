@@ -98,6 +98,10 @@ public class NativeTemplateView extends FrameLayout {
         return nativeAdView;
     }
 
+    public NativeAd getNativeAd() {
+        return nativeAd;
+    }
+
     public void setNativeAd(@NonNull NativeAd nativeAd) {
         this.nativeAd = nativeAd;
 

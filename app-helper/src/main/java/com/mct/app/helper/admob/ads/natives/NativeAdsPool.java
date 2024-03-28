@@ -1,6 +1,8 @@
 package com.mct.app.helper.admob.ads.natives;
 
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 
 import com.google.android.gms.ads.AdLoader;
 import com.google.android.gms.ads.AdRequest;
@@ -28,8 +30,9 @@ public class NativeAdsPool {
         if (AdsManager.getInstance().isPremium()) {
             adLoader = null;
         } else {
-            String id = AdsManager.getInstance().isDebug() ? AdsUtils.NATIVE_ID : adsUnitId;
-            adLoader = new AdLoader.Builder(context, id)
+            Handler handler = new Handler(Looper.getMainLooper());
+            String adsUnit = AdsManager.getInstance().isDebug() ? AdsUtils.NATIVE_ID : adsUnitId;
+            adLoader = new AdLoader.Builder(context, adsUnit)
                     .withNativeAdOptions(new NativeAdOptions.Builder()
                             .setVideoOptions(new VideoOptions.Builder().setStartMuted(true).build())
                             .build())
@@ -39,9 +42,12 @@ public class NativeAdsPool {
                         } else {
                             nativeAd.setOnPaidEventListener(AdsManager.getInstance().getOnPaidEventListener());
                             nativeAdsList.addLast(nativeAd);
-                            if (onPoolRefreshedListener != null) {
-                                onPoolRefreshedListener.onPoolRefreshed();
-                            }
+                            handler.removeCallbacksAndMessages(null);
+                            handler.postDelayed(() -> {
+                                if (onPoolRefreshedListener != null) {
+                                    onPoolRefreshedListener.onPoolRefreshed();
+                                }
+                            }, 100);
                         }
                     }).build();
         }
@@ -64,6 +70,10 @@ public class NativeAdsPool {
     public void dispose() {
         isDispose = true;
         clearAds();
+    }
+
+    public boolean isDispose() {
+        return isDispose;
     }
 
     public boolean isAdsUnavailable() {

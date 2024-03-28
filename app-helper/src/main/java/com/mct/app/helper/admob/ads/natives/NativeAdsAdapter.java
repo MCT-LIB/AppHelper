@@ -70,7 +70,7 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         if (viewType == TYPE_NATIVE_ADS) {
-            return new AdViewHolder(parent, itemContainerLayoutRes, itemContainerId, templateLayoutRes);
+            return new AdViewHolder(parent, itemContainerLayoutRes, itemContainerId, templateLayoutRes, templateStyle);
         }
         return super.onCreateViewHolder(parent, viewType);
     }
@@ -80,7 +80,7 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
         if (holder instanceof AdViewHolder) {
             AdViewHolder adViewHolder = (AdViewHolder) holder;
             if (adViewHolder.isUnbindAds()) {
-                adViewHolder.setNativeAd(nativeAdsPool.get(), templateStyle);
+                adViewHolder.setNativeAd(nativeAdsPool.get());
             }
             if (holder.isRecyclable()) {
                 boundViewHolders.add((AdViewHolder) holder);
@@ -140,7 +140,7 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
     private void updateNativeAdsHolders() {
         boundViewHolders.stream()
                 .filter(AdViewHolder::isUnbindAds)
-                .forEach(holder -> holder.setNativeAd(nativeAdsPool.get(), templateStyle));
+                .forEach(holder -> holder.setNativeAd(nativeAdsPool.get()));
     }
 
     private static class AdViewHolder extends RecyclerView.ViewHolder {
@@ -148,24 +148,22 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
         private final View loadingView;
         private final NativeTemplateView templateView;
 
-        private AdViewHolder(ViewGroup parent, int itemContainerLayoutRes, int itemContainerId, int templateLayoutRes) {
+        private AdViewHolder(ViewGroup parent,
+                             int itemContainerLayoutRes, int itemContainerId,
+                             int templateLayoutRes, NativeTemplateStyle templateStyle) {
             super(createItemView(parent, itemContainerLayoutRes));
             ViewGroup container = itemView.findViewById(itemContainerId);
             container.addView(loadingView = createLoadingView(itemView.getContext()));
-            container.addView(templateView = new NativeTemplateView(parent.getContext(), templateLayoutRes),
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-            );
-            hideItemView();
+            container.addView(templateView = createTemplateView(itemView.getContext(), templateLayoutRes, templateStyle));
+            hideTemplateView();
         }
 
-        private void setNativeAd(NativeAd nativeAd, NativeTemplateStyle templateStyle) {
+        private void setNativeAd(NativeAd nativeAd) {
             if (nativeAd != null) {
                 templateView.setNativeAd(nativeAd);
-                templateView.setStyles(templateStyle);
-                showItemView();
+                showTemplateView();
             } else {
-                hideItemView();
+                hideTemplateView();
             }
         }
 
@@ -173,12 +171,12 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
             return templateView.getVisibility() != View.VISIBLE;
         }
 
-        private void hideItemView() {
+        private void hideTemplateView() {
             templateView.setVisibility(View.INVISIBLE);
             loadingView.setVisibility(View.VISIBLE);
         }
 
-        private void showItemView() {
+        private void showTemplateView() {
             templateView.setVisibility(View.VISIBLE);
             loadingView.setVisibility(View.INVISIBLE);
         }
@@ -186,6 +184,17 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
         private static View createItemView(@NonNull ViewGroup parent, int itemContainerLayoutRes) {
             LayoutInflater inflater = LayoutInflater.from(parent.getContext());
             return inflater.inflate(itemContainerLayoutRes, parent, false);
+        }
+
+        @NonNull
+        private static NativeTemplateView createTemplateView(Context context, int templateLayoutRes, NativeTemplateStyle templateStyle) {
+            NativeTemplateView templateView = new NativeTemplateView(context, templateLayoutRes);
+            templateView.setStyles(templateStyle);
+            templateView.setLayoutParams(new ViewGroup.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+            ));
+            return templateView;
         }
 
         @NonNull
