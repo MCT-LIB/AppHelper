@@ -10,7 +10,6 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.ItemTouchHelper;
-import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.mct.app.helper.Constant;
@@ -18,6 +17,8 @@ import com.mct.app.helper.R;
 import com.mct.app.helper.admob.ads.natives.NativeAdsAdapter;
 import com.mct.app.helper.admob.ads.natives.NativeTemplate;
 import com.mct.app.helper.admob.ads.natives.NativeTemplateStyle;
+import com.mct.app.helper.admob.ads.natives.manager.NpaGridLayoutManager;
+import com.mct.app.helper.admob.ads.natives.manager.NpaLinearLayoutManager;
 import com.mct.app.helper.native_rcv.adapter.GridSpacingItemDecoration;
 import com.mct.app.helper.native_rcv.adapter.UserAdapter;
 
@@ -42,7 +43,7 @@ public class NativeRecyclerActivity extends AppCompatActivity {
     }
 
     private void initData() {
-        rcvData = findViewById(R.id.rcv_data);
+        rcvData = findViewById(R.id.rcv_user);
         touchHelper = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(
                 ItemTouchHelper.UP | ItemTouchHelper.DOWN | ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT, 0) {
 
@@ -108,7 +109,7 @@ public class NativeRecyclerActivity extends AppCompatActivity {
                     .setAdsItemConfig(3, 3)
                     .build();
             rcvData.setAdapter(adapter);
-            rcvData.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
+            rcvData.setLayoutManager(new NpaLinearLayoutManager(getApplicationContext()));
             setItemDecoration(null);
             return;
         }
@@ -118,7 +119,7 @@ public class NativeRecyclerActivity extends AppCompatActivity {
                     .setAdsItemConfig(6, 1)
                     .build();
             rcvData.setAdapter(adapter);
-            GridLayoutManager grid = new GridLayoutManager(getApplicationContext(), 2);
+            GridLayoutManager grid = new NpaGridLayoutManager(getApplicationContext(), 2);
             grid.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
                 @Override
                 public int getSpanSize(int position) {
@@ -138,7 +139,7 @@ public class NativeRecyclerActivity extends AppCompatActivity {
                     .setAdsItemConfig(5, 3)
                     .build();
             rcvData.setAdapter(adapter);
-            GridLayoutManager grid = new GridLayoutManager(getApplicationContext(), 2);
+            GridLayoutManager grid = new NpaGridLayoutManager(getApplicationContext(), 2);
             rcvData.setLayoutManager(grid);
             setItemDecoration(new GridSpacingItemDecoration(2, 24, true, 0));
             return;
@@ -155,7 +156,7 @@ public class NativeRecyclerActivity extends AppCompatActivity {
                     .setAdsItemConfig(5, 3)
                     .build();
             rcvData.setAdapter(adapter);
-            GridLayoutManager grid = new GridLayoutManager(getApplicationContext(), 2);
+            GridLayoutManager grid = new NpaGridLayoutManager(getApplicationContext(), 2);
             rcvData.setLayoutManager(grid);
             setItemDecoration(new GridSpacingItemDecoration(2, 24, true, 0));
             return;
