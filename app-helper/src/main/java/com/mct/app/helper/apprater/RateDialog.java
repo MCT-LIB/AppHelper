@@ -6,7 +6,7 @@ public interface RateDialog {
 
     void setOnRateLaterListener(Runnable listener);
 
-    void setOnNoThanksListener(Runnable listener);
+    void setDontShowAgainListener(Runnable listener);
 
     void setDontRemindButtonVisible(boolean visible);
 

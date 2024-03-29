@@ -1,6 +1,5 @@
 package com.mct.app.helper.apprater;
 
-
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
@@ -8,7 +7,7 @@ import android.content.pm.PackageManager;
 
 import androidx.annotation.NonNull;
 
-public final class ApplicationRatingInfo {
+class AppInfo {
 
     private String applicationName;
     private String applicationVersionName;
@@ -26,17 +25,16 @@ public final class ApplicationRatingInfo {
         return applicationVersionCode;
     }
 
-    private ApplicationRatingInfo() {
+    private AppInfo() {
     }
 
     @NonNull
-    public static ApplicationRatingInfo createApplicationInfo(@NonNull Context context) {
+    public static AppInfo createApplicationInfo(@NonNull Context context) {
         PackageManager packageManager = context.getPackageManager();
-        ApplicationRatingInfo resultInfo = new ApplicationRatingInfo();
+        AppInfo resultInfo = new AppInfo();
         try {
-        ApplicationInfo applicationInfo = packageManager.getApplicationInfo(context.getApplicationInfo().packageName, 0);
-        PackageInfo packageInfo = packageManager.getPackageInfo(context.getApplicationInfo().packageName, 0);
-
+            ApplicationInfo applicationInfo = packageManager.getApplicationInfo(context.getApplicationInfo().packageName, 0);
+            PackageInfo packageInfo = packageManager.getPackageInfo(context.getApplicationInfo().packageName, 0);
             resultInfo.applicationName = packageManager.getApplicationLabel(applicationInfo).toString();
             resultInfo.applicationVersionName = packageInfo.versionName;
             resultInfo.applicationVersionCode = packageInfo.versionCode;

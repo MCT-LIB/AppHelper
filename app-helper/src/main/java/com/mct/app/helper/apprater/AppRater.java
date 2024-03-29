@@ -1,228 +1,138 @@
 package com.mct.app.helper.apprater;
 
-
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
+import android.net.Uri;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.core.util.Supplier;
 
-/**
- * @noinspection unused
- */
+import java.util.function.Function;
+
 public class AppRater {
 
     private static final String TAG = "AppRater";
+    private static String marketLink;
+    private static String packageName;
+    private static Uri marketUri;
+    private static Function<Context, RateDialog> rateDialogProvider;
 
-    // Preference Constants
-    private final static String PREF_NAME = "AppRater";
-    private final static String PREF_LAUNCH_COUNT = "launch_count";
-    private final static String PREF_FIRST_LAUNCHED = "date_first_launch";
-    private final static String PREF_DONT_SHOW_AGAIN = "dont_show_again";
-    private final static String PREF_REMIND_LATER = "remind_me_later";
-    private final static String PREF_APP_VERSION_NAME = "app_version_name";
-    private final static String PREF_APP_VERSION_CODE = "app_version_code";
-
-    private final static int DAYS_UNTIL_PROMPT = 3;
-    private final static int LAUNCHES_UNTIL_PROMPT = 7;
-    private static int DAYS_UNTIL_PROMPT_FOR_REMIND_LATER = 3;
-    private static int LAUNCHES_UNTIL_PROMPT_FOR_REMIND_LATER = 7;
-    private static boolean hideNoButton;
-    private static boolean isVersionNameCheckEnabled;
-    private static boolean isVersionCodeCheckEnabled;
-    private static boolean isCancelable = true;
-
-    private static Market market = new GoogleMarket();
-    private static Supplier<RateDialog> rateDialogSupplier;
-
-    /**
-     * Decides if the version name check is active or not
-     */
-    public static void setVersionNameCheckEnabled(boolean versionNameCheck) {
-        isVersionNameCheckEnabled = versionNameCheck;
+    public static void setMarketLink(String marketLink) {
+        AppRater.marketLink = marketLink;
     }
 
-    /**
-     * Decides if the version code check is active or not
-     */
-    public static void setVersionCodeCheckEnabled(boolean versionCodeCheck) {
-        isVersionCodeCheckEnabled = versionCodeCheck;
+    public static void setPackageName(String packageName) {
+        AppRater.packageName = packageName;
     }
 
-    /**
-     * sets number of day until rating dialog pops up for next time when remind
-     * me later option is chosen
-     */
-    public static void setNumDaysForRemindLater(int daysUntilPromt) {
-        DAYS_UNTIL_PROMPT_FOR_REMIND_LATER = daysUntilPromt;
+    public static void setMarketUri(Uri marketUri) {
+        AppRater.marketUri = marketUri;
     }
 
-    /**
-     * sets the number of launches until the rating dialog pops up for next time
-     * when remind me later option is chosen
-     */
-    public static void setNumLaunchesForRemindLater(int launchesUntilPrompt) {
-
-        LAUNCHES_UNTIL_PROMPT_FOR_REMIND_LATER = launchesUntilPrompt;
+    public static void setRateDialogProvider(Function<Context, RateDialog> rateDialogProvider) {
+        AppRater.rateDialogProvider = rateDialogProvider;
     }
 
-    /**
-     * decides if No thanks button appear in dialog or not
-     */
-    public static void setDontRemindButtonVisible(boolean isNoButtonVisible) {
-        AppRater.hideNoButton = isNoButtonVisible;
-    }
+    public static void launched(@NonNull Context context, @NonNull RateConfig config) {
+        RatePreference preference = new RatePreference(context, config.getUniqueName());
+        AppInfo ratingInfo = AppInfo.createApplicationInfo(context);
 
-    /**
-     * sets whether the rating dialog is cancelable or not, default is true.
-     */
-    public static void setCancelable(boolean cancelable) {
-        isCancelable = cancelable;
-    }
-
-    public static void setRateDialogSupplier(Supplier<RateDialog> rateDialogSupplier) {
-        AppRater.rateDialogSupplier = rateDialogSupplier;
-    }
-
-    /**
-     * Call this method at the end of your OnCreate method to determine whether
-     * to show the rate prompt using the specified or default day, launch count
-     * values and checking if the version is changed or not
-     */
-    public static void app_launched(Context context) {
-        app_launched(context, DAYS_UNTIL_PROMPT, LAUNCHES_UNTIL_PROMPT);
-    }
-
-    /**
-     * Call this method at the end of your OnCreate method to determine whether
-     * to show the rate prompt using the specified or default day, launch count
-     * values with additional day and launch parameter for remind me later option
-     * and checking if the version is changed or not
-     */
-    public static void app_launched(Context context, int daysUntilPrompt, int launchesUntilPrompt, int daysForRemind, int launchesForRemind) {
-        setNumDaysForRemindLater(daysForRemind);
-        setNumLaunchesForRemindLater(launchesForRemind);
-        app_launched(context, daysUntilPrompt, launchesUntilPrompt);
-    }
-
-    /**
-     * Call this method at the end of your OnCreate method to determine whether
-     * to show the rate prompt
-     */
-    public static void app_launched(Context context, int daysUntilPrompt, int launchesUntilPrompt) {
-        SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = prefs.edit();
-        ApplicationRatingInfo ratingInfo = ApplicationRatingInfo.createApplicationInfo(context);
-        int days;
-        int launches;
-        if (isVersionNameCheckEnabled) {
-            if (!ratingInfo.getApplicationVersionName().equals(prefs.getString(PREF_APP_VERSION_NAME, "none"))) {
-                resetData(context);
-                editor.putString(PREF_APP_VERSION_NAME, ratingInfo.getApplicationVersionName());
-                editor.apply();
+        // Check version name
+        if (config.isCheckVersionName()) {
+            if (!ratingInfo.getApplicationVersionName().equals(preference.getAppVersionName())) {
+                preference.resetData();
+                preference.setAppVersionName(ratingInfo.getApplicationVersionName());
             }
         }
-        if (isVersionCodeCheckEnabled) {
-            if (ratingInfo.getApplicationVersionCode() != (prefs.getInt(PREF_APP_VERSION_CODE, -1))) {
-                resetData(context);
-                editor.putInt(PREF_APP_VERSION_CODE, ratingInfo.getApplicationVersionCode());
-                editor.apply();
+        // Check version code
+        if (config.isCheckVersionCode()) {
+            if (ratingInfo.getApplicationVersionCode() != preference.getAppVersionCode()) {
+                preference.resetData();
+                preference.setAppVersionCode(ratingInfo.getApplicationVersionCode());
             }
         }
-        if (prefs.getBoolean(PREF_DONT_SHOW_AGAIN, false)) {
+        // Check dont show again
+        if (preference.getDontShowAgain()) {
             return;
-        } else if (prefs.getBoolean(PREF_REMIND_LATER, false)) {
-            days = DAYS_UNTIL_PROMPT_FOR_REMIND_LATER;
-            launches = LAUNCHES_UNTIL_PROMPT_FOR_REMIND_LATER;
+        }
+        // get condition values
+        long millisecond, launches;
+        if (preference.getRemindLater()) {
+            millisecond = config.getTimeUntilPromptForRemindLater();
+            launches = config.getLaunchesUntilPromptForRemindLater();
         } else {
-            days = daysUntilPrompt;
-            launches = launchesUntilPrompt;
+            millisecond = config.getTimeUntilPrompt();
+            launches = config.getLaunchesUntilPrompt();
         }
 
         // Increment launch counter
-        long launch_count = prefs.getLong(PREF_LAUNCH_COUNT, 0) + 1;
-        editor.putLong(PREF_LAUNCH_COUNT, launch_count);
+        long launchCount = preference.getLaunchCount() + 1;
+        preference.setLaunchCount(launchCount);
+
         // Get date of first launch
-        long date_firstLaunch = prefs.getLong(PREF_FIRST_LAUNCHED, 0);
-        if (date_firstLaunch == 0) {
-            date_firstLaunch = System.currentTimeMillis();
-            editor.putLong(PREF_FIRST_LAUNCHED, date_firstLaunch);
+        long firstLaunch = preference.getFirstLaunched();
+        if (firstLaunch == 0) {
+            firstLaunch = System.currentTimeMillis();
+            preference.setFirstLaunched(firstLaunch);
         }
-        editor.apply();
-        // Wait for at least the number of launches or the number of days used
-        // until prompt
-        if (launch_count >= launches || (System.currentTimeMillis() >= date_firstLaunch + ((long) days * 24 * 60 * 60 * 1000))) {
-            if (rateDialogSupplier != null) {
-                RateDialog dialog = AppRater.rateDialogSupplier.get();
-                dialog.setDontRemindButtonVisible(AppRater.hideNoButton);
-                dialog.setCancelable(AppRater.isCancelable);
-                dialog.setOnRateNowListener(() -> {
-                    rateNow(context);
-                    editor.putBoolean(PREF_DONT_SHOW_AGAIN, true).apply();
-                    dialog.dismiss();
-                });
-                dialog.setOnRateLaterListener(() -> {
-                    editor.putLong(PREF_FIRST_LAUNCHED, System.currentTimeMillis());
-                    editor.putLong(PREF_LAUNCH_COUNT, 0);
-                    editor.putBoolean(PREF_DONT_SHOW_AGAIN, false);
-                    editor.putBoolean(PREF_REMIND_LATER, true);
-                    editor.apply();
-                    dialog.dismiss();
-                });
-                dialog.setOnNoThanksListener(() -> {
-                    editor.putLong(PREF_FIRST_LAUNCHED, System.currentTimeMillis());
-                    editor.putLong(PREF_LAUNCH_COUNT, 0);
-                    editor.putBoolean(PREF_DONT_SHOW_AGAIN, true);
-                    editor.putBoolean(PREF_REMIND_LATER, false);
-                    editor.apply();
-                    dialog.dismiss();
-                });
-                dialog.show();
+
+        // Check if it's time to show
+        if (launchCount >= launches || System.currentTimeMillis() >= firstLaunch + millisecond) {
+            if (AppRater.rateDialogProvider == null) {
+                return;
             }
+
+            // Check max shown times
+            if (config.getMaxShownTimes() > 0) {
+                int shownCount = preference.getShownTimes();
+                if (shownCount >= config.getMaxShownTimes()) {
+                    return;
+                }
+                preference.setShownTimes(shownCount + 1);
+            }
+
+            // Show dialog
+            RateDialog dialog = AppRater.rateDialogProvider.apply(context);
+            dialog.setDontRemindButtonVisible(config.isShowDontRemind());
+            dialog.setCancelable(config.isCancelable());
+            dialog.setOnRateNowListener(() -> {
+                rateNow(context);
+                preference.setDontShowAgain(true);
+                dialog.dismiss();
+            });
+            dialog.setOnRateLaterListener(() -> {
+                preference.resetData();
+                preference.setRemindLater(true);
+                dialog.dismiss();
+            });
+            dialog.setDontShowAgainListener(() -> {
+                preference.resetData();
+                preference.setDontShowAgain(true);
+                dialog.dismiss();
+            });
+            dialog.show();
         }
     }
 
     /**
-     * Call this method directly if you want to show the rate prompt immediately
+     * Call this method directly if you want
      */
     public static void rateNow(@NonNull Context context) {
         try {
-            context.startActivity(new Intent(Intent.ACTION_VIEW, market.getMarketURI(context)));
+            context.startActivity(new Intent(Intent.ACTION_VIEW, getMarketUri(context)));
         } catch (ActivityNotFoundException e) {
             Log.e(TAG, "Market Intent not found", e);
         }
     }
 
-    public static void setPackageName(String packageName) {
-        AppRater.market.overridePackageName(packageName);
-    }
-
-    /**
-     * Set an alternate Market, defaults to Google Play
-     */
-    public static void setMarket(Market market) {
-        AppRater.market = market;
-    }
-
-    /**
-     * Get the currently set Market
-     *
-     * @return market
-     */
-    public static Market getMarket() {
-        return market;
-    }
-
-    public static void resetData(@NonNull Context context) {
-        SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = prefs.edit();
-        editor.putBoolean(PREF_DONT_SHOW_AGAIN, false);
-        editor.putBoolean(PREF_REMIND_LATER, false);
-        editor.putLong(PREF_LAUNCH_COUNT, 0);
-        editor.putLong(PREF_FIRST_LAUNCHED, System.currentTimeMillis());
-        editor.apply();
+    private static Uri getMarketUri(Context context) {
+        if (AppRater.marketUri != null) {
+            return AppRater.marketUri;
+        } else {
+            String mktLink = AppRater.marketLink != null ? AppRater.marketLink : "market://details?id=";
+            String pkgName = AppRater.packageName != null ? AppRater.packageName : context.getPackageName();
+            return Uri.parse(mktLink + pkgName);
+        }
     }
 }
