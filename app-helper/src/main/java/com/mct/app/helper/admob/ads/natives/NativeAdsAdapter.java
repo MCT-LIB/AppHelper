@@ -15,10 +15,40 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.gms.ads.nativead.NativeAd;
 import com.mct.app.helper.R;
+import com.mct.app.helper.admob.ads.natives.manager.NpaGridLayoutManager;
+import com.mct.app.helper.admob.ads.natives.manager.NpaLinearLayoutManager;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+/**
+ * RecyclerView adapter for displaying native ads alongside regular content.
+ * <p>
+ * This adapter extends RecyclerViewAdapterWrapper to wrap your adapter
+ * and seamlessly integrate native ad items into the regular content displayed by the RecyclerView.
+ * </p>
+ * <b>How to use:</b>
+ * <pre>
+ * NativeTemplateStyle style = new NativeTemplateStyle.Builder()
+ *     .withMainBackgroundColor(Color.parseColor("#fafafa"))
+ *     .withCallToActionBackgroundColor(Color.parseColor("#4285f4"))
+ *     .withCallToActionCornerRadius(ScreenUtils.dp2px(2))
+ *     .build();
+ * NativeAdsAdapter adapter = new NativeAdsAdapter.Builder(yourAdapter, Constant.NATIVE_ID, 3)
+ *     .setNativeTemplate(NativeTemplate.SMALL_A4)
+ *     .setNativeTemplateStyle(style)
+ *     //.setItemContainerLayoutRes(_yourItemContainerLayoutRes)
+ *     //.setItemContainerId(_yourItemContainerId)
+ *     .setAdsItemConfig(3, 3)
+ *     .build();
+ * recyclerView.setAdapter(adapter);
+ * recyclerView.setLayoutManager(new NpaGridLayoutManager(recyclerView.getContext(), 2));
+ * </pre>
+ * <b>Note:</b>
+ * if you get the error {@link IndexOutOfBoundsException} "Inconsistency detected.
+ * Invalid view holder adapter position...",
+ * please use {@link NpaLinearLayoutManager} or {@link NpaGridLayoutManager}
+ */
 public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
 
     public static final int TYPE_ADS = 9999;
@@ -121,7 +151,6 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
     public void onViewRecycled(@NonNull RecyclerView.ViewHolder holder) {
         if (holder instanceof AdViewHolder) {
             boundAdsViewHolders.remove(holder);
-            return;
         }
         super.onViewRecycled(holder);
     }
