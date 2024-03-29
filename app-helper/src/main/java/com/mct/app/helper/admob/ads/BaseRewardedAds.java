@@ -26,7 +26,7 @@ public abstract class BaseRewardedAds<Ads> extends BaseFullScreenAds<Ads> {
             );
             return;
         }
-        if (isCanShowAds()) {
+        if (isCanShowAds() && validateActivityToShow(activity)) {
             setShowing(true);
             onShowAds(activity, getAds(), new FullScreenContentCallbackImpl(this, activity.getApplicationContext(), callback), onUserEarnedReward);
         } else {

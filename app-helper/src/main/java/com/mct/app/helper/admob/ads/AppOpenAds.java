@@ -6,6 +6,7 @@ import android.content.Context;
 import androidx.annotation.NonNull;
 
 import com.google.android.gms.ads.AdLoadCallback;
+import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.FullScreenContentCallback;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.appopen.AppOpenAd;
@@ -42,4 +43,8 @@ public class AppOpenAds extends BaseFullScreenAds<AppOpenAd> {
         appOpenAd.show(activity);
     }
 
+    @Override
+    public AdRequest getAdRequest() {
+        return new AdRequest.Builder().setHttpTimeoutMillis(8000).build();
+    }
 }

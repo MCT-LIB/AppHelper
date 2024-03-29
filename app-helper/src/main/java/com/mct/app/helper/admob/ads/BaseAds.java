@@ -1,5 +1,6 @@
 package com.mct.app.helper.admob.ads;
 
+import android.app.Activity;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
@@ -197,6 +198,10 @@ public abstract class BaseAds<Ads> {
                 adsLoadDisposable = null;
             }
         }
+    }
+
+    protected static boolean validateActivityToShow(Activity activity) {
+        return activity != null && !activity.isFinishing() && !activity.isDestroyed();
     }
 
     protected static void invokeCallback(Callback callback) {
