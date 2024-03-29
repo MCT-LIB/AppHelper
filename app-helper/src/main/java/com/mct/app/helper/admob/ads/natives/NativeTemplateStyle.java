@@ -7,69 +7,32 @@ import android.graphics.Typeface;
  */
 public class NativeTemplateStyle {
 
-    // Call to action typeface.
     private Typeface callToActionTextTypeface;
-
-    // Size of call to action text.
     private float callToActionTextSize;
-
-    // Call to action typeface color in the form 0xAARRGGBB.
-    private Integer callToActionTypefaceColor;
-
-    // Call to action background color.
+    private Integer callToActionColor;
     private Integer callToActionBackgroundColor;
-    // Call to action ripple color.
     private Integer callToActionRippleColor;
-    // Call to action corner radius.
     private Integer callToActionCornerRadius;
 
-    // All templates have a primary text area which is populated by the native ad's headline.
-
-    // Primary text typeface.
     private Typeface primaryTextTypeface;
-
-    // Size of primary text.
     private float primaryTextSize;
-
-    // Primary text typeface color in the form 0xAARRGGBB.
-    private Integer primaryTextTypefaceColor;
-
-    // Primary text background color.
+    private Integer primaryTextColor;
     private Integer primaryTextBackgroundColor;
 
-    // The typeface, typeface color, and background color for the second row of text in the template.
-    // All templates have a secondary text area which is populated either by the body of the ad or
-    // by the rating of the app.
-
-    // Secondary text typeface.
     private Typeface secondaryTextTypeface;
-
-    // Size of secondary text.
     private float secondaryTextSize;
-
-    // Secondary text typeface color in the form 0xAARRGGBB.
-    private Integer secondaryTextTypefaceColor;
-
-    // Secondary text background color.
+    private Integer secondaryTextColor;
     private Integer secondaryTextBackgroundColor;
 
-    // The typeface, typeface color, and background color for the third row of text in the template.
-    // The third row is used to display store name or the default tertiary text.
-
-    // Tertiary text typeface.
     private Typeface tertiaryTextTypeface;
-
-    // Size of tertiary text.
     private float tertiaryTextSize;
-
-    // Tertiary text typeface color in the form 0xAARRGGBB.
-    private Integer tertiaryTextTypefaceColor;
-
-    // Tertiary text background color.
+    private Integer tertiaryTextColor;
     private Integer tertiaryTextBackgroundColor;
 
-    // The background color for the bulk of the ad.
+    // The background color of the ad.
     private Integer mainBackgroundColor;
+    private Integer adIndicatorTint;
+    private Integer ratingBarTint;
 
     private NativeTemplateStyle() {
     }
@@ -82,8 +45,8 @@ public class NativeTemplateStyle {
         return callToActionTextSize;
     }
 
-    public Integer getCallToActionTypefaceColor() {
-        return callToActionTypefaceColor;
+    public Integer getCallToActionColor() {
+        return callToActionColor;
     }
 
     public Integer getCallToActionBackgroundColor() {
@@ -106,8 +69,8 @@ public class NativeTemplateStyle {
         return primaryTextSize;
     }
 
-    public Integer getPrimaryTextTypefaceColor() {
-        return primaryTextTypefaceColor;
+    public Integer getPrimaryTextColor() {
+        return primaryTextColor;
     }
 
     public Integer getPrimaryTextBackgroundColor() {
@@ -122,8 +85,8 @@ public class NativeTemplateStyle {
         return secondaryTextSize;
     }
 
-    public Integer getSecondaryTextTypefaceColor() {
-        return secondaryTextTypefaceColor;
+    public Integer getSecondaryTextColor() {
+        return secondaryTextColor;
     }
 
     public Integer getSecondaryTextBackgroundColor() {
@@ -138,8 +101,8 @@ public class NativeTemplateStyle {
         return tertiaryTextSize;
     }
 
-    public Integer getTertiaryTextTypefaceColor() {
-        return tertiaryTextTypefaceColor;
+    public Integer getTertiaryTextColor() {
+        return tertiaryTextColor;
     }
 
     public Integer getTertiaryTextBackgroundColor() {
@@ -148,6 +111,14 @@ public class NativeTemplateStyle {
 
     public Integer getMainBackgroundColor() {
         return mainBackgroundColor;
+    }
+
+    public Integer getAdIndicatorTint() {
+        return adIndicatorTint;
+    }
+
+    public Integer getRatingBarTint() {
+        return ratingBarTint;
     }
 
     /**
@@ -171,8 +142,8 @@ public class NativeTemplateStyle {
             return this;
         }
 
-        public Builder withCallToActionTypefaceColor(int callToActionTypefaceColor) {
-            this.styles.callToActionTypefaceColor = callToActionTypefaceColor;
+        public Builder withCallToActionColor(int callToActionColor) {
+            this.styles.callToActionColor = callToActionColor;
             return this;
         }
 
@@ -201,8 +172,8 @@ public class NativeTemplateStyle {
             return this;
         }
 
-        public Builder withPrimaryTextTypefaceColor(int primaryTextTypefaceColor) {
-            this.styles.primaryTextTypefaceColor = primaryTextTypefaceColor;
+        public Builder withPrimaryTextColor(int primaryTextColor) {
+            this.styles.primaryTextColor = primaryTextColor;
             return this;
         }
 
@@ -221,8 +192,8 @@ public class NativeTemplateStyle {
             return this;
         }
 
-        public Builder withSecondaryTextTypefaceColor(int secondaryTextTypefaceColor) {
-            this.styles.secondaryTextTypefaceColor = secondaryTextTypefaceColor;
+        public Builder withSecondaryTextColor(int secondaryTextColor) {
+            this.styles.secondaryTextColor = secondaryTextColor;
             return this;
         }
 
@@ -241,8 +212,8 @@ public class NativeTemplateStyle {
             return this;
         }
 
-        public Builder withTertiaryTextTypefaceColor(int tertiaryTextTypefaceColor) {
-            this.styles.tertiaryTextTypefaceColor = tertiaryTextTypefaceColor;
+        public Builder withTertiaryTextColor(int tertiaryTextColor) {
+            this.styles.tertiaryTextColor = tertiaryTextColor;
             return this;
         }
 
@@ -253,6 +224,16 @@ public class NativeTemplateStyle {
 
         public Builder withMainBackgroundColor(int mainBackgroundColor) {
             this.styles.mainBackgroundColor = mainBackgroundColor;
+            return this;
+        }
+
+        public Builder withAdIndicatorTint(int adIndicatorTint) {
+            this.styles.adIndicatorTint = adIndicatorTint;
+            return this;
+        }
+
+        public Builder withRatingBarTint(int ratingBarTint) {
+            this.styles.ratingBarTint = ratingBarTint;
             return this;
         }
 

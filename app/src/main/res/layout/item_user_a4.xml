@@ -45,7 +45,7 @@
             android:gravity="center_horizontal"
             android:maxLines="2"
             android:padding="8dp"
-            android:textColor="@color/gnt_gray"
+            android:textColor="@color/gnt_primary_text_color"
             android:textSize="@dimen/gnt_text_size_large"
             android:textStyle="bold"
             app:layout_constraintEnd_toEndOf="parent"

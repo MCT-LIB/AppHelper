@@ -6,11 +6,12 @@
     </declare-styleable>
 
     <style name="GntAdIndicator" parent="Widget.AppCompat.TextView">
+        <item name="android:id">@id/gnt_indicator_view</item>
         <item name="android:layout_width">@dimen/gnt_ad_indicator_width</item>
         <item name="android:layout_height">@dimen/gnt_ad_indicator_height</item>
-        <item name="android:background">@drawable/gnt_rounded_corners_shape</item>
+        <item name="android:background">@drawable/gnt_ad_indicator_background</item>
         <item name="android:gravity">center</item>
-        <item name="android:textColor">@color/gnt_ad_indicator_foreground</item>
+        <item name="android:textColor">@color/gnt_ad_indicator_color</item>
         <item name="android:textSize">@dimen/gnt_ad_indicator_text_size</item>
         <item name="android:textStyle">bold</item>
         <item name="android:text">Ad</item>
@@ -21,12 +22,24 @@
         <item name="android:gravity">center</item>
         <item name="android:lines">1</item>
         <item name="android:textAllCaps">false</item>
-        <item name="android:textColor">@color/gnt_white</item>
+        <item name="android:textColor">@color/gnt_cta_text_color</item>
         <item name="android:textSize">@dimen/gnt_text_size_small</item>
         <item name="android:paddingStart">@dimen/gnt_default_margin</item>
         <item name="android:paddingEnd">@dimen/gnt_default_margin</item>
     </style>
 
+    <style name="GntRatingBar" parent="Widget.AppCompat.RatingBar.Small">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:isIndicator">true</item>
+        <item name="android:numStars">5</item>
+        <item name="android:progressBackgroundTint">@color/gnt_rating_bar_color</item>
+        <item name="android:progressTint">@color/gnt_rating_bar_color</item>
+        <item name="android:secondaryProgressTint">@color/gnt_rating_bar_color</item>
+        <item name="android:stepSize">0.5</item>
+    </style>
+
+    <item name="gnt_indicator_view" type="id" />
     <dimen name="gnt_text_size_extra_small">10sp</dimen>
     <dimen name="gnt_text_size_small">12sp</dimen>
     <dimen name="gnt_text_size_large">14sp</dimen>
@@ -39,14 +52,11 @@
     <dimen name="gnt_no_margin">0dp</dimen>
     <dimen name="gnt_no_size">0dp</dimen>
 
-    <color name="gnt_ad_indicator_foreground">#3A6728</color>
-    <color name="gnt_ad_indicator_background">#EFFFF1</color>
-    <color name="gnt_black">#000000</color>
-    <color name="gnt_white">#FFFFFF</color>
-    <color name="gnt_red">#FF0000</color>
-    <color name="gnt_yellow">#FBC02D</color>
-    <color name="gnt_green">#00FF00</color>
-    <color name="gnt_blue">#4285f4</color>
-    <color name="gnt_gray">#808080</color>
-    <color name="gnt_outline">#E0E0E0</color>
+    <color name="gnt_ad_indicator_color">#43A047</color>
+    <color name="gnt_cta_background_color">#4285f4</color>
+    <color name="gnt_cta_text_color">#FFFFFF</color>
+    <color name="gnt_rating_bar_color">#FBC02D</color>
+    <color name="gnt_primary_text_color">#505050</color>
+    <color name="gnt_secondary_text_color">#646464</color>
+    <color name="gnt_tertiary_text_color">#808080</color>
 </resources>

@@ -7,7 +7,7 @@
         android:id="@+id/native_ad_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/gnt_outline_shape">
+        android:background="@drawable/gnt_template_background">
 
         <androidx.appcompat.widget.LinearLayoutCompat
             android:id="@+id/background"
@@ -30,7 +30,6 @@
                 android:layout_weight="1">
 
                 <androidx.appcompat.widget.AppCompatTextView
-                    android:id="@+id/ad_notification_view"
                     style="@style/GntAdIndicator"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
@@ -43,11 +42,11 @@
                     android:layout_marginStart="@dimen/gnt_small_margin"
                     android:ellipsize="end"
                     android:maxLines="2"
-                    android:textColor="@color/gnt_gray"
+                    android:textColor="@color/gnt_primary_text_color"
                     android:textSize="@dimen/gnt_text_size_large"
                     android:textStyle="bold"
                     app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toEndOf="@id/ad_notification_view"
+                    app:layout_constraintStart_toEndOf="@id/gnt_indicator_view"
                     app:layout_constraintTop_toTopOf="parent"
                     tools:text="@tools:sample/lorem" />
 
@@ -57,10 +56,10 @@
                     android:layout_height="wrap_content"
                     android:ellipsize="end"
                     android:maxLines="2"
-                    android:textColor="@color/gnt_gray"
+                    android:textColor="@color/gnt_tertiary_text_color"
                     android:textSize="@dimen/gnt_text_size_small"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/ad_notification_view"
+                    app:layout_constraintTop_toBottomOf="@id/gnt_indicator_view"
                     tools:text="@tools:sample/lorem" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
@@ -83,9 +82,7 @@
 
             <RatingBar
                 android:id="@+id/rating_bar"
-                style="?android:attr/ratingBarStyleSmall"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+                style="@style/GntRatingBar" />
 
             <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/secondary"

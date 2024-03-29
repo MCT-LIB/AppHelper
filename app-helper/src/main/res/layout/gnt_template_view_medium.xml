@@ -11,7 +11,7 @@
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="@drawable/gnt_outline_shape">
+            android:background="@drawable/gnt_template_background">
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/background"
@@ -61,7 +61,7 @@
                             android:layout_height="wrap_content"
                             android:ellipsize="end"
                             android:lines="1"
-                            android:textColor="@color/gnt_gray"
+                            android:textColor="@color/gnt_primary_text_color"
                             android:textSize="@dimen/gnt_text_size_large"
                             android:textStyle="bold"
                             tools:text="@tools:sample/lorem" />
@@ -72,7 +72,7 @@
                             android:layout_height="wrap_content"
                             android:ellipsize="end"
                             android:maxLines="2"
-                            android:textColor="@color/gnt_gray"
+                            android:textColor="@color/gnt_tertiary_text_color"
                             android:textSize="@dimen/gnt_text_size_extra_small"
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintStart_toEndOf="@id/icon"
@@ -91,31 +91,22 @@
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@id/headline">
 
-                        <androidx.appcompat.widget.AppCompatTextView
-                            android:id="@+id/ad_notification_view"
-                            style="@style/GntAdIndicator" />
+                        <androidx.appcompat.widget.AppCompatTextView style="@style/GntAdIndicator" />
 
                         <RatingBar
                             android:id="@+id/rating_bar"
-                            style="?android:attr/ratingBarStyleSmall"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginHorizontal="@dimen/gnt_small_margin"
-                            android:isIndicator="true"
-                            android:progressBackgroundTint="@color/gnt_yellow"
-                            android:progressTint="@color/gnt_yellow"
-                            android:secondaryProgressTint="@color/gnt_yellow"
-                            android:stepSize="0.5"
+                            style="@style/GntRatingBar"
+                            android:layout_marginStart="@dimen/gnt_small_margin"
                             tools:rating="3" />
 
                         <androidx.appcompat.widget.AppCompatTextView
                             android:id="@+id/secondary"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:background="@color/gnt_white"
+                            android:layout_marginStart="@dimen/gnt_small_margin"
                             android:gravity="top"
                             android:lines="1"
-                            android:textColor="@color/gnt_gray"
+                            android:textColor="@color/gnt_secondary_text_color"
                             android:textSize="@dimen/gnt_text_size_small"
                             tools:text="@tools:sample/lorem" />
 

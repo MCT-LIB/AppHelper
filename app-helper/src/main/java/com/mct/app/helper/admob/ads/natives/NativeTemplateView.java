@@ -46,6 +46,7 @@ public class NativeTemplateView extends FrameLayout {
     private MediaView mediaView;
     private Button callToActionView;
     private ViewGroup background;
+    private TextView adIndicator;
 
     public NativeTemplateView(Context context, @LayoutRes int template) {
         super(context);
@@ -85,6 +86,7 @@ public class NativeTemplateView extends FrameLayout {
         iconView = findViewById(R.id.icon);
         mediaView = findViewById(R.id.media_view);
         background = findViewById(R.id.background);
+        adIndicator = findViewById(R.id.gnt_indicator_view);
     }
 
     public void setStyles(NativeTemplateStyle styles) {
@@ -100,6 +102,15 @@ public class NativeTemplateView extends FrameLayout {
 
     public NativeAd getNativeAd() {
         return nativeAd;
+    }
+
+    /**
+     * To prevent memory leaks, make sure to destroy your ad when you don't need it anymore. This
+     * method does not destroy the template view.
+     * <a href="https://developers.google.com/admob/android/native-unified#destroy_ad">destroy_ad</a>
+     */
+    public void destroyNativeAd() {
+        nativeAd.destroy();
     }
 
     public void setNativeAd(@NonNull NativeAd nativeAd) {
@@ -119,7 +130,7 @@ public class NativeTemplateView extends FrameLayout {
         nativeAdView.setHeadlineView(primaryView);
         nativeAdView.setMediaView(mediaView);
         secondaryView.setVisibility(VISIBLE);
-        if (adHasOnlyStore(nativeAd)) {
+        if (!TextUtils.isEmpty(store) && TextUtils.isEmpty(advertiser)) {
             nativeAdView.setStoreView(secondaryView);
             secondaryText = store;
         } else if (!TextUtils.isEmpty(advertiser)) {
@@ -160,15 +171,6 @@ public class NativeTemplateView extends FrameLayout {
         nativeAdView.setNativeAd(nativeAd);
     }
 
-    /**
-     * To prevent memory leaks, make sure to destroy your ad when you don't need it anymore. This
-     * method does not destroy the template view.
-     * <a href="https://developers.google.com/admob/android/native-unified#destroy_ad">destroy_ad</a>
-     */
-    public void destroyNativeAd() {
-        nativeAd.destroy();
-    }
-
     private void applyStyles() {
 
         Integer mainBackground = styles.getMainBackgroundColor();
@@ -183,6 +185,19 @@ public class NativeTemplateView extends FrameLayout {
             if (tertiaryView != null) {
                 tertiaryView.setBackground(new ColorDrawable(mainBackground));
             }
+        }
+
+        Integer indicatorTint = styles.getAdIndicatorTint();
+        if (indicatorTint != null) {
+            adIndicator.setTextColor(indicatorTint);
+            adIndicator.setBackgroundTintList(ColorStateList.valueOf(indicatorTint));
+        }
+
+        Integer ratingBarTint = styles.getRatingBarTint();
+        if (ratingBarTint != null) {
+            ratingBar.setProgressTintList(ColorStateList.valueOf(ratingBarTint));
+            ratingBar.setProgressBackgroundTintList(ColorStateList.valueOf(ratingBarTint));
+            ratingBar.setSecondaryProgressTintList(ColorStateList.valueOf(ratingBarTint));
         }
 
         Typeface primary = styles.getPrimaryTextTypeface();
@@ -205,20 +220,20 @@ public class NativeTemplateView extends FrameLayout {
             callToActionView.setTypeface(ctaTypeface);
         }
 
-        if (styles.getPrimaryTextTypefaceColor() != null && primaryView != null) {
-            primaryView.setTextColor(styles.getPrimaryTextTypefaceColor());
+        if (styles.getPrimaryTextColor() != null && primaryView != null) {
+            primaryView.setTextColor(styles.getPrimaryTextColor());
         }
 
-        if (styles.getSecondaryTextTypefaceColor() != null && secondaryView != null) {
-            secondaryView.setTextColor(styles.getSecondaryTextTypefaceColor());
+        if (styles.getSecondaryTextColor() != null && secondaryView != null) {
+            secondaryView.setTextColor(styles.getSecondaryTextColor());
         }
 
-        if (styles.getTertiaryTextTypefaceColor() != null && tertiaryView != null) {
-            tertiaryView.setTextColor(styles.getTertiaryTextTypefaceColor());
+        if (styles.getTertiaryTextColor() != null && tertiaryView != null) {
+            tertiaryView.setTextColor(styles.getTertiaryTextColor());
         }
 
-        if (styles.getCallToActionTypefaceColor() != null && callToActionView != null) {
-            callToActionView.setTextColor(styles.getCallToActionTypefaceColor());
+        if (styles.getCallToActionColor() != null && callToActionView != null) {
+            callToActionView.setTextColor(styles.getCallToActionColor());
         }
 
         float ctaTextSize = styles.getCallToActionTextSize();
@@ -272,12 +287,6 @@ public class NativeTemplateView extends FrameLayout {
 
         invalidate();
         requestLayout();
-    }
-
-    private boolean adHasOnlyStore(@NonNull NativeAd nativeAd) {
-        String store = nativeAd.getStore();
-        String advertiser = nativeAd.getAdvertiser();
-        return !TextUtils.isEmpty(store) && TextUtils.isEmpty(advertiser);
     }
 
     @NonNull

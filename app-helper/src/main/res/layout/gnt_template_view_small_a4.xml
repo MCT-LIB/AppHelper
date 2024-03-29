@@ -7,7 +7,7 @@
         android:id="@+id/native_ad_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/gnt_outline_shape"
+        android:background="@drawable/gnt_template_background"
         tools:layout_gravity="center"
         tools:layout_width="200dp">
 
@@ -48,7 +48,7 @@
                         android:gravity="center_vertical"
                         android:maxLines="2"
                         android:paddingHorizontal="@dimen/gnt_extra_small_margin"
-                        android:textColor="@color/gnt_gray"
+                        android:textColor="@color/gnt_primary_text_color"
                         android:textSize="@dimen/gnt_text_size_small"
                         android:textStyle="bold"
                         app:layout_constraintEnd_toEndOf="parent"
@@ -71,7 +71,6 @@
                             android:layout_height="wrap_content">
 
                             <androidx.appcompat.widget.AppCompatTextView
-                                android:id="@+id/ad_notification_view"
                                 style="@style/GntAdIndicator"
                                 android:layout_gravity="center" />
 
@@ -79,24 +78,17 @@
 
                         <RatingBar
                             android:id="@+id/rating_bar"
-                            style="?android:attr/ratingBarStyleSmall"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginHorizontal="@dimen/gnt_extra_small_margin"
-                            android:isIndicator="true"
-                            android:progressBackgroundTint="@color/gnt_yellow"
-                            android:progressTint="@color/gnt_yellow"
-                            android:secondaryProgressTint="@color/gnt_yellow"
-                            android:stepSize="0.5"
+                            style="@style/GntRatingBar"
+                            android:layout_marginStart="@dimen/gnt_extra_small_margin"
                             tools:rating="3" />
 
                         <androidx.appcompat.widget.AppCompatTextView
                             android:id="@+id/secondary"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:background="@color/gnt_white"
+                            android:layout_marginStart="@dimen/gnt_extra_small_margin"
                             android:lines="1"
-                            android:textColor="@color/gnt_gray"
+                            android:textColor="@color/gnt_secondary_text_color"
                             android:textSize="@dimen/gnt_text_size_extra_small"
                             tools:text="@tools:sample/lorem" />
 
@@ -109,7 +101,7 @@
                         android:layout_height="wrap_content"
                         android:ellipsize="end"
                         android:maxLines="2"
-                        android:textColor="@color/gnt_gray"
+                        android:textColor="@color/gnt_tertiary_text_color"
                         android:textSize="@dimen/gnt_text_size_small"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
@@ -128,7 +120,7 @@
                     app:layout_constraintHeight_min="120dp"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/headline"
-                    tools:background="@color/gnt_outline" />
+                    tools:background="#C6E7F6" />
 
                 <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/cta"
