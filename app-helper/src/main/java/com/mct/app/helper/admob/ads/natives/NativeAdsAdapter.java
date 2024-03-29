@@ -16,12 +16,12 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.gms.ads.nativead.NativeAd;
 import com.mct.app.helper.R;
 
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
 
-    private static final int TYPE_NATIVE_ADS = 9999;
+    public static final int TYPE_ADS = 9999;
     private static final int DEFAULT_AD_ITEM_INTERVAL = 4;
     private static final int DEFAULT_AD_ITEM_OFFSET = 2;
 
@@ -33,7 +33,7 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
     private final int templateLayoutRes;
     private final int itemContainerLayoutRes;
     private final int itemContainerId;
-    private final Set<AdViewHolder> boundViewHolders;
+    private final Set<AdViewHolder> boundAdsViewHolders;
 
     private NativeAdsPool nativeAdsPool;
 
@@ -47,7 +47,34 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
         this.templateLayoutRes = builder.templateLayoutRes;
         this.itemContainerLayoutRes = builder.itemContainerLayoutRes;
         this.itemContainerId = builder.itemContainerId;
-        this.boundViewHolders = new HashSet<>();
+        this.boundAdsViewHolders = new LinkedHashSet<>();
+    }
+
+    @NonNull
+    @Override
+    protected RecyclerView.AdapterDataObserver createDataObserver() {
+        return new DefaultAdapterDataObserver() {
+            public void onItemRangeInserted(int positionStart, int itemCount) {
+                invalidateBoundAdsViewHolders();
+                notifyItemRangeInserted(positionStart, itemCount);
+            }
+
+            public void onItemRangeRemoved(int positionStart, int itemCount) {
+                invalidateBoundAdsViewHolders();
+                notifyItemRangeRemoved(positionStart, itemCount);
+            }
+
+            public void onItemRangeMoved(int fromPosition, int toPosition, int itemCount) {
+                invalidateBoundAdsViewHolders();
+                notifyItemMoved(fromPosition, toPosition);
+            }
+
+            private void invalidateBoundAdsViewHolders() {
+                boundAdsViewHolders.stream()
+                        .filter(holder -> holder.getAdapterPosition() >= getItemCount())
+                        .forEach(holder -> notifyItemRemoved(holder.getAdapterPosition()));
+            }
+        };
     }
 
     @Override
@@ -69,8 +96,8 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
     @NonNull
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        if (viewType == TYPE_NATIVE_ADS) {
-            return new AdViewHolder(parent, itemContainerLayoutRes, itemContainerId, templateLayoutRes, templateStyle);
+        if (viewType == TYPE_ADS) {
+            return new AdViewHolder(parent, itemContainerLayoutRes, itemContainerId, templateLayoutRes);
         }
         return super.onCreateViewHolder(parent, viewType);
     }
@@ -80,10 +107,10 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
         if (holder instanceof AdViewHolder) {
             AdViewHolder adViewHolder = (AdViewHolder) holder;
             if (adViewHolder.isUnbindAds()) {
-                adViewHolder.setNativeAd(nativeAdsPool.get());
+                adViewHolder.setNativeAd(nativeAdsPool.get(), templateStyle);
             }
             if (holder.isRecyclable()) {
-                boundViewHolders.add((AdViewHolder) holder);
+                boundAdsViewHolders.add((AdViewHolder) holder);
             }
             return;
         }
@@ -93,7 +120,7 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
     @Override
     public void onViewRecycled(@NonNull RecyclerView.ViewHolder holder) {
         if (holder instanceof AdViewHolder) {
-            boundViewHolders.remove(holder);
+            boundAdsViewHolders.remove(holder);
             return;
         }
         super.onViewRecycled(holder);
@@ -102,7 +129,7 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
     @Override
     public int getItemViewType(int position) {
         if (isAdPosition(position)) {
-            return TYPE_NATIVE_ADS;
+            return TYPE_ADS;
         }
         return super.getItemViewType(convertAdPositionToOriginPosition(position));
     }
@@ -138,9 +165,9 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
     }
 
     private void updateNativeAdsHolders() {
-        boundViewHolders.stream()
+        boundAdsViewHolders.stream()
                 .filter(AdViewHolder::isUnbindAds)
-                .forEach(holder -> holder.setNativeAd(nativeAdsPool.get()));
+                .forEach(holder -> holder.setNativeAd(nativeAdsPool.get(), templateStyle));
     }
 
     private static class AdViewHolder extends RecyclerView.ViewHolder {
@@ -148,22 +175,24 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
         private final View loadingView;
         private final NativeTemplateView templateView;
 
-        private AdViewHolder(ViewGroup parent,
-                             int itemContainerLayoutRes, int itemContainerId,
-                             int templateLayoutRes, NativeTemplateStyle templateStyle) {
+        private AdViewHolder(ViewGroup parent, int itemContainerLayoutRes, int itemContainerId, int templateLayoutRes) {
             super(createItemView(parent, itemContainerLayoutRes));
             ViewGroup container = itemView.findViewById(itemContainerId);
             container.addView(loadingView = createLoadingView(itemView.getContext()));
-            container.addView(templateView = createTemplateView(itemView.getContext(), templateLayoutRes, templateStyle));
-            hideTemplateView();
+            container.addView(templateView = new NativeTemplateView(parent.getContext(), templateLayoutRes),
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+            );
+            hideItemView();
         }
 
-        private void setNativeAd(NativeAd nativeAd) {
+        private void setNativeAd(NativeAd nativeAd, NativeTemplateStyle templateStyle) {
             if (nativeAd != null) {
                 templateView.setNativeAd(nativeAd);
-                showTemplateView();
+                templateView.setStyles(templateStyle);
+                showItemView();
             } else {
-                hideTemplateView();
+                hideItemView();
             }
         }
 
@@ -171,12 +200,12 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
             return templateView.getVisibility() != View.VISIBLE;
         }
 
-        private void hideTemplateView() {
+        private void hideItemView() {
             templateView.setVisibility(View.INVISIBLE);
             loadingView.setVisibility(View.VISIBLE);
         }
 
-        private void showTemplateView() {
+        private void showItemView() {
             templateView.setVisibility(View.VISIBLE);
             loadingView.setVisibility(View.INVISIBLE);
         }
@@ -184,17 +213,6 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
         private static View createItemView(@NonNull ViewGroup parent, int itemContainerLayoutRes) {
             LayoutInflater inflater = LayoutInflater.from(parent.getContext());
             return inflater.inflate(itemContainerLayoutRes, parent, false);
-        }
-
-        @NonNull
-        private static NativeTemplateView createTemplateView(Context context, int templateLayoutRes, NativeTemplateStyle templateStyle) {
-            NativeTemplateView templateView = new NativeTemplateView(context, templateLayoutRes);
-            templateView.setStyles(templateStyle);
-            templateView.setLayoutParams(new ViewGroup.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.MATCH_PARENT
-            ));
-            return templateView;
         }
 
         @NonNull

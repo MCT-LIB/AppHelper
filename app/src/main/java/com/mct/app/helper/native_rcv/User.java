@@ -1,10 +1,8 @@
 package com.mct.app.helper.native_rcv;
 
-import java.util.UUID;
-
 public class User {
 
-    private final String name;
+    private String name;
 
     public User(int index) {
         this.name = "User " + index;
@@ -12,5 +10,9 @@ public class User {
 
     public String getName() {
         return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 }

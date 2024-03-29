@@ -6,6 +6,7 @@ import android.annotation.SuppressLint;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.RecyclerView.ViewHolder;
 
@@ -13,31 +14,16 @@ import androidx.recyclerview.widget.RecyclerView.ViewHolder;
 class RecyclerViewAdapterWrapper extends RecyclerView.Adapter {
 
     private final RecyclerView.Adapter wrapped;
+    private final AdapterDataObserver dataObserver;
 
     public RecyclerViewAdapterWrapper(RecyclerView.Adapter wrapped) {
         this.wrapped = wrapped;
-        this.wrapped.registerAdapterDataObserver(new AdapterDataObserver() {
-            @SuppressLint("NotifyDataSetChanged")
-            public void onChanged() {
-                notifyDataSetChanged();
-            }
+        this.dataObserver = createDataObserver();
+    }
 
-            public void onItemRangeChanged(int positionStart, int itemCount) {
-                notifyItemRangeChanged(positionStart, itemCount);
-            }
-
-            public void onItemRangeInserted(int positionStart, int itemCount) {
-                notifyItemRangeInserted(positionStart, itemCount);
-            }
-
-            public void onItemRangeRemoved(int positionStart, int itemCount) {
-                notifyItemRangeRemoved(positionStart, itemCount);
-            }
-
-            public void onItemRangeMoved(int fromPosition, int toPosition, int itemCount) {
-                notifyItemMoved(fromPosition, toPosition);
-            }
-        });
+    @NonNull
+    protected AdapterDataObserver createDataObserver() {
+        return new DefaultAdapterDataObserver();
     }
 
     @NonNull
@@ -93,22 +79,54 @@ class RecyclerViewAdapterWrapper extends RecyclerView.Adapter {
 
     @Override
     public void registerAdapterDataObserver(@NonNull AdapterDataObserver observer) {
-        wrapped.registerAdapterDataObserver(observer);
+        super.registerAdapterDataObserver(observer);
     }
 
     @Override
     public void unregisterAdapterDataObserver(@NonNull AdapterDataObserver observer) {
-        wrapped.unregisterAdapterDataObserver(observer);
+        super.unregisterAdapterDataObserver(observer);
     }
 
     @Override
     public void onAttachedToRecyclerView(@NonNull RecyclerView recyclerView) {
         wrapped.onAttachedToRecyclerView(recyclerView);
+        wrapped.registerAdapterDataObserver(dataObserver);
     }
 
     @Override
     public void onDetachedFromRecyclerView(@NonNull RecyclerView recyclerView) {
+        wrapped.unregisterAdapterDataObserver(dataObserver);
         wrapped.onDetachedFromRecyclerView(recyclerView);
     }
 
+    public RecyclerView.Adapter getWrapped() {
+        return wrapped;
+    }
+
+    protected class DefaultAdapterDataObserver extends AdapterDataObserver {
+        @SuppressLint("NotifyDataSetChanged")
+        public void onChanged() {
+            notifyDataSetChanged();
+        }
+
+        public void onItemRangeChanged(int positionStart, int itemCount) {
+            notifyItemRangeChanged(positionStart, itemCount);
+        }
+
+        public void onItemRangeChanged(int positionStart, int itemCount, @Nullable Object payload) {
+            notifyItemRangeChanged(positionStart, itemCount);
+        }
+
+        public void onItemRangeInserted(int positionStart, int itemCount) {
+            notifyItemRangeInserted(positionStart, itemCount);
+        }
+
+        public void onItemRangeRemoved(int positionStart, int itemCount) {
+            notifyItemRangeRemoved(positionStart, itemCount);
+        }
+
+        public void onItemRangeMoved(int fromPosition, int toPosition, int itemCount) {
+            notifyItemMoved(fromPosition, toPosition);
+        }
+    }
 }
