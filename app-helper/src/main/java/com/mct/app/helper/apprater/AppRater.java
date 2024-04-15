@@ -8,6 +8,7 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 public class AppRater {
@@ -93,23 +94,34 @@ public class AppRater {
             }
 
             // Show dialog
+            AtomicBoolean isPreferenceUpdated = new AtomicBoolean(false);
             RateDialog dialog = AppRater.rateDialogProvider.apply(context);
             dialog.setDontRemindButtonVisible(config.isShowDontRemind());
             dialog.setCancelable(config.isCancelable());
             dialog.setOnRateNowListener(() -> {
                 rateNow(context);
+                isPreferenceUpdated.set(true);
                 preference.setDontShowAgain(true);
                 dialog.dismiss();
             });
-            dialog.setOnRateLaterListener(() -> {
+            dialog.setOnRemindLaterListener(() -> {
+                isPreferenceUpdated.set(true);
                 preference.resetData();
                 preference.setRemindLater(true);
                 dialog.dismiss();
             });
-            dialog.setDontShowAgainListener(() -> {
+            dialog.setDontRemindListener(() -> {
+                isPreferenceUpdated.set(true);
                 preference.resetData();
                 preference.setDontShowAgain(true);
                 dialog.dismiss();
+            });
+            dialog.setOnDismissListener(() -> {
+                if (isPreferenceUpdated.get()) {
+                    return;
+                }
+                preference.resetData();
+                preference.setRemindLater(true);
             });
             dialog.show();
         }
