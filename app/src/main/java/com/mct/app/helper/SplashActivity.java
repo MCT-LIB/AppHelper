@@ -42,16 +42,7 @@ public class SplashActivity extends AppCompatActivity {
 
         AdsManager.getInstance().load(Constant.INTERSTITIAL_ID, this, null, null);
         AdsManager.getInstance().load(Constant.NATIVE_ID, this, null, null);
-        AdsManager.getInstance().show(Constant.APP_OPEN_ID, this, this::gotoMain);
-
-        // go to main if ads load too many time
-        handler.postDelayed(this::gotoMain, 10000);
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        handler.removeCallbacksAndMessages(null);
+        AdsManager.getInstance().showSyncLoad(Constant.APP_OPEN_ID, this, this::gotoMain);
     }
 
     private void gotoMain() {

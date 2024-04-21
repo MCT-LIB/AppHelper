@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public abstract class BaseFullScreenAds<Ads> extends BaseAds<Ads> {
 
-    private OnDismissListener<Ads> onDismissListener;
+    private OnAdsShowChangeListener onAdsShowChangeListener;
 
     public BaseFullScreenAds(String adsUnitId, long adsInterval) {
         super(adsUnitId, adsInterval);
@@ -22,12 +22,17 @@ public abstract class BaseFullScreenAds<Ads> extends BaseAds<Ads> {
 
     protected abstract void onShowAds(@NonNull Activity activity, @NonNull Ads ads, @NonNull FullScreenContentCallback callback);
 
-    public final void show(@NonNull Activity activity, Callback callback) {
+    public final void show(@NonNull Activity activity, boolean waitLoadAndShow, Callback callback) {
         if (isCanLoadAds()) {
-            load(activity.getApplicationContext(),
-                    () -> show(activity, callback),
-                    () -> invokeCallback(callback)
-            );
+            if (waitLoadAndShow) {
+                load(activity.getApplicationContext(),
+                        () -> show(activity, waitLoadAndShow, callback),
+                        () -> invokeCallback(callback)
+                );
+            } else {
+                load(activity.getApplicationContext(), null, null);
+                invokeCallback(callback);
+            }
             return;
         }
         if (isCanShowAds() && validateActivityToShow(activity)) {
@@ -38,18 +43,26 @@ public abstract class BaseFullScreenAds<Ads> extends BaseAds<Ads> {
         }
     }
 
-    public void setOnDismissListener(OnDismissListener<Ads> onDismissListener) {
-        this.onDismissListener = onDismissListener;
+    public void setOnAdsShowChangeListener(OnAdsShowChangeListener onAdsShowChangeListener) {
+        this.onAdsShowChangeListener = onAdsShowChangeListener;
     }
 
-    private void onAdDismissedFullScreen() {
-        if (onDismissListener != null) {
-            onDismissListener.onDismiss(this);
+    private void onAdShowedFullScreen() {
+        if (onAdsShowChangeListener != null) {
+            onAdsShowChangeListener.onShow(this);
         }
     }
 
-    public interface OnDismissListener<Ads> {
-        void onDismiss(BaseFullScreenAds<Ads> fullScreenAds);
+    private void onAdDismissedFullScreen() {
+        if (onAdsShowChangeListener != null) {
+            onAdsShowChangeListener.onDismiss(this);
+        }
+    }
+
+    public interface OnAdsShowChangeListener {
+        void onShow(BaseFullScreenAds<?> fullScreenAds);
+
+        void onDismiss(BaseFullScreenAds<?> fullScreenAds);
     }
 
     protected static class FullScreenContentCallbackImpl extends FullScreenContentCallback {
@@ -99,6 +112,7 @@ public abstract class BaseFullScreenAds<Ads> extends BaseAds<Ads> {
                 return;
             }
             Log.d(TAG, "onAdShowedFullScreenContent");
+            ads.onAdShowedFullScreen();
         }
 
         private boolean isDispose() {

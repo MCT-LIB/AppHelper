@@ -10,6 +10,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.util.Consumer;
 import androidx.core.util.Pair;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.ads.OnPaidEventListener;
@@ -23,6 +24,7 @@ import com.mct.app.helper.admob.ads.InterstitialAds;
 import com.mct.app.helper.admob.ads.NativeAds;
 import com.mct.app.helper.admob.ads.RewardedAds;
 import com.mct.app.helper.admob.ads.RewardedInterstitialAds;
+import com.mct.app.helper.admob.ads.natives.NativeAdsAdapter;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -42,6 +44,7 @@ public final class AdsManager {
     private final AtomicReference<OnPaidEventListener> mOnPaidEventListener = new AtomicReference<>();
     private final Map<String, BaseAds<?>> mAds = new LinkedHashMap<>();
     private final AppOpenLifecycleObserver mAppOpenObserver = new AppOpenLifecycleObserver();
+    private final List<NativeAdsAdapter> mNativeAdsAdapters = new ArrayList<>();
 
     public static AdsManager getInstance() {
         if (instance == null) {
@@ -194,6 +197,17 @@ public final class AdsManager {
         mOnPaidEventListener.set(Optional.ofNullable(listener).map(OnPaidEventListeners::toGms).orElse(null));
     }
 
+    public void registerNativeAdsAdapter(NativeAdsAdapter adapter) {
+        if (mNativeAdsAdapters.contains(adapter)) {
+            return;
+        }
+        mNativeAdsAdapters.add(adapter);
+    }
+
+    public void unregisterNativeAdsAdapter(NativeAdsAdapter adapter) {
+        mNativeAdsAdapters.remove(adapter);
+    }
+
     /* --- Ads actions methods --- */
 
     /**
@@ -250,7 +264,7 @@ public final class AdsManager {
      */
     public void show(BaseFullScreenAds<?> ads, Activity activity, Callback callback) {
         if (checkAdsCondition(ads, callback)) {
-            ads.show(activity, handleFullScreenCallback(ads, callback));
+            ads.show(activity, false, callback);
         }
     }
 
@@ -280,9 +294,73 @@ public final class AdsManager {
      */
     public void show(BaseRewardedAds<?> ads, Activity activity, Callback callback, Callback onUserEarnedReward) {
         if (checkAdsCondition(ads, callback)) {
-            ads.show(activity, handleFullScreenCallback(ads, callback), onUserEarnedReward);
+            ads.show(activity, false, callback, onUserEarnedReward);
         }
     }
+
+
+    /**
+     * Show full screen ads by alias, wait load and show if necessary
+     *
+     * @param alias    alias of ads
+     * @param activity activity
+     * @param callback callback when finish(always called)
+     * @see AppOpenAds
+     * @see InterstitialAds
+     * @see RewardedAds
+     * @see RewardedInterstitialAds
+     */
+    public void showSyncLoad(String alias, Activity activity, Callback callback) {
+        showSyncLoad(getAds(alias, BaseFullScreenAds.class), activity, callback);
+    }
+
+    /**
+     * Show full screen ads by model, wait load and show if necessary
+     *
+     * @param ads      ads model
+     * @param activity activity
+     * @param callback callback when finish(always called)
+     * @see AppOpenAds
+     * @see InterstitialAds
+     * @see RewardedAds
+     * @see RewardedInterstitialAds
+     */
+    public void showSyncLoad(BaseFullScreenAds<?> ads, Activity activity, Callback callback) {
+        if (checkAdsCondition(ads, callback)) {
+            ads.show(activity, true, callback);
+        }
+    }
+
+    /**
+     * Show rewarded ads by alias, wait load and show if necessary
+     *
+     * @param alias              alias of ads
+     * @param activity           activity
+     * @param callback           callback when finish(always called)
+     * @param onUserEarnedReward callback when user earned reward
+     * @see RewardedAds
+     * @see RewardedInterstitialAds
+     */
+    public void showSyncLoad(String alias, Activity activity, Callback callback, Callback onUserEarnedReward) {
+        showSyncLoad(getAds(alias, BaseRewardedAds.class), activity, callback, onUserEarnedReward);
+    }
+
+    /**
+     * Show rewarded ads by model, wait load and show if necessary
+     *
+     * @param ads                ads model
+     * @param activity           activity
+     * @param callback           callback when finish(always called)
+     * @param onUserEarnedReward callback when user earned reward
+     * @see RewardedAds
+     * @see RewardedInterstitialAds
+     */
+    public void showSyncLoad(BaseRewardedAds<?> ads, Activity activity, Callback callback, Callback onUserEarnedReward) {
+        if (checkAdsCondition(ads, callback)) {
+            ads.show(activity, true, callback, onUserEarnedReward);
+        }
+    }
+
 
     /**
      * Show view ads by alias
@@ -438,14 +516,36 @@ public final class AdsManager {
         }
         ads.setDebugSupplier(mDebug::get);
         ads.setOnPaidEventListenerSupplier(mOnPaidEventListener::get);
-        if (isInterstitialOrOpenAd(ads)) {
-            ((BaseFullScreenAds<?>) ads).setOnDismissListener(a -> getAdsList().stream()
-                    .filter(AdsManager::isInterstitialOrOpenAd)
-                    .forEach(BaseAds::postDelayShowFlag)
-            );
-        }
-        if (ads instanceof AppOpenAds) {
-            setAppOpenObserverAds((AppOpenAds) ads);
+        if (ads instanceof BaseFullScreenAds) {
+            if (ads instanceof AppOpenAds) {
+                setAppOpenObserverAds((AppOpenAds) ads);
+            }
+            BaseFullScreenAds<?> baseFullScreenAds = (BaseFullScreenAds<?>) ads;
+            baseFullScreenAds.setOnAdsShowChangeListener(new BaseFullScreenAds.OnAdsShowChangeListener() {
+
+                List<Pair<View, Integer>> viewAds;
+
+                @Override
+                public void onShow(BaseFullScreenAds<?> fullScreenAds) {
+                    if (fullScreenAds instanceof AppOpenAds) {
+                        viewAds = getBannerAndNativeViews();
+                        viewAds.forEach(view -> view.first.setVisibility(View.INVISIBLE));
+                    }
+                }
+
+                @Override
+                public void onDismiss(BaseFullScreenAds<?> fullScreenAds) {
+                    if (isInterstitialOrOpenAd(ads)) {
+                        // post delay show flag
+                        getAdsList().stream().filter(AdsManager::isInterstitialOrOpenAd).forEach(BaseAds::postDelayShowFlag);
+                    }
+                    if (viewAds != null) {
+                        viewAds.forEach(view -> view.first.setVisibility(view.second));
+                        viewAds.clear();
+                        viewAds = null;
+                    }
+                }
+            });
         }
         mAds.put(alias, ads);
     }
@@ -500,19 +600,6 @@ public final class AdsManager {
     }
 
     @NonNull
-    private Callback handleFullScreenCallback(@NonNull BaseFullScreenAds<?> ads, Callback callback) {
-        if (!ads.isCanShow()) {
-            return () -> invokeCallback(callback);
-        }
-        List<Pair<View, Integer>> viewAds = getBannerAndNativeViews();
-        viewAds.forEach(view -> view.first.setVisibility(View.INVISIBLE));
-        return () -> {
-            viewAds.forEach(view -> view.first.setVisibility(view.second));
-            invokeCallback(callback);
-        };
-    }
-
-    @NonNull
     private List<Pair<View, Integer>> getBannerAndNativeViews() {
         List<Pair<View, Integer>> viewAds = new ArrayList<>();
         for (BaseAds<?> ads : mAds.values()) {
@@ -524,6 +611,14 @@ public final class AdsManager {
                             baseViewAds.getAds().getVisibility())
                     );
                 }
+            }
+        }
+        for (NativeAdsAdapter adapter : mNativeAdsAdapters) {
+            for (RecyclerView.ViewHolder holder : adapter.getBoundAdsViewHolders()) {
+                viewAds.add(new Pair<>(
+                        holder.itemView,
+                        holder.itemView.getVisibility())
+                );
             }
         }
         return viewAds;

@@ -18,12 +18,17 @@ public abstract class BaseRewardedAds<Ads> extends BaseFullScreenAds<Ads> {
                                       @NonNull FullScreenContentCallback callback,
                                       @Nullable Callback onUserEarnedReward);
 
-    public final void show(@NonNull Activity activity, Callback callback, Callback onUserEarnedReward) {
+    public final void show(@NonNull Activity activity, boolean waitLoadAndShow, Callback callback, Callback onUserEarnedReward) {
         if (isCanLoadAds()) {
-            load(activity.getApplicationContext(),
-                    () -> show(activity, callback, onUserEarnedReward),
-                    () -> invokeCallback(callback)
-            );
+            if (waitLoadAndShow) {
+                load(activity.getApplicationContext(),
+                        () -> show(activity, waitLoadAndShow, callback, onUserEarnedReward),
+                        () -> invokeCallback(callback)
+                );
+            } else {
+                load(activity.getApplicationContext(), null, null);
+                invokeCallback(callback);
+            }
             return;
         }
         if (isCanShowAds() && validateActivityToShow(activity)) {

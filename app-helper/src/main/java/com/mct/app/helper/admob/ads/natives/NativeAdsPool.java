@@ -68,6 +68,9 @@ public class NativeAdsPool {
     }
 
     public void dispose() {
+        if (isDispose) {
+            return;
+        }
         isDispose = true;
         clearAds();
     }

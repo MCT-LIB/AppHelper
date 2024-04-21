@@ -15,9 +15,11 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.gms.ads.nativead.NativeAd;
 import com.mct.app.helper.R;
+import com.mct.app.helper.admob.AdsManager;
 import com.mct.app.helper.admob.ads.natives.manager.NpaGridLayoutManager;
 import com.mct.app.helper.admob.ads.natives.manager.NpaLinearLayoutManager;
 
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -110,6 +112,7 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
     @Override
     public void onAttachedToRecyclerView(@NonNull RecyclerView recyclerView) {
         super.onAttachedToRecyclerView(recyclerView);
+        AdsManager.getInstance().registerNativeAdsAdapter(this);
         nativeAdsPool = new NativeAdsPool(recyclerView.getContext(), adsUnitId);
         nativeAdsPool.loadAds(adsCacheSize);
         nativeAdsPool.setOnPoolRefreshedListener(this::updateNativeAdsHolders);
@@ -118,6 +121,7 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
     @Override
     public void onDetachedFromRecyclerView(@NonNull RecyclerView recyclerView) {
         super.onDetachedFromRecyclerView(recyclerView);
+        AdsManager.getInstance().unregisterNativeAdsAdapter(this);
         nativeAdsPool.setOnPoolRefreshedListener(null);
         nativeAdsPool.dispose();
         nativeAdsPool = null;
@@ -165,7 +169,7 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
 
     @Override
     public int getItemCount() {
-        if (nativeAdsPool.isAdsUnavailable()) {
+        if (isAdsUnavailable()) {
             return super.getItemCount();
         }
         int realCount = super.getItemCount();
@@ -173,33 +177,44 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
     }
 
     public int convertAdPositionToOriginPosition(int position) {
-        if (nativeAdsPool.isAdsUnavailable()) {
+        if (isAdsUnavailable()) {
             return position;
         }
         return position - getTotalAdsItemBeforePosition(position);
     }
 
     public int getTotalAdsItemBeforePosition(int position) {
-        if (nativeAdsPool.isAdsUnavailable()) {
+        if (isAdsUnavailable()) {
             return 0;
         }
         return (position + 1 + adsItemOffset) / (adsItemInterval + 1);
     }
 
     public boolean isAdPosition(int position) {
-        if (nativeAdsPool.isAdsUnavailable()) {
+        if (isAdsUnavailable()) {
             return false;
         }
         return (position + 1 + adsItemOffset) % (adsItemInterval + 1) == 0;
     }
 
+    public Set<AdViewHolder> getBoundAdsViewHolders() {
+        return Collections.unmodifiableSet(boundAdsViewHolders);
+    }
+
     private void updateNativeAdsHolders() {
+        if (isAdsUnavailable()) {
+            return;
+        }
         boundAdsViewHolders.stream()
                 .filter(AdViewHolder::isUnbindAds)
                 .forEach(holder -> holder.setNativeAd(nativeAdsPool.get(), templateStyle));
     }
 
-    private static class AdViewHolder extends RecyclerView.ViewHolder {
+    private boolean isAdsUnavailable() {
+        return nativeAdsPool == null || nativeAdsPool.isAdsUnavailable();
+    }
+
+    public static class AdViewHolder extends RecyclerView.ViewHolder {
 
         private final View loadingView;
         private final NativeTemplateView templateView;
