@@ -15,6 +15,8 @@ import com.mct.app.helper.admob.ads.natives.NativeTemplate;
 import com.mct.app.helper.admob.ads.natives.NativeTemplateStyle;
 import com.mct.app.helper.admob.ads.natives.NativeTemplateView;
 
+import java.util.Optional;
+
 public class NativeAds extends BaseViewAds<NativeTemplateView> {
 
     private final int layoutRes;
@@ -37,6 +39,10 @@ public class NativeAds extends BaseViewAds<NativeTemplateView> {
 
     public void setTemplateStyle(NativeTemplateStyle templateStyle) {
         this.templateStyle = templateStyle;
+    }
+
+    public void applyStyle() {
+        Optional.ofNullable(getAds()).ifPresent(ads -> ads.setStyles(templateStyle));
     }
 
     @Override
