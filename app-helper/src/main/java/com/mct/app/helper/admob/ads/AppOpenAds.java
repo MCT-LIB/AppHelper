@@ -45,6 +45,6 @@ public class AppOpenAds extends BaseFullScreenAds<AppOpenAd> {
 
     @Override
     public AdRequest getAdRequest() {
-        return new AdRequest.Builder().setHttpTimeoutMillis(8000).build();
+        return new AdRequest.Builder().setHttpTimeoutMillis(5000).build();
     }
 }

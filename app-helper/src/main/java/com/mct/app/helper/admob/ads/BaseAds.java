@@ -64,12 +64,11 @@ public abstract class BaseAds<Ads> {
         }
     }
 
-    public final void forceLoad(@NonNull Context context) {
+    public final void forceClear() {
         disposeAdsLoadIfNeed();
         setAds(null);
         setLoading(false);
         setShowing(false);
-        load(context, null, null);
     }
 
     public final void postDelayShowFlag() {

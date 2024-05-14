@@ -137,6 +137,9 @@ class AppOpenLifecycleObserver {
 
         @Override
         public void onActivityDestroyed(@NonNull Activity activity) {
+            if (currentActivity == activity) {
+                currentActivity = null;
+            }
         }
     }
 

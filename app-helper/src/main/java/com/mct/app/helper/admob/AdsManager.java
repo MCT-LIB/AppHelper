@@ -1,6 +1,7 @@
 package com.mct.app.helper.admob;
 
 import android.app.Activity;
+import android.app.Application;
 import android.content.Context;
 import android.util.Log;
 import android.view.View;
@@ -38,12 +39,18 @@ public final class AdsManager {
 
     private static final String TAG = "AdsManager";
     private static AdsManager instance;
+
+    // configs
+    private Application mApplication;
     private final AtomicBoolean mIsInitialized = new AtomicBoolean(false);
     private final AtomicBoolean mIsPremium = new AtomicBoolean(false);
     private final AtomicBoolean mDebug = new AtomicBoolean(false);
     private final AtomicReference<OnPaidEventListener> mOnPaidEventListener = new AtomicReference<>();
-    private final Map<String, BaseAds<?>> mAds = new LinkedHashMap<>();
+    private final AdsLoadObserver mAdsLoadObserver = new AdsLoadObserver();
     private final AppOpenLifecycleObserver mAppOpenObserver = new AppOpenLifecycleObserver();
+
+    // ads holder
+    private final Map<String, BaseAds<?>> mAds = new LinkedHashMap<>();
     private final List<NativeAdsAdapter> mNativeAdsAdapters = new ArrayList<>();
 
     public static AdsManager getInstance() {
@@ -71,20 +78,17 @@ public final class AdsManager {
             // already initialized
             return;
         }
-        AtomicBoolean invokeFlag = new AtomicBoolean(false);
+        mApplication = activity.getApplication();
+        AtomicReference<Runnable> init = new AtomicReference<>(() -> {
+            MobileAds.initialize(mApplication);
+            invalidatePremium();
+        });
         configuratorConsumer.accept(new AdsConfigurator(this, () -> {
-            GoogleMobileAdsConsentManager manager = GoogleMobileAdsConsentManager.getInstance(activity.getApplicationContext());
-            manager.gatherConsent(activity, consentError -> {
-                if (invokeFlag.get()) {
-                    return;
-                }
-                mAppOpenObserver.init(activity.getApplication());
-                MobileAds.initialize(activity.getApplicationContext());
-            });
+            GoogleMobileAdsConsentManager manager = GoogleMobileAdsConsentManager.getInstance(mApplication);
+            manager.gatherConsent(activity, consentError -> Optional.ofNullable(init.get()).ifPresent(Runnable::run));
             if (manager.canRequestAds()) {
-                invokeFlag.set(true);
-                mAppOpenObserver.init(activity.getApplication());
-                MobileAds.initialize(activity.getApplicationContext());
+                Optional.ofNullable(init.get()).ifPresent(Runnable::run);
+                init.set(null);
             }
         }));
     }
@@ -118,6 +122,7 @@ public final class AdsManager {
      */
     public void setPremium(boolean isPremium) {
         mIsPremium.set(isPremium);
+        invalidatePremium();
     }
 
     /**
@@ -136,6 +141,24 @@ public final class AdsManager {
      */
     public void setDebug(boolean debug) {
         mDebug.set(debug);
+    }
+
+    /**
+     * Set auto load when has internet
+     *
+     * @param enable true if auto load
+     */
+    public void setAutoLoadFullscreenAdsWhenHasInternet(boolean enable) {
+        mAdsLoadObserver.setAutoLoadFullscreenAdsWhenHasInternet(enable);
+    }
+
+    /**
+     * Set auto reload when orientation changed
+     *
+     * @param enable true if auto reload
+     */
+    public void setAutoReloadFullscreenAdsWhenOrientationChanged(boolean enable) {
+        mAdsLoadObserver.setAutoReloadFullscreenAdsWhenOrientationChanged(enable);
     }
 
     /**
@@ -586,6 +609,19 @@ public final class AdsManager {
     ///////////////////////////////////////////////////////////////////////////
     // Private methods
     ///////////////////////////////////////////////////////////////////////////
+
+    private void invalidatePremium() {
+        if (mApplication == null) {
+            return;
+        }
+        if (mIsPremium.get()) {
+            mAdsLoadObserver.release(mApplication);
+            mAppOpenObserver.release(mApplication);
+        } else {
+            mAdsLoadObserver.init(mApplication);
+            mAppOpenObserver.init(mApplication);
+        }
+    }
 
     private boolean checkAdsCondition(BaseAds<?> ads, Callback callback) {
         if (ads == null) {

@@ -25,6 +25,8 @@ public class AdsConfigurator {
 
     private Boolean mPremium;
     private Boolean mDebug;
+    private Boolean mAutoLoadFullscreenAdsWhenHasInternet;
+    private Boolean mAutoReloadFullscreenAdsWhenOrientationChanged;
     private Boolean mAppOpenObserverEnabled;
     private Class<?>[] mAppOpenObserverBlackListActivity;
     private OnPaidEventListeners mOnPaidEventListener;
@@ -69,6 +71,28 @@ public class AdsConfigurator {
      */
     public AdsConfigurator onPaidEventListener(OnPaidEventListeners listener) {
         mOnPaidEventListener = listener;
+        return this;
+    }
+
+    /**
+     * Sets whether to automatically load ads when the device has internet
+     *
+     * @param enable true if you want to load ads automatically
+     * @return This AdsConfigurator instance for method chaining
+     */
+    public AdsConfigurator autoLoadWhenHasInternet(boolean enable) {
+        mAutoLoadFullscreenAdsWhenHasInternet = enable;
+        return this;
+    }
+
+    /**
+     * Sets whether to automatically reload fullscreen ads when the orientation changes
+     *
+     * @param enable true if you want to reload fullscreen ads automatically
+     * @return This AdsConfigurator instance for method chaining
+     */
+    public AdsConfigurator autoReloadFullscreenAdsWhenOrientationChanged(boolean enable) {
+        mAutoReloadFullscreenAdsWhenOrientationChanged = enable;
         return this;
     }
 
@@ -175,6 +199,12 @@ public class AdsConfigurator {
         }
         if (mDebug != null) {
             mAdsManager.setDebug(mDebug);
+        }
+        if (mAutoLoadFullscreenAdsWhenHasInternet != null) {
+            mAdsManager.setAutoLoadFullscreenAdsWhenHasInternet(mAutoLoadFullscreenAdsWhenHasInternet);
+        }
+        if (mAutoReloadFullscreenAdsWhenOrientationChanged != null) {
+            mAdsManager.setAutoReloadFullscreenAdsWhenOrientationChanged(mAutoReloadFullscreenAdsWhenOrientationChanged);
         }
         if (mAppOpenObserverEnabled != null) {
             mAdsManager.setAppOpenObserverEnabled(mAppOpenObserverEnabled);
