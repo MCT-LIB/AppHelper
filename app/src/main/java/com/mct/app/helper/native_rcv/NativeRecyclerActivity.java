@@ -115,7 +115,7 @@ public class NativeRecyclerActivity extends AppCompatActivity {
         }
         if (view.getId() == R.id.btn_style_2) {
             adapter = new NativeAdsAdapter.Builder(createUserAdapter(R.layout.item_user), adsUnitId, numberOfAds)
-                    .setNativeTemplate(NativeTemplate.MEDIUM)
+                    .setNativeTemplate(NativeTemplate.MEDIUM_1)
                     .setAdsItemConfig(6, 1)
                     .build();
             rcvData.setAdapter(adapter);

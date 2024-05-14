@@ -22,7 +22,7 @@ public class NativeAds extends BaseViewAds<NativeTemplateView> {
     private NativeTemplateStyle templateStyle;
 
     public NativeAds(String adsUnitId) {
-        this(adsUnitId, NativeTemplate.MEDIUM);
+        this(adsUnitId, NativeTemplate.MEDIUM_1);
     }
 
     public NativeAds(String adsUnitId, @NonNull NativeTemplate nativeTemplate) {

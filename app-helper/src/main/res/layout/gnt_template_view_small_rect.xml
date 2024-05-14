@@ -7,7 +7,6 @@
         android:id="@+id/native_ad_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@drawable/gnt_template_background"
         tools:layout_gravity="center"
         tools:layout_height="400dp"
         tools:layout_width="300dp">
@@ -16,6 +15,7 @@
             android:id="@+id/background"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:background="@color/gnt_main_background_color"
             android:padding="@dimen/gnt_small_margin"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent">
@@ -68,6 +68,7 @@
                         android:layout_height="wrap_content">
 
                         <androidx.appcompat.widget.AppCompatTextView
+                            android:id="@+id/gnt_indicator_view"
                             style="@style/GntAdIndicator"
                             android:layout_gravity="center" />
 

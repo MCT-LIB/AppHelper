@@ -40,19 +40,21 @@
     </style>
 
     <item name="gnt_indicator_view" type="id" />
-    <dimen name="gnt_text_size_extra_small">10sp</dimen>
-    <dimen name="gnt_text_size_small">12sp</dimen>
-    <dimen name="gnt_text_size_large">14sp</dimen>
-    <dimen name="gnt_ad_indicator_width">24dp</dimen>
-    <dimen name="gnt_ad_indicator_height">20dp</dimen>
-    <dimen name="gnt_ad_indicator_text_size">10sp</dimen>
-    <dimen name="gnt_default_margin">10dp</dimen>
-    <dimen name="gnt_small_margin">5dp</dimen>
-    <dimen name="gnt_extra_small_margin">2.5dp</dimen>
+    <dimen name="gnt_text_size_extra_small">@dimen/_8ssp</dimen>
+    <dimen name="gnt_text_size_small">@dimen/_10ssp</dimen>
+    <dimen name="gnt_text_size_large">@dimen/_12ssp</dimen>
+    <dimen name="gnt_text_size_extra_large">@dimen/_14ssp</dimen>
+    <dimen name="gnt_ad_indicator_width">@dimen/_22sdp</dimen>
+    <dimen name="gnt_ad_indicator_height">@dimen/_18sdp</dimen>
+    <dimen name="gnt_ad_indicator_text_size">@dimen/_7ssp</dimen>
+    <dimen name="gnt_default_margin">@dimen/_8sdp</dimen>
+    <dimen name="gnt_small_margin">@dimen/_4sdp</dimen>
+    <dimen name="gnt_extra_small_margin">@dimen/_2sdp</dimen>
     <dimen name="gnt_no_margin">0dp</dimen>
     <dimen name="gnt_no_size">0dp</dimen>
 
     <color name="gnt_ad_indicator_color">#43A047</color>
+    <color name="gnt_main_background_color">#FFFFFF</color>
     <color name="gnt_cta_background_color">#4285f4</color>
     <color name="gnt_cta_text_color">#FFFFFF</color>
     <color name="gnt_rating_bar_color">#FBC02D</color>

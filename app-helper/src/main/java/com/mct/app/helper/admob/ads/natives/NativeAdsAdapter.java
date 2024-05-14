@@ -299,7 +299,7 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
             this.adsUnitId = adsUnitId;
             this.adsCacheSize = adsCacheSize;
             this.templateStyle = null;
-            this.templateLayoutRes = R.layout.gnt_template_view_medium;
+            this.templateLayoutRes = R.layout.gnt_template_view_medium_1;
             this.itemContainerLayoutRes = R.layout.gnt_item_container;
             this.itemContainerId = R.id.gnt_container;
             this.adsItemInterval = DEFAULT_AD_ITEM_INTERVAL;

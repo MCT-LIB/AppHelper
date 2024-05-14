@@ -131,7 +131,7 @@ public class AdsConfigurator {
      * @return A NativeAdsConfigurator instance for further configuration
      */
     public NativeAdsConfigurator nativeAds(String adsUnitId) {
-        return new NativeAdsConfigurator(this, adsUnitId).template(NativeTemplate.MEDIUM);
+        return new NativeAdsConfigurator(this, adsUnitId).template(NativeTemplate.MEDIUM_1);
     }
 
     /**

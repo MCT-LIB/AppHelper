@@ -64,6 +64,14 @@ public abstract class BaseAds<Ads> {
         }
     }
 
+    public final void forceLoad(@NonNull Context context) {
+        disposeAdsLoadIfNeed();
+        setAds(null);
+        setLoading(false);
+        setShowing(false);
+        load(context, null, null);
+    }
+
     public final void postDelayShowFlag() {
         isCanShow = false;
         handler.removeCallbacks(delayShowFlagRunnable);

@@ -21,9 +21,12 @@ import com.mct.app.helper.native_rcv.NativeRecyclerActivity;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String NATIVE_EXTRA_LARGE = "NATIVE_EXTRA_LARGE";
+    private static final String NATIVE_LARGE_1 = "NATIVE_LARGE_1";
+    private static final String NATIVE_LARGE_2 = "NATIVE_LARGE_2";
+    private static final String NATIVE_MEDIUM_1 = "NATIVE_MEDIUM_1";
+    private static final String NATIVE_MEDIUM_2 = "NATIVE_MEDIUM_2";
     private static final String NATIVE_SMALL = "NATIVE_SMALL";
-    private static final String NATIVE_MEDIUM = "NATIVE_MEDIUM";
-    private static final String NATIVE_LARGE = "NATIVE_LARGE";
     private static final String SMALL_A4 = "SMALL_A4";
     private static final String SMALL_RECT = "SMALL_RECT";
     private static final String SMALL_SQUARE = "SMALL_SQUARE";
@@ -36,9 +39,12 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         AdsManager.getInstance().config(adsConfigurator -> adsConfigurator
+                .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.EXTRA_LARGE).alias(NATIVE_EXTRA_LARGE).and()
+                .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.LARGE_1).alias(NATIVE_LARGE_1).and()
+                .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.LARGE_2).alias(NATIVE_LARGE_2).and()
+                .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.MEDIUM_1).alias(NATIVE_MEDIUM_1).and()
+                .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.MEDIUM_2).alias(NATIVE_MEDIUM_2).and()
                 .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.SMALL).alias(NATIVE_SMALL).and()
-                .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.MEDIUM).alias(NATIVE_MEDIUM).and()
-                .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.LARGE).alias(NATIVE_LARGE).and()
                 .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.SMALL_A4).alias(SMALL_A4).and()
                 .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.SMALL_RECT).alias(SMALL_RECT).and()
                 .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.SMALL_SQUARE).alias(SMALL_SQUARE).and()
@@ -51,9 +57,12 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btn_show_interstitial).setOnClickListener(this::clickButton);
         findViewById(R.id.btn_show_rewarded).setOnClickListener(this::clickButton);
         findViewById(R.id.btn_show_rewarded_interstitial).setOnClickListener(this::clickButton);
+        findViewById(R.id.btn_show_native_extra_large).setOnClickListener(this::clickButton);
+        findViewById(R.id.btn_show_native_large_1).setOnClickListener(this::clickButton);
+        findViewById(R.id.btn_show_native_large_2).setOnClickListener(this::clickButton);
+        findViewById(R.id.btn_show_native_medium_1).setOnClickListener(this::clickButton);
+        findViewById(R.id.btn_show_native_medium_2).setOnClickListener(this::clickButton);
         findViewById(R.id.btn_show_native_small).setOnClickListener(this::clickButton);
-        findViewById(R.id.btn_show_native_medium).setOnClickListener(this::clickButton);
-        findViewById(R.id.btn_show_native_large).setOnClickListener(this::clickButton);
         findViewById(R.id.btn_show_native_small_a4).setOnClickListener(this::clickButton);
         findViewById(R.id.btn_show_native_small_rect).setOnClickListener(this::clickButton);
         findViewById(R.id.btn_show_native_small_square).setOnClickListener(this::clickButton);
@@ -100,19 +109,34 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(this, "Earned reward INTERSTITIAL", Toast.LENGTH_SHORT).show();
             });
         }
+        if (view.getId() == R.id.btn_show_native_extra_large) {
+            setContainerSmall(false, true);
+            AdsManager.getInstance().show(NATIVE_EXTRA_LARGE, container);
+            return;
+        }
+        if (view.getId() == R.id.btn_show_native_large_1) {
+            setContainerSmall(false, true);
+            AdsManager.getInstance().show(NATIVE_LARGE_1, container);
+            return;
+        }
+        if (view.getId() == R.id.btn_show_native_large_2) {
+            setContainerSmall(false, true);
+            AdsManager.getInstance().show(NATIVE_LARGE_2, container);
+            return;
+        }
+        if (view.getId() == R.id.btn_show_native_medium_1) {
+            setContainerSmall(false, true);
+            AdsManager.getInstance().show(NATIVE_MEDIUM_1, container);
+            return;
+        }
+        if (view.getId() == R.id.btn_show_native_medium_2) {
+            setContainerSmall(false, true);
+            AdsManager.getInstance().show(NATIVE_MEDIUM_2, container);
+            return;
+        }
         if (view.getId() == R.id.btn_show_native_small) {
             setContainerSmall(false, true);
             AdsManager.getInstance().show(NATIVE_SMALL, container);
-            return;
-        }
-        if (view.getId() == R.id.btn_show_native_medium) {
-            setContainerSmall(false, true);
-            AdsManager.getInstance().show(NATIVE_MEDIUM, container);
-            return;
-        }
-        if (view.getId() == R.id.btn_show_native_large) {
-            setContainerSmall(false, true);
-            AdsManager.getInstance().show(NATIVE_LARGE, container);
             return;
         }
         if (view.getId() == R.id.btn_show_native_small_a4) {
@@ -131,9 +155,12 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         if (view.getId() == R.id.btn_hide_native) {
+            AdsManager.getInstance().hide(NATIVE_EXTRA_LARGE);
+            AdsManager.getInstance().hide(NATIVE_LARGE_1);
+            AdsManager.getInstance().hide(NATIVE_LARGE_2);
+            AdsManager.getInstance().hide(NATIVE_MEDIUM_1);
+            AdsManager.getInstance().hide(NATIVE_MEDIUM_2);
             AdsManager.getInstance().hide(NATIVE_SMALL);
-            AdsManager.getInstance().hide(NATIVE_MEDIUM);
-            AdsManager.getInstance().hide(NATIVE_LARGE);
             AdsManager.getInstance().hide(SMALL_A4);
             AdsManager.getInstance().hide(SMALL_RECT);
             AdsManager.getInstance().hide(SMALL_SQUARE);

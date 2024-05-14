@@ -1,6 +1,6 @@
 <resources>
     <!-- Base application theme. -->
-    <style name="Base.Theme.AppHelperKit" parent="Theme.Material3.Light.NoActionBar">
+    <style name="Base.Theme.AppHelperKit" parent="Theme.Material3.Dark.NoActionBar">
         <!-- Customize your light theme here. -->
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
         <item name="android:statusBarColor">?android:attr/colorBackground</item>

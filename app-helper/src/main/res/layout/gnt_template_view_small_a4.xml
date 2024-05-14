@@ -7,7 +7,6 @@
         android:id="@+id/native_ad_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/gnt_template_background"
         tools:layout_gravity="center"
         tools:layout_width="200dp">
 
@@ -19,6 +18,7 @@
                 android:id="@+id/background"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
+                android:background="@color/gnt_main_background_color"
                 android:padding="@dimen/gnt_small_margin"
                 app:layout_constraintDimensionRatio="H,100:141"
                 app:layout_constraintStart_toStartOf="parent"
@@ -46,6 +46,7 @@
                         android:layout_height="wrap_content"
                         android:ellipsize="end"
                         android:gravity="center_vertical"
+                        android:lines="2"
                         android:maxLines="2"
                         android:paddingHorizontal="@dimen/gnt_extra_small_margin"
                         android:textColor="@color/gnt_primary_text_color"
@@ -54,7 +55,7 @@
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toEndOf="@id/icon"
                         app:layout_constraintTop_toTopOf="parent"
-                        tools:text="@tools:sample/lorem/random" />
+                        tools:text="@tools:sample/lorem" />
 
                     <androidx.appcompat.widget.LinearLayoutCompat
                         android:id="@+id/row_two"
@@ -71,6 +72,7 @@
                             android:layout_height="wrap_content">
 
                             <androidx.appcompat.widget.AppCompatTextView
+                                android:id="@+id/gnt_indicator_view"
                                 style="@style/GntAdIndicator"
                                 android:layout_gravity="center" />
 

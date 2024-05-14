@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="gnt_ad_indicator_color">#41A25D</color>
+    <color name="gnt_main_background_color">#121212</color>
+    <color name="gnt_cta_background_color">#003C8F</color>
+    <color name="gnt_cta_text_color">#FFFFFF</color>
+    <color name="gnt_rating_bar_color">#FFD700</color>
+    <color name="gnt_primary_text_color">#EEEEEE</color>
+    <color name="gnt_secondary_text_color">#CCCCCC</color>
+    <color name="gnt_tertiary_text_color">#AAAAAA</color>
+</resources>

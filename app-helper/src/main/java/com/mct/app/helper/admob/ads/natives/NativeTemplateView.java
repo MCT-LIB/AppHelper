@@ -65,7 +65,7 @@ public class NativeTemplateView extends FrameLayout {
         super(context, attrs, defStyleAttr);
         TypedArray attributes = context.getTheme().obtainStyledAttributes(attrs, R.styleable.TemplateView, 0, 0);
         try {
-            initView(attributes.getResourceId(R.styleable.TemplateView_gnt_template, R.layout.gnt_template_view_medium));
+            initView(attributes.getResourceId(R.styleable.TemplateView_gnt_template, R.layout.gnt_template_view_medium_1));
         } finally {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 attributes.close();
@@ -285,7 +285,6 @@ public class NativeTemplateView extends FrameLayout {
             tertiaryView.setBackground(new ColorDrawable(tertiaryBackground));
         }
 
-        invalidate();
         requestLayout();
     }
 

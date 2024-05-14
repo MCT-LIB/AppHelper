@@ -7,7 +7,6 @@
         android:id="@+id/native_ad_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/gnt_template_background"
         tools:layout_gravity="center"
         tools:layout_width="200dp">
 
@@ -19,6 +18,7 @@
                 android:id="@+id/background"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
+                android:background="@color/gnt_main_background_color"
                 android:padding="@dimen/gnt_small_margin"
                 app:layout_constraintDimensionRatio="H,1:1"
                 app:layout_constraintStart_toStartOf="parent"
@@ -32,20 +32,21 @@
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent">
 
+                    <androidx.appcompat.widget.AppCompatTextView
+                        android:id="@+id/gnt_indicator_view"
+                        style="@style/GntAdIndicator"
+                        app:layout_constraintBottom_toBottomOf="@id/icon"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="@id/icon" />
+
                     <androidx.appcompat.widget.AppCompatImageView
                         android:id="@+id/icon"
                         android:layout_width="24dp"
                         android:layout_height="24dp"
-                        app:layout_constraintStart_toStartOf="parent"
+                        android:layout_marginStart="@dimen/gnt_extra_small_margin"
+                        app:layout_constraintStart_toEndOf="@id/gnt_indicator_view"
                         app:layout_constraintTop_toTopOf="parent"
                         tools:src="@tools:sample/avatars" />
-
-                    <androidx.appcompat.widget.AppCompatTextView
-                        style="@style/GntAdIndicator"
-                        android:layout_marginStart="@dimen/gnt_extra_small_margin"
-                        app:layout_constraintBottom_toBottomOf="@id/icon"
-                        app:layout_constraintStart_toEndOf="@id/icon"
-                        app:layout_constraintTop_toTopOf="@id/icon" />
 
                     <androidx.appcompat.widget.AppCompatTextView
                         android:id="@+id/primary"
@@ -60,10 +61,10 @@
                         android:textStyle="bold"
                         app:layout_constraintBottom_toBottomOf="@id/icon"
                         app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintStart_toEndOf="@id/gnt_indicator_view"
+                        app:layout_constraintStart_toEndOf="@id/icon"
                         app:layout_constraintTop_toTopOf="@id/icon"
-                        tools:text="@tools:sample/lorem"
-                        tools:ignore="UnknownId" />
+                        tools:ignore="UnknownId"
+                        tools:text="@tools:sample/lorem" />
 
                     <androidx.appcompat.widget.AppCompatTextView
                         android:id="@+id/body"

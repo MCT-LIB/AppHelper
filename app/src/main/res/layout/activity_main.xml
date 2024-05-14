@@ -88,40 +88,58 @@
                 android:orientation="vertical">
 
                 <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_show_native_extra_large"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="Native extra large" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_show_native_large_1"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="Native large 1" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_show_native_large_2"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="Native large 2" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_show_native_medium_1"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="Native medium 1" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_show_native_medium_2"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="Native medium 2" />
+
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_show_native_small"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
-                    android:text="S native small" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_show_native_medium"
-                    android:layout_width="match_parent"
-                    android:layout_height="40dp"
-                    android:text="S native medium" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_show_native_large"
-                    android:layout_width="match_parent"
-                    android:layout_height="40dp"
-                    android:text="S native large" />
+                    android:text="Native small" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_show_native_small_a4"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
-                    android:text="S native small a4" />
+                    android:text="Native small a4" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_show_native_small_rect"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
-                    android:text="S native small rect" />
+                    android:text="Native small rect" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_show_native_small_square"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
-                    android:text="S native small square" />
+                    android:text="Native small square" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_hide_native"
