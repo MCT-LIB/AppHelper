@@ -46,6 +46,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import io.reactivex.rxjava3.disposables.CompositeDisposable;
@@ -568,15 +569,15 @@ public class BillingConnector {
      * Called to purchase a non-consumable/consumable product
      */
     public final void purchase(Activity activity, String productId) {
-        purchase(activity, productId, 0);
+        purchase(activity, productId, null, null);
     }
 
     /**
      * Called to purchase a non-consumable/consumable product
      * <p>
-     * The offer index represents the different offers in the subscription.
+     * The planId and offerId represents the different plans, offers in the subscription.
      */
-    private void purchase(Activity activity, String productId, int selectedOfferIndex) {
+    private void purchase(Activity activity, String productId, String planId, String offerId) {
         if (checkProductBeforeInteraction(productId)) {
             Optional<ProductInfo> productInfo = fetchedProductInfoList.stream().filter(it -> it.getProduct().equals(productId)).findFirst();
             if (productInfo.isPresent()) {
@@ -584,12 +585,29 @@ public class BillingConnector {
                 List<BillingFlowParams.ProductDetailsParams> productDetailsParamsList;
 
                 if (productDetails.getProductType().equals(SUBS) && productDetails.getSubscriptionOfferDetails() != null) {
+
+                    ProductDetails.SubscriptionOfferDetails offerDetails = null;
+
+                    if (planId != null) {
+                        Predicate<ProductDetails.SubscriptionOfferDetails> filter = offerId != null
+                                ? (it -> planId.equals(it.getBasePlanId()) && offerId.equals(it.getOfferId()))
+                                : (it -> planId.equals(it.getBasePlanId()));
+                        offerDetails = productDetails.getSubscriptionOfferDetails().stream()
+                                .filter(filter)
+                                .findFirst()
+                                .orElse(null);
+                    }
+
+                    if (offerDetails == null) {
+                        offerDetails = productDetails.getSubscriptionOfferDetails().get(0);
+                    }
+
                     //the offer index represents the different offers in the subscription
                     //offer index is only available for subscriptions starting with Google Billing v5+
                     productDetailsParamsList = Collections.singletonList(
                             BillingFlowParams.ProductDetailsParams.newBuilder()
                                     .setProductDetails(productDetails)
-                                    .setOfferToken(productDetails.getSubscriptionOfferDetails().get(selectedOfferIndex).getOfferToken())
+                                    .setOfferToken(offerDetails.getOfferToken())
                                     .build()
                     );
                 } else {
@@ -619,8 +637,8 @@ public class BillingConnector {
      * <p>
      * For subscription with only one base package, use subscribe(activity, productId) method or selectedOfferIndex = 0
      */
-    public final void subscribe(Activity activity, String productId, int selectedOfferIndex) {
-        purchase(activity, productId, selectedOfferIndex);
+    public final void subscribe(Activity activity, String productId, String planId, String offerId) {
+        purchase(activity, productId, planId, offerId);
     }
 
     /**

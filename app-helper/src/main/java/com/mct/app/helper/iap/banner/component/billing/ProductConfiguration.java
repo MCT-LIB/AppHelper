@@ -26,13 +26,15 @@ import androidx.annotation.NonNull;
 public class ProductConfiguration {
 
     private final String productId;
+    private final String planId;
+    private final String offerId;
     private final float discountPercent;
-    private final int selectedOfferIndex;
 
-    private ProductConfiguration(String productId, float discountPercent, int selectedOfferIndex) {
+    private ProductConfiguration(String productId, String planId, String offerId, float discountPercent) {
         this.productId = productId;
+        this.planId = planId;
+        this.offerId = offerId;
         this.discountPercent = discountPercent;
-        this.selectedOfferIndex = selectedOfferIndex;
     }
 
     /**
@@ -45,21 +47,30 @@ public class ProductConfiguration {
     }
 
     /**
+     * Gets the plan ID configured in this instance.
+     *
+     * @return The plan ID.
+     */
+    public String getPlanId() {
+        return planId;
+    }
+
+    /**
+     * Gets the offer ID configured in this instance.
+     *
+     * @return The offer ID.
+     */
+    public String getOfferId() {
+        return offerId;
+    }
+
+    /**
      * Gets the discount percentage configured in this instance.
      *
      * @return The discount percentage.
      */
     public float getDiscountPercent() {
         return discountPercent;
-    }
-
-    /**
-     * Gets the selected offer index configured in this instance.
-     *
-     * @return The selected offer index (for products with multiple offers).
-     */
-    public int getSelectedOfferIndex() {
-        return selectedOfferIndex;
     }
 
     /**
@@ -79,16 +90,41 @@ public class ProductConfiguration {
     public static class Builder {
 
         private final String productId;
+        private String planId;
+        private String offerId;
         private float discountPercent;
-        private int selectedOfferIndex;
 
         /**
          * @param productId - The product ID to configure.
          */
         public Builder(String productId) {
             this.productId = productId;
+            this.planId = null;
+            this.offerId = null;
             this.discountPercent = 0;
-            this.selectedOfferIndex = 0;
+        }
+
+        /**
+         * Sets the plan ID for the product.
+         *
+         * @param planId - The plan ID to set.
+         * @return The {@link Builder} instance for method chaining.
+         */
+        public Builder setSubscription(String planId) {
+            this.planId = planId;
+            return this;
+        }
+
+        /**
+         * Sets the plan ID and offer ID for the product.
+         *
+         * @param offerId - The offer ID to set.
+         * @return The {@link Builder} instance for method chaining.
+         */
+        public Builder setSubscription(String planId, String offerId) {
+            this.planId = planId;
+            this.offerId = offerId;
+            return this;
         }
 
         /**
@@ -97,19 +133,8 @@ public class ProductConfiguration {
          * @param discountPercent - The discount percentage to apply.
          * @return The {@link Builder} instance for method chaining.
          */
-        public Builder withDiscountPercent(float discountPercent) {
+        public Builder setDiscountPercent(float discountPercent) {
             this.discountPercent = discountPercent;
-            return this;
-        }
-
-        /**
-         * Sets the selected offer index for the product (for products with multiple offers).
-         *
-         * @param selectedOfferIndex - The selected offer index to set.
-         * @return The {@link Builder} instance for method chaining.
-         */
-        public Builder withOfferIndex(int selectedOfferIndex) {
-            this.selectedOfferIndex = selectedOfferIndex;
             return this;
         }
 
@@ -119,7 +144,7 @@ public class ProductConfiguration {
          * @return A {@link ProductConfiguration} instance with the specified configurations.
          */
         public ProductConfiguration build() {
-            return new ProductConfiguration(productId, discountPercent, selectedOfferIndex);
+            return new ProductConfiguration(productId, planId, offerId, discountPercent);
         }
     }
 }

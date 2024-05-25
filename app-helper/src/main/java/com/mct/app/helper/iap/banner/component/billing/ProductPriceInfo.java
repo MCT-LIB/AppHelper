@@ -12,6 +12,9 @@ import com.mct.app.helper.iap.billing.enums.SkuProductType;
 import com.mct.app.helper.iap.billing.models.ProductInfo;
 import com.mct.app.helper.iap.billing.models.SubscriptionOfferDetails;
 
+import java.util.Comparator;
+import java.util.function.Predicate;
+
 /**
  * ProductPriceInfo is a utility class for managing and formatting pricing information for a product.
  * It provides methods to calculate real and fake prices, get average prices, and format prices for display.
@@ -35,7 +38,32 @@ public class ProductPriceInfo {
                     productInfo.getOneTimePurchaseOfferFormattedPrice()
             );
         }
-        return fromPricingPhase(discountPercent, productInfo.getSubscriptionOfferDetails().get(productConfiguration.getSelectedOfferIndex()).getPricingPhases().get(0));
+        try {
+            String planId = productConfiguration.getPlanId();
+            String offerId = productConfiguration.getOfferId();
+            SubscriptionOfferDetails offerDetails = null;
+
+            if (planId != null) {
+                Predicate<SubscriptionOfferDetails> filter = offerId != null
+                        ? (it -> planId.equals(it.getBasePlanId()) && offerId.equals(it.getOfferId()))
+                        : (it -> planId.equals(it.getBasePlanId()));
+                offerDetails = productInfo.getSubscriptionOfferDetails().stream()
+                        .filter(filter)
+                        .findFirst()
+                        .orElse(null);
+            }
+
+            if (offerDetails == null) {
+                offerDetails = productInfo.getSubscriptionOfferDetails().get(0);
+            }
+
+            return fromPricingPhase(discountPercent, offerDetails.getPricingPhases().stream()
+                    .max(Comparator.comparingLong(SubscriptionOfferDetails.PricingPhases::getPriceAmountMicros))
+                    .orElseThrow(() -> new RuntimeException("Failed to get pricing phases")));
+
+        } catch (Exception e) {
+            return fromPriceAmount(discountPercent, 0f, null);
+        }
     }
 
     /**

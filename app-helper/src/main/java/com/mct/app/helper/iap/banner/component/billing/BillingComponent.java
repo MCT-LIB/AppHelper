@@ -209,7 +209,7 @@ public class BillingComponent extends BaseComponentAdapter {
      * @param product - The product to subscribe.
      */
     public final void subscribe(@NonNull ProductConfiguration product) {
-        connector.subscribe(activity, product.getProductId(), product.getSelectedOfferIndex());
+        connector.subscribe(activity, product.getProductId(), product.getPlanId(), product.getOfferId());
     }
 
     /**
