@@ -45,8 +45,8 @@ import com.mct.app.helper.iap.billing.models.PurchaseInfo;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import io.reactivex.rxjava3.disposables.CompositeDisposable;
@@ -589,11 +589,8 @@ public class BillingConnector {
                     ProductDetails.SubscriptionOfferDetails offerDetails = null;
 
                     if (planId != null) {
-                        Predicate<ProductDetails.SubscriptionOfferDetails> filter = offerId != null
-                                ? (it -> planId.equals(it.getBasePlanId()) && offerId.equals(it.getOfferId()))
-                                : (it -> planId.equals(it.getBasePlanId()));
                         offerDetails = productDetails.getSubscriptionOfferDetails().stream()
-                                .filter(filter)
+                                .filter(it -> Objects.equals(planId, it.getBasePlanId()) && Objects.equals(offerId, it.getOfferId()))
                                 .findFirst()
                                 .orElse(null);
                     }

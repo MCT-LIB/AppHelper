@@ -1,6 +1,10 @@
 package com.mct.app.helper.iap.banner.component.billing;
 
+import android.text.TextUtils;
+
 import androidx.annotation.NonNull;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * ProductConfiguration - A class for configuring product-specific settings.
@@ -28,12 +32,14 @@ public class ProductConfiguration {
     private final String productId;
     private final String planId;
     private final String offerId;
+    private final AtomicBoolean enableOfferId; // use for toggle free trial
     private final float discountPercent;
 
-    private ProductConfiguration(String productId, String planId, String offerId, float discountPercent) {
+    private ProductConfiguration(String productId, String planId, String offerId, boolean enableOfferId, float discountPercent) {
         this.productId = productId;
         this.planId = planId;
         this.offerId = offerId;
+        this.enableOfferId = new AtomicBoolean(enableOfferId);
         this.discountPercent = discountPercent;
     }
 
@@ -61,7 +67,7 @@ public class ProductConfiguration {
      * @return The offer ID.
      */
     public String getOfferId() {
-        return offerId;
+        return isEnableOfferId() ? offerId : null;
     }
 
     /**
@@ -71,6 +77,24 @@ public class ProductConfiguration {
      */
     public float getDiscountPercent() {
         return discountPercent;
+    }
+
+    /**
+     * Gets the enableOfferId configured in this instance.
+     *
+     * @return The enableOfferId.
+     */
+    public boolean isEnableOfferId() {
+        return enableOfferId.get();
+    }
+
+    /**
+     * Sets enable offer id
+     *
+     * @param enableOfferId - enable offer id
+     */
+    public void setEnableOfferId(boolean enableOfferId) {
+        this.enableOfferId.set(enableOfferId);
     }
 
     /**
@@ -92,6 +116,7 @@ public class ProductConfiguration {
         private final String productId;
         private String planId;
         private String offerId;
+        private boolean enableOfferId;
         private float discountPercent;
 
         /**
@@ -101,6 +126,7 @@ public class ProductConfiguration {
             this.productId = productId;
             this.planId = null;
             this.offerId = null;
+            this.enableOfferId = true;
             this.discountPercent = 0;
         }
 
@@ -123,7 +149,18 @@ public class ProductConfiguration {
          */
         public Builder setSubscription(String planId, String offerId) {
             this.planId = planId;
-            this.offerId = offerId;
+            this.offerId = TextUtils.isEmpty(offerId) ? null : offerId;
+            return this;
+        }
+
+        /**
+         * Sets enable offer id
+         *
+         * @param enableOfferId - enable offer id
+         * @return The {@link Builder} instance for method chaining.
+         */
+        public Builder setEnableOfferId(boolean enableOfferId) {
+            this.enableOfferId = enableOfferId;
             return this;
         }
 
@@ -144,7 +181,7 @@ public class ProductConfiguration {
          * @return A {@link ProductConfiguration} instance with the specified configurations.
          */
         public ProductConfiguration build() {
-            return new ProductConfiguration(productId, planId, offerId, discountPercent);
+            return new ProductConfiguration(productId, planId, offerId, enableOfferId, discountPercent);
         }
     }
 }

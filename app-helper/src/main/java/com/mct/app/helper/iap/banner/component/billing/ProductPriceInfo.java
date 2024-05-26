@@ -13,7 +13,7 @@ import com.mct.app.helper.iap.billing.models.ProductInfo;
 import com.mct.app.helper.iap.billing.models.SubscriptionOfferDetails;
 
 import java.util.Comparator;
-import java.util.function.Predicate;
+import java.util.Objects;
 
 /**
  * ProductPriceInfo is a utility class for managing and formatting pricing information for a product.
@@ -44,11 +44,8 @@ public class ProductPriceInfo {
             SubscriptionOfferDetails offerDetails = null;
 
             if (planId != null) {
-                Predicate<SubscriptionOfferDetails> filter = offerId != null
-                        ? (it -> planId.equals(it.getBasePlanId()) && offerId.equals(it.getOfferId()))
-                        : (it -> planId.equals(it.getBasePlanId()));
                 offerDetails = productInfo.getSubscriptionOfferDetails().stream()
-                        .filter(filter)
+                        .filter(it -> Objects.equals(planId, it.getBasePlanId()) && Objects.equals(offerId, it.getOfferId()))
                         .findFirst()
                         .orElse(null);
             }
