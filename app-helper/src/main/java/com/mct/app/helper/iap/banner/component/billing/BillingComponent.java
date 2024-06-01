@@ -213,6 +213,15 @@ public class BillingComponent extends BaseComponentAdapter {
     }
 
     /**
+     * Called to purchase a non-consumable/consumable product
+     *
+     * @param product - The ID of the product to purchase.
+     */
+    public final void purchase(@NonNull ProductConfiguration product) {
+        connector.purchase(activity, product.getProductId());
+    }
+
+    /**
      * Consumes a purchased product.
      *
      * @param purchaseInfo - The PurchaseInfo object representing the purchased product to be consumed.
