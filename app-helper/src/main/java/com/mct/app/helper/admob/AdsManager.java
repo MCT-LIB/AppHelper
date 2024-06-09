@@ -45,7 +45,7 @@ public final class AdsManager {
     private final AtomicBoolean mIsInitialized = new AtomicBoolean(false);
     private final AtomicBoolean mIsPremium = new AtomicBoolean(false);
     private final AtomicBoolean mDebug = new AtomicBoolean(false);
-    private final AtomicReference<OnPaidEventListener> mOnPaidEventListener = new AtomicReference<>();
+    private final AtomicReference<OnPaidEventListeners> mOnPaidEventListener = new AtomicReference<>();
     private final AdsLoadObserver mAdsLoadObserver = new AdsLoadObserver();
     private final AppOpenLifecycleObserver mAppOpenObserver = new AppOpenLifecycleObserver();
 
@@ -207,8 +207,8 @@ public final class AdsManager {
      *
      * @return on paid event listener
      */
-    public OnPaidEventListener getOnPaidEventListener() {
-        return mOnPaidEventListener.get();
+    public OnPaidEventListener getOnPaidEventListener(String alias) {
+        return Optional.ofNullable(mOnPaidEventListener.get()).map(l -> l.toGms(alias)).orElse(null);
     }
 
     /**
@@ -217,7 +217,7 @@ public final class AdsManager {
      * @param listener on paid event listener
      */
     public void setOnPaidEventListener(OnPaidEventListeners listener) {
-        mOnPaidEventListener.set(Optional.ofNullable(listener).map(OnPaidEventListeners::toGms).orElse(null));
+        mOnPaidEventListener.set(listener);
     }
 
     public void registerNativeAdsAdapter(NativeAdsAdapter adapter) {
@@ -536,7 +536,7 @@ public final class AdsManager {
             return;
         }
         ads.setDebugSupplier(mDebug::get);
-        ads.setOnPaidEventListenerSupplier(mOnPaidEventListener::get);
+        ads.setOnPaidEventListenerSupplier(() -> getOnPaidEventListener(alias));
         if (ads instanceof BaseFullScreenAds) {
             if (ads instanceof AppOpenAds) {
                 setAppOpenObserverAds((AppOpenAds) ads);

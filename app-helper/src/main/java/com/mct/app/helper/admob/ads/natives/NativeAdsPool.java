@@ -27,6 +27,10 @@ public class NativeAdsPool {
     private OnPoolRefreshedListener onPoolRefreshedListener;
 
     public NativeAdsPool(Context context, String adsUnitId) {
+        this(context, adsUnitId, adsUnitId);
+    }
+
+    public NativeAdsPool(Context context, String adsUnitId, String alias) {
         if (AdsManager.getInstance().isPremium()) {
             adLoader = null;
         } else {
@@ -40,7 +44,7 @@ public class NativeAdsPool {
                         if (isDispose) {
                             nativeAd.destroy();
                         } else {
-                            nativeAd.setOnPaidEventListener(AdsManager.getInstance().getOnPaidEventListener());
+                            nativeAd.setOnPaidEventListener(AdsManager.getInstance().getOnPaidEventListener(alias));
                             nativeAdsList.addLast(nativeAd);
                             handler.removeCallbacksAndMessages(null);
                             handler.postDelayed(() -> {

@@ -6,9 +6,14 @@ import com.google.android.gms.ads.AdValue;
 
 public class AdsValue {
 
+    private final String alias;
     private final int precisionType;
     private final String currencyCode;
     private final long valueMicros;
+
+    public String getAlias() {
+        return alias;
+    }
 
     public int getPrecisionType() {
         return this.precisionType;
@@ -23,15 +28,17 @@ public class AdsValue {
         return this.currencyCode;
     }
 
-    private AdsValue(int precisionType, String currencyCode, long valueMicros) {
+    private AdsValue(String alias, int precisionType, String currencyCode, long valueMicros) {
+        this.alias = alias;
         this.precisionType = precisionType;
         this.currencyCode = currencyCode;
         this.valueMicros = valueMicros;
     }
 
     @NonNull
-    public static AdsValue of(@NonNull AdValue adValue) {
+    public static AdsValue of(String alias, @NonNull AdValue adValue) {
         return new AdsValue(
+                alias,
                 adValue.getPrecisionType(),
                 adValue.getCurrencyCode(),
                 adValue.getValueMicros()
