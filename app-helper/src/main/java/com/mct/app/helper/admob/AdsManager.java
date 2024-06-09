@@ -286,7 +286,7 @@ public final class AdsManager {
      * @see RewardedInterstitialAds
      */
     public void show(BaseFullScreenAds<?> ads, Activity activity, Callback callback) {
-        if (checkAdsCondition(ads, callback)) {
+        if (checkShowFullScreenAdsCondition(ads, callback)) {
             ads.show(activity, false, callback);
         }
     }
@@ -316,11 +316,10 @@ public final class AdsManager {
      * @see RewardedInterstitialAds
      */
     public void show(BaseRewardedAds<?> ads, Activity activity, Callback callback, Callback onUserEarnedReward) {
-        if (checkAdsCondition(ads, callback)) {
+        if (checkShowFullScreenAdsCondition(ads, callback)) {
             ads.show(activity, false, callback, onUserEarnedReward);
         }
     }
-
 
     /**
      * Show full screen ads by alias, wait load and show if necessary
@@ -349,7 +348,7 @@ public final class AdsManager {
      * @see RewardedInterstitialAds
      */
     public void showSyncLoad(BaseFullScreenAds<?> ads, Activity activity, Callback callback) {
-        if (checkAdsCondition(ads, callback)) {
+        if (checkShowFullScreenAdsCondition(ads, callback)) {
             ads.show(activity, true, callback);
         }
     }
@@ -379,11 +378,10 @@ public final class AdsManager {
      * @see RewardedInterstitialAds
      */
     public void showSyncLoad(BaseRewardedAds<?> ads, Activity activity, Callback callback, Callback onUserEarnedReward) {
-        if (checkAdsCondition(ads, callback)) {
+        if (checkShowFullScreenAdsCondition(ads, callback)) {
             ads.show(activity, true, callback, onUserEarnedReward);
         }
     }
-
 
     /**
      * Show view ads by alias
@@ -621,6 +619,19 @@ public final class AdsManager {
             mAdsLoadObserver.init(mApplication);
             mAppOpenObserver.init(mApplication);
         }
+    }
+
+    private boolean checkShowFullScreenAdsCondition(BaseAds<?> ads, Callback callback) {
+        // check ads condition first
+        if (!checkAdsCondition(ads, callback)) {
+            return false;
+        }
+        // check has any full screen ads is show
+        if (mAds.values().stream().anyMatch(a -> a instanceof BaseFullScreenAds && a.isShowing())) {
+            invokeCallback(callback);
+            return false;
+        }
+        return true;
     }
 
     private boolean checkAdsCondition(BaseAds<?> ads, Callback callback) {

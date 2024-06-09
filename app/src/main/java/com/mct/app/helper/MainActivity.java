@@ -95,17 +95,17 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         if (view.getId() == R.id.btn_show_interstitial) {
-            AdsManager.getInstance().show(Constant.INTERSTITIAL_ID, this, null);
+            AdsManager.getInstance().showSyncLoad(Constant.INTERSTITIAL_ID, this, null);
             return;
         }
         if (view.getId() == R.id.btn_show_rewarded) {
-            AdsManager.getInstance().show(Constant.REWARDED_ID, this, null, () -> {
+            AdsManager.getInstance().showSyncLoad(Constant.REWARDED_ID, this, null, () -> {
                 Toast.makeText(this, "Earned reward NORMAL", Toast.LENGTH_SHORT).show();
             });
             return;
         }
         if (view.getId() == R.id.btn_show_rewarded_interstitial) {
-            AdsManager.getInstance().show(Constant.REWARDED_INTERSTITIAL_ID, this, null, () -> {
+            AdsManager.getInstance().showSyncLoad(Constant.REWARDED_INTERSTITIAL_ID, this, null, () -> {
                 Toast.makeText(this, "Earned reward INTERSTITIAL", Toast.LENGTH_SHORT).show();
             });
         }
