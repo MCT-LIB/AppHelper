@@ -1,4 +1,4 @@
-package com.mct.app.helper.native_rcv.adapter;
+package com.mct.app.helper.demo.native_rcv.adapter;
 
 import android.graphics.Rect;
 import android.view.View;

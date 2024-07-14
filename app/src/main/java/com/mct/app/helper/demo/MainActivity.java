@@ -1,4 +1,4 @@
-package com.mct.app.helper;
+package com.mct.app.helper.demo;
 
 import android.content.Context;
 import android.content.Intent;
@@ -17,7 +17,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.mct.app.helper.admob.AdsManager;
 import com.mct.app.helper.admob.ads.natives.NativeTemplate;
 import com.mct.app.helper.admob.utils.BannerCollapseUtils;
-import com.mct.app.helper.native_rcv.NativeRecyclerActivity;
+import com.mct.app.helper.demo.native_rcv.NativeRecyclerActivity;
 
 public class MainActivity extends AppCompatActivity {
 

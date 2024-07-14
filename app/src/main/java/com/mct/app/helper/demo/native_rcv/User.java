@@ -1,4 +1,4 @@
-package com.mct.app.helper.native_rcv;
+package com.mct.app.helper.demo.native_rcv;
 
 public class User {
 

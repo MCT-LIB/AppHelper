@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace 'com.mct.app.helper'
+    namespace 'com.mct.app.helper.demo'
     compileSdk 34
 
     defaultConfig {

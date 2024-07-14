@@ -1,4 +1,4 @@
-package com.mct.app.helper.native_rcv.adapter;
+package com.mct.app.helper.demo.native_rcv.adapter;
 
 import android.view.LayoutInflater;
 import android.view.View;
@@ -10,8 +10,8 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.mct.app.helper.R;
-import com.mct.app.helper.native_rcv.User;
+import com.mct.app.helper.demo.R;
+import com.mct.app.helper.demo.native_rcv.User;
 
 import java.util.List;
 import java.util.regex.Matcher;

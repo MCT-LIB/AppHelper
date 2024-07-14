@@ -1,4 +1,4 @@
-package com.mct.app.helper.native_rcv;
+package com.mct.app.helper.demo.native_rcv;
 
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -12,15 +12,15 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.mct.app.helper.Constant;
-import com.mct.app.helper.R;
+import com.mct.app.helper.demo.Constant;
+import com.mct.app.helper.demo.R;
 import com.mct.app.helper.admob.ads.natives.NativeAdsAdapter;
 import com.mct.app.helper.admob.ads.natives.NativeTemplate;
 import com.mct.app.helper.admob.ads.natives.NativeTemplateStyle;
 import com.mct.app.helper.admob.ads.natives.manager.NpaGridLayoutManager;
 import com.mct.app.helper.admob.ads.natives.manager.NpaLinearLayoutManager;
-import com.mct.app.helper.native_rcv.adapter.GridSpacingItemDecoration;
-import com.mct.app.helper.native_rcv.adapter.UserAdapter;
+import com.mct.app.helper.demo.native_rcv.adapter.GridSpacingItemDecoration;
+import com.mct.app.helper.demo.native_rcv.adapter.UserAdapter;
 
 import java.util.ArrayList;
 import java.util.Collections;
