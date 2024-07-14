@@ -43,7 +43,7 @@
                 android:ellipsize="end"
                 android:maxLines="2"
                 android:textColor="@color/gnt_primary_text_color"
-                android:textSize="@dimen/gnt_text_size_large"
+                android:textSize="@dimen/gnt_text_size_small"
                 android:textStyle="bold"
                 app:layout_constraintEnd_toStartOf="@id/cta"
                 app:layout_constraintStart_toEndOf="@id/gnt_indicator_view"
@@ -55,6 +55,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="@dimen/gnt_small_margin"
+                android:layout_marginTop="@dimen/gnt_extra_small_margin"
                 android:layout_marginEnd="@dimen/gnt_small_margin"
                 android:ellipsize="end"
                 android:maxLines="2"
@@ -62,7 +63,7 @@
                 android:textSize="@dimen/gnt_text_size_small"
                 app:layout_constraintEnd_toStartOf="@id/cta"
                 app:layout_constraintStart_toEndOf="@id/icon"
-                app:layout_constraintTop_toBottomOf="@id/gnt_indicator_view"
+                app:layout_constraintTop_toBottomOf="@id/primary"
                 tools:text="@tools:sample/lorem/random" />
 
             <androidx.appcompat.widget.AppCompatButton
