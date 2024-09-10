@@ -131,10 +131,15 @@ public class AppRater {
      * Call this method directly if you want
      */
     public static void rateNow(@NonNull Context context) {
+        Intent intent = new Intent(Intent.ACTION_VIEW, getMarketUri(context));
         try {
-            context.startActivity(new Intent(Intent.ACTION_VIEW, getMarketUri(context)));
-        } catch (ActivityNotFoundException e) {
-            Log.e(TAG, "Market Intent not found", e);
+            context.startActivity(intent.setPackage("com.android.vending"));
+        } catch (Exception e) {
+            try {
+                context.startActivity(intent.setPackage(null));
+            } catch (Exception ignored) {
+                Log.e(TAG, "Market Intent not found", e);
+            }
         }
     }
 
