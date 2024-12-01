@@ -4,8 +4,12 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 
+import androidx.annotation.NonNull;
+
+import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdLoader;
 import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.VideoOptions;
 import com.google.android.gms.ads.nativead.NativeAd;
 import com.google.android.gms.ads.nativead.NativeAdOptions;
@@ -23,6 +27,7 @@ public class NativeAdsPool {
     private final AdLoader adLoader;
     private final ArrayDeque<NativeAd> nativeAdsList = new ArrayDeque<>();
 
+    private boolean isLoading;
     private boolean isDispose;
     private OnPoolRefreshedListener onPoolRefreshedListener;
 
@@ -40,6 +45,23 @@ public class NativeAdsPool {
                     .withNativeAdOptions(new NativeAdOptions.Builder()
                             .setVideoOptions(new VideoOptions.Builder().setStartMuted(true).build())
                             .build())
+                    .withAdListener(new AdListener() {
+                        @Override
+                        public void onAdLoaded() {
+                            isLoading = false;
+                        }
+
+                        @Override
+                        public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
+                            isLoading = false;
+                            handler.removeCallbacksAndMessages(null);
+                            handler.postDelayed(() -> {
+                                if (onPoolRefreshedListener != null) {
+                                    onPoolRefreshedListener.onPoolRefreshed();
+                                }
+                            }, 200);
+                        }
+                    })
                     .forNativeAd(nativeAd -> {
                         if (isDispose) {
                             nativeAd.destroy();
@@ -61,6 +83,10 @@ public class NativeAdsPool {
         if (isAdsUnavailable()) {
             return;
         }
+        if (isLoading) {
+            return;
+        }
+        isLoading = true;
         adLoader.loadAds(new AdRequest.Builder().build(), numberOfAds);
     }
 
@@ -71,16 +97,19 @@ public class NativeAdsPool {
         nativeAdsList.clear();
     }
 
+    public boolean isLoading() {
+        return isLoading;
+    }
+
+    public boolean isDispose() {
+        return isDispose;
+    }
+
     public void dispose() {
         if (isDispose) {
             return;
         }
         isDispose = true;
-        clearAds();
-    }
-
-    public boolean isDispose() {
-        return isDispose;
     }
 
     public boolean isAdsUnavailable() {
@@ -89,6 +118,10 @@ public class NativeAdsPool {
 
     public void setOnPoolRefreshedListener(OnPoolRefreshedListener listener) {
         onPoolRefreshedListener = listener;
+    }
+
+    public int size() {
+        return nativeAdsList.size();
     }
 
     public NativeAd get() {

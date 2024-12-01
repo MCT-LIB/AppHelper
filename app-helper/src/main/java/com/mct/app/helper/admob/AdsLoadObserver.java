@@ -17,6 +17,7 @@ import androidx.annotation.NonNull;
 import com.mct.app.helper.admob.ads.AppOpenAds;
 import com.mct.app.helper.admob.ads.BaseAds;
 import com.mct.app.helper.admob.ads.InterstitialAds;
+import com.mct.app.helper.admob.ads.natives.NativeAdsAdapter;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -101,6 +102,9 @@ class AdsLoadObserver {
 
     // just load if not loaded
     private void onNetworkAvailable(Application application) {
+        // load native
+        AdsManager.getInstance().getNativeAdsAdapters().forEach(NativeAdsAdapter::loadAdsIfNecessary);
+        // load app open and interstitial
         AdsManager.getInstance().getAdsList().stream()
                 .filter(ads -> ads instanceof AppOpenAds || ads instanceof InterstitialAds)
                 .forEach(ads -> {
