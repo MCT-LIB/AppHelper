@@ -215,7 +215,7 @@ public class AdsConfigurator {
         if (mOnPaidEventListener != null) {
             mAdsManager.setOnPaidEventListener(mOnPaidEventListener);
         }
-        if (mAds.size() > 0) {
+        if (!mAds.isEmpty()) {
             mAds.forEach(mAdsManager::putAds);
         }
         if (mCallback != null) {

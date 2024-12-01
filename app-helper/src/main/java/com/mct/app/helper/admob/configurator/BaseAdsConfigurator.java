@@ -3,6 +3,8 @@ package com.mct.app.helper.admob.configurator;
 import com.mct.app.helper.admob.AdsConfigurator;
 import com.mct.app.helper.admob.ads.BaseAds;
 
+import java.util.Objects;
+
 @SuppressWarnings("unchecked")
 public abstract class BaseAdsConfigurator<C extends BaseAdsConfigurator<C, Ads>, Ads extends BaseAds<?>> {
 
@@ -13,16 +15,16 @@ public abstract class BaseAdsConfigurator<C extends BaseAdsConfigurator<C, Ads>,
 
     public BaseAdsConfigurator(AdsConfigurator configurator, String adsUnitId) {
         this.configurator = configurator;
-        this.adsUnitId = adsUnitId;
+        this.adsUnitId = Objects.requireNonNull(adsUnitId);
     }
 
-    public C alias(String id) {
-        this.alias = id;
+    public C alias(String alias) {
+        this.alias = Objects.requireNonNull(alias);
         return (C) this;
     }
 
     public C adsUnitId(String adsUnitId) {
-        this.adsUnitId = adsUnitId;
+        this.adsUnitId = Objects.requireNonNull(adsUnitId);
         return (C) this;
     }
 

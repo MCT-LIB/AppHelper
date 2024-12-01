@@ -44,7 +44,7 @@ public class NativeAdsPool {
                         if (isDispose) {
                             nativeAd.destroy();
                         } else {
-                            nativeAd.setOnPaidEventListener(AdsManager.getInstance().getOnPaidEventListener(alias));
+                            nativeAd.setOnPaidEventListener(AdsManager.getInstance().getOnPaidEventListener(() -> alias));
                             nativeAdsList.addLast(nativeAd);
                             handler.removeCallbacksAndMessages(null);
                             handler.postDelayed(() -> {

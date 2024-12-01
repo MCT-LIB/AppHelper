@@ -41,7 +41,7 @@ class AdsLoadObserver {
         registerObserver(application);
     }
 
-    public void release(Application application) {
+    public void release(@NonNull Application application) {
         unregisterObserver(application);
     }
 

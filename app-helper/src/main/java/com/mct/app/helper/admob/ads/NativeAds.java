@@ -45,6 +45,10 @@ public class NativeAds extends BaseViewAds<NativeTemplateView> {
         Optional.ofNullable(getAds()).ifPresent(ads -> ads.setStyles(templateStyle));
     }
 
+    public void destroy() {
+        Optional.ofNullable(getAds()).ifPresent(NativeTemplateView::destroyNativeAd);
+    }
+
     @Override
     protected void onLoadAds(@NonNull Context context, @NonNull AdLoadCallback<NativeTemplateView> callback) {
         new AdLoader.Builder(context, getLoadAdsUnitId())
@@ -67,5 +71,4 @@ public class NativeAds extends BaseViewAds<NativeTemplateView> {
                 .build()
                 .loadAd(getAdRequest());
     }
-
 }

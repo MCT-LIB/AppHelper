@@ -14,15 +14,29 @@ public abstract class BaseRewardedAds<Ads> extends BaseFullScreenAds<Ads> {
         super(adsUnitId, adsInterval);
     }
 
-    protected abstract void onShowAds(@NonNull Activity activity, @NonNull Ads ads,
-                                      @NonNull FullScreenContentCallback callback,
-                                      @Nullable Callback onUserEarnedReward);
+    protected abstract void onShowAds(
+            @NonNull Activity activity,
+            @NonNull Ads ads,
+            @NonNull FullScreenContentCallback callback,
+            @Nullable Callback onUserEarnedReward
+    );
 
-    public final void show(@NonNull Activity activity, boolean waitLoadAndShow, Callback callback, Callback onUserEarnedReward) {
+    public final void show(@NonNull String alias, @NonNull Activity activity, boolean waitLoadAndShow, Callback callback, Callback onUserEarnedReward) {
+        if (isLoading()) {
+            if (waitLoadAndShow) {
+                setAdLoadCallbacks(
+                        () -> show(alias, activity, waitLoadAndShow, callback, onUserEarnedReward),
+                        () -> invokeCallback(callback)
+                );
+            } else {
+                invokeCallback(callback);
+            }
+            return;
+        }
         if (isCanLoadAds()) {
             if (waitLoadAndShow) {
                 load(activity.getApplicationContext(),
-                        () -> show(activity, waitLoadAndShow, callback, onUserEarnedReward),
+                        () -> show(alias, activity, waitLoadAndShow, callback, onUserEarnedReward),
                         () -> invokeCallback(callback)
                 );
             } else {
@@ -33,6 +47,7 @@ public abstract class BaseRewardedAds<Ads> extends BaseFullScreenAds<Ads> {
         }
         if (isCanShowAds() && validateActivityToShow(activity)) {
             setShowing(true);
+            setCustomAlias(alias);
             onShowAds(activity, getAds(), new FullScreenContentCallbackImpl(this, activity.getApplicationContext(), callback), onUserEarnedReward);
         } else {
             invokeCallback(callback);

@@ -20,13 +20,28 @@ public abstract class BaseFullScreenAds<Ads> extends BaseAds<Ads> {
         super(adsUnitId, adsInterval);
     }
 
-    protected abstract void onShowAds(@NonNull Activity activity, @NonNull Ads ads, @NonNull FullScreenContentCallback callback);
+    protected abstract void onShowAds(
+            @NonNull Activity activity,
+            @NonNull Ads ads,
+            @NonNull FullScreenContentCallback callback
+    );
 
-    public final void show(@NonNull Activity activity, boolean waitLoadAndShow, Callback callback) {
+    public final void show(@NonNull String alias, @NonNull Activity activity, boolean waitLoadAndShow, Callback callback) {
+        if (isLoading()) {
+            if (waitLoadAndShow) {
+                setAdLoadCallbacks(
+                        () -> show(alias, activity, waitLoadAndShow, callback),
+                        () -> invokeCallback(callback)
+                );
+            } else {
+                invokeCallback(callback);
+            }
+            return;
+        }
         if (isCanLoadAds()) {
             if (waitLoadAndShow) {
                 load(activity.getApplicationContext(),
-                        () -> show(activity, waitLoadAndShow, callback),
+                        () -> show(alias, activity, waitLoadAndShow, callback),
                         () -> invokeCallback(callback)
                 );
             } else {
@@ -37,14 +52,15 @@ public abstract class BaseFullScreenAds<Ads> extends BaseAds<Ads> {
         }
         if (isCanShowAds() && validateActivityToShow(activity)) {
             setShowing(true);
+            setCustomAlias(alias);
             onShowAds(activity, getAds(), new FullScreenContentCallbackImpl(this, activity.getApplicationContext(), callback));
         } else {
             invokeCallback(callback);
         }
     }
 
-    public void setOnAdsShowChangeListener(OnAdsShowChangeListener onAdsShowChangeListener) {
-        this.onAdsShowChangeListener = onAdsShowChangeListener;
+    public void setOnAdsShowChangeListener(OnAdsShowChangeListener listener) {
+        this.onAdsShowChangeListener = listener;
     }
 
     private void onAdShowedFullScreen() {

@@ -11,6 +11,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.util.Consumer;
 import androidx.core.util.Pair;
+import androidx.core.util.Supplier;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.gms.ads.MobileAds;
@@ -31,6 +32,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -64,7 +66,7 @@ public final class AdsManager {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    // Config methods
+    // Init & Config methods
     ///////////////////////////////////////////////////////////////////////////
 
     /**
@@ -79,16 +81,37 @@ public final class AdsManager {
             return;
         }
         mApplication = activity.getApplication();
-        AtomicReference<Runnable> init = new AtomicReference<>(() -> {
-            MobileAds.initialize(mApplication);
-            invalidatePremium();
-        });
         configuratorConsumer.accept(new AdsConfigurator(this, () -> {
+            GoogleMobileAdsConsentManager.getInstance(mApplication).gatherConsent(activity, e -> {
+            });
+        }));
+    }
+
+    /**
+     * Initialize ads(Usually called in Splash)
+     *
+     * @param activity             activity
+     * @param configuratorConsumer configurator
+     * @param callback             callback
+     */
+    public void initAsync(@NonNull Activity activity, @NonNull Consumer<AdsConfigurator> configuratorConsumer, @NonNull Callback callback) {
+        if (mIsInitialized.getAndSet(true)) {
+            // already initialized
+            return;
+        }
+        mApplication = activity.getApplication();
+        configuratorConsumer.accept(new AdsConfigurator(this, () -> {
+            AtomicReference<Thread> initThreadAtomic = new AtomicReference<>(new Thread(() -> {
+                // Initialize the Google Mobile Ads SDK on a background thread.
+                MobileAds.initialize(mApplication, status -> activity.runOnUiThread(callback::callback));
+            }));
+            Runnable initialize = () -> Optional
+                    .ofNullable(initThreadAtomic.getAndSet(null))
+                    .ifPresent(Thread::start);
             GoogleMobileAdsConsentManager manager = GoogleMobileAdsConsentManager.getInstance(mApplication);
-            manager.gatherConsent(activity, consentError -> Optional.ofNullable(init.get()).ifPresent(Runnable::run));
+            manager.gatherConsent(activity, e -> initialize.run());
             if (manager.canRequestAds()) {
-                Optional.ofNullable(init.get()).ifPresent(Runnable::run);
-                init.set(null);
+                initialize.run();
             }
         }));
     }
@@ -122,7 +145,16 @@ public final class AdsManager {
      */
     public void setPremium(boolean isPremium) {
         mIsPremium.set(isPremium);
-        invalidatePremium();
+        // init or release observer
+        if (mApplication != null) {
+            if (mIsPremium.get()) {
+                mAdsLoadObserver.release(mApplication);
+                mAppOpenObserver.release(mApplication);
+            } else {
+                mAdsLoadObserver.init(mApplication);
+                mAppOpenObserver.init(mApplication);
+            }
+        }
     }
 
     /**
@@ -196,10 +228,10 @@ public final class AdsManager {
     /**
      * Set app open observer app open ads model
      *
-     * @param ads app open ads
+     * @param alias app open ads alias
      */
-    public void setAppOpenObserverAds(AppOpenAds ads) {
-        mAppOpenObserver.setAppOpenAds(ads);
+    public void setAppOpenAdsAlias(String alias) {
+        mAppOpenObserver.setAppOpenAdsAlias(alias);
     }
 
     /**
@@ -207,7 +239,7 @@ public final class AdsManager {
      *
      * @return on paid event listener
      */
-    public OnPaidEventListener getOnPaidEventListener(String alias) {
+    public OnPaidEventListener getOnPaidEventListener(Supplier<String> alias) {
         return Optional.ofNullable(mOnPaidEventListener.get()).map(l -> l.toGms(alias)).orElse(null);
     }
 
@@ -231,27 +263,19 @@ public final class AdsManager {
         mNativeAdsAdapters.remove(adapter);
     }
 
-    /* --- Ads actions methods --- */
+    ///////////////////////////////////////////////////////////////////////////
+    // Ads interaction methods
+    ///////////////////////////////////////////////////////////////////////////
 
     /**
-     * Load ads by alias
-     *
-     * @param alias   alias of ads
-     * @param context context
-     * @param success callback when success
-     * @param failure callback when failure
+     * Load ads
      */
     public void load(String alias, Context context, Callback success, Callback failure) {
         load(getAds(alias, BaseAds.class), context, success, failure);
     }
 
     /**
-     * Load ads by model
-     *
-     * @param ads     ads model
-     * @param context context
-     * @param success callback when success
-     * @param failure callback when failure
+     * Load ads
      */
     public void load(BaseAds<?> ads, Context context, Callback success, Callback failure) {
         if (checkAdsCondition(ads, failure)) {
@@ -260,202 +284,158 @@ public final class AdsManager {
     }
 
     /**
-     * Show full screen ads by alias
+     * Show appOpen or interstitial ads
      *
-     * @param alias    alias of ads
-     * @param activity activity
-     * @param callback callback when finish(always called)
      * @see AppOpenAds
      * @see InterstitialAds
-     * @see RewardedAds
-     * @see RewardedInterstitialAds
      */
     public void show(String alias, Activity activity, Callback callback) {
-        show(getAds(alias, BaseFullScreenAds.class), activity, callback);
+        show(alias, alias, activity, callback);
     }
 
     /**
-     * Show full screen ads by model
+     * Show appOpen or interstitial ads
      *
-     * @param ads      ads model
-     * @param activity activity
-     * @param callback callback when finish(always called)
      * @see AppOpenAds
      * @see InterstitialAds
-     * @see RewardedAds
-     * @see RewardedInterstitialAds
      */
-    public void show(BaseFullScreenAds<?> ads, Activity activity, Callback callback) {
+    public void show(String alias, String customAlias, Activity activity, Callback callback) {
+        BaseFullScreenAds<?> ads = getAds(alias, BaseFullScreenAds.class);
         if (checkShowFullScreenAdsCondition(ads, callback)) {
-            ads.show(activity, false, callback);
+            assert ads != null;
+            ads.show(customAlias, activity, false, callback);
         }
     }
 
     /**
-     * Show rewarded ads by alias
+     * Show appOpen or interstitial ads, wait load if necessary and show
      *
-     * @param alias              alias of ads
-     * @param activity           activity
-     * @param callback           callback when finish(always called)
-     * @param onUserEarnedReward callback when user earned reward
+     * @see AppOpenAds
+     * @see InterstitialAds
+     */
+    public void showSyncLoad(String alias, Activity activity, Callback callback) {
+        showSyncLoad(alias, alias, activity, callback);
+    }
+
+    /**
+     * Show appOpen or interstitial ads, wait load if necessary and show
+     *
+     * @see AppOpenAds
+     * @see InterstitialAds
+     */
+    public void showSyncLoad(String alias, String customAlias, Activity activity, Callback callback) {
+        BaseFullScreenAds<?> ads = getAds(alias, BaseFullScreenAds.class);
+        if (checkShowFullScreenAdsCondition(ads, callback)) {
+            assert ads != null;
+            ads.show(customAlias, activity, true, callback);
+        }
+    }
+
+    /**
+     * Show rewarded ads
+     *
      * @see RewardedAds
      * @see RewardedInterstitialAds
      */
     public void show(String alias, Activity activity, Callback callback, Callback onUserEarnedReward) {
-        show(getAds(alias, BaseRewardedAds.class), activity, callback, onUserEarnedReward);
+        show(alias, alias, activity, callback, onUserEarnedReward);
     }
 
     /**
-     * Show rewarded ads by model
+     * Show rewarded ads
      *
-     * @param ads                ads model
-     * @param activity           activity
-     * @param callback           callback when finish(always called)
-     * @param onUserEarnedReward callback when user earned reward
      * @see RewardedAds
      * @see RewardedInterstitialAds
      */
-    public void show(BaseRewardedAds<?> ads, Activity activity, Callback callback, Callback onUserEarnedReward) {
+    public void show(String alias, String customAlias, Activity activity, Callback callback, Callback onUserEarnedReward) {
+        BaseRewardedAds<?> ads = getAds(alias, BaseRewardedAds.class);
         if (checkShowFullScreenAdsCondition(ads, callback)) {
-            ads.show(activity, false, callback, onUserEarnedReward);
+            assert ads != null;
+            ads.show(customAlias, activity, false, callback, onUserEarnedReward);
         }
     }
 
     /**
-     * Show full screen ads by alias, wait load and show if necessary
+     * Show rewarded ads, wait load if necessary and show
      *
-     * @param alias    alias of ads
-     * @param activity activity
-     * @param callback callback when finish(always called)
-     * @see AppOpenAds
-     * @see InterstitialAds
-     * @see RewardedAds
-     * @see RewardedInterstitialAds
-     */
-    public void showSyncLoad(String alias, Activity activity, Callback callback) {
-        showSyncLoad(getAds(alias, BaseFullScreenAds.class), activity, callback);
-    }
-
-    /**
-     * Show full screen ads by model, wait load and show if necessary
-     *
-     * @param ads      ads model
-     * @param activity activity
-     * @param callback callback when finish(always called)
-     * @see AppOpenAds
-     * @see InterstitialAds
-     * @see RewardedAds
-     * @see RewardedInterstitialAds
-     */
-    public void showSyncLoad(BaseFullScreenAds<?> ads, Activity activity, Callback callback) {
-        if (checkShowFullScreenAdsCondition(ads, callback)) {
-            ads.show(activity, true, callback);
-        }
-    }
-
-    /**
-     * Show rewarded ads by alias, wait load and show if necessary
-     *
-     * @param alias              alias of ads
-     * @param activity           activity
-     * @param callback           callback when finish(always called)
-     * @param onUserEarnedReward callback when user earned reward
      * @see RewardedAds
      * @see RewardedInterstitialAds
      */
     public void showSyncLoad(String alias, Activity activity, Callback callback, Callback onUserEarnedReward) {
-        showSyncLoad(getAds(alias, BaseRewardedAds.class), activity, callback, onUserEarnedReward);
+        showSyncLoad(alias, alias, activity, callback, onUserEarnedReward);
     }
 
     /**
-     * Show rewarded ads by model, wait load and show if necessary
+     * Show rewarded ads, wait load if necessary and show
      *
-     * @param ads                ads model
-     * @param activity           activity
-     * @param callback           callback when finish(always called)
-     * @param onUserEarnedReward callback when user earned reward
      * @see RewardedAds
      * @see RewardedInterstitialAds
      */
-    public void showSyncLoad(BaseRewardedAds<?> ads, Activity activity, Callback callback, Callback onUserEarnedReward) {
+    public void showSyncLoad(String alias, String customAlias, Activity activity, Callback callback, Callback onUserEarnedReward) {
+        BaseRewardedAds<?> ads = getAds(alias, BaseRewardedAds.class);
         if (checkShowFullScreenAdsCondition(ads, callback)) {
-            ads.show(activity, true, callback, onUserEarnedReward);
+            assert ads != null;
+            ads.show(customAlias, activity, true, callback, onUserEarnedReward);
         }
     }
 
     /**
-     * Show view ads by alias
+     * Show view ads
      *
-     * @param alias     alias of ads
-     * @param container container to show ads
      * @see BannerAds
      * @see NativeAds
      */
     public void show(String alias, ViewGroup container) {
-        show(getAds(alias, BaseViewAds.class), container);
+        show(alias, alias, container);
     }
 
     /**
-     * Show view ads by model
+     * Show view ads
      *
-     * @param ads       ads model
-     * @param container container to show ads
      * @see BannerAds
      * @see NativeAds
      */
-    public void show(BaseViewAds<?> ads, ViewGroup container) {
+    public void show(String alias, String customAlias, ViewGroup container) {
+        BaseViewAds<?> ads = getAds(alias, BaseViewAds.class);
         if (checkAdsCondition(ads, null)) {
-            ads.show(container);
+            assert ads != null;
+            ads.show(customAlias, container);
         }
     }
 
     /**
-     * Force load and show view ads by alias
+     * Force load and show view ads
      *
-     * @param alias          alias of ads
-     * @param container      container to show ads
-     * @param multiContainer enable multi container
      * @see BannerAds
      * @see NativeAds
      */
     public void forceShow(String alias, ViewGroup container, boolean multiContainer) {
-        forceShow(getAds(alias, BaseViewAds.class), container, multiContainer);
+        forceShow(alias, alias, container, multiContainer);
     }
 
     /**
-     * Force load and show view ads by model
+     * Force load and show view ads
      *
-     * @param ads            ads model
-     * @param container      container to show ads
-     * @param multiContainer enable multi container
      * @see BannerAds
      * @see NativeAds
      */
-    public void forceShow(BaseViewAds<?> ads, ViewGroup container, boolean multiContainer) {
+    public void forceShow(String alias, String customAlias, ViewGroup container, boolean multiContainer) {
+        BaseViewAds<?> ads = getAds(alias, BaseViewAds.class);
         if (checkAdsCondition(ads, null)) {
-            ads.forceShow(container, multiContainer);
+            assert ads != null;
+            ads.forceShow(customAlias, container, multiContainer);
         }
     }
 
     /**
-     * Hide view ads by alias
+     * Hide view ads
      *
      * @param alias alias of ads
      * @see BannerAds
      * @see NativeAds
      */
     public void hide(String alias) {
-        hide(getAds(alias, BaseViewAds.class));
-    }
-
-    /**
-     * Hide view ads by model
-     *
-     * @param ads ads model
-     * @see BannerAds
-     * @see NativeAds
-     */
-    public void hide(BaseViewAds<?> ads) {
+        BaseViewAds<?> ads = getAds(alias, BaseViewAds.class);
         if (ads == null) {
             return;
         }
@@ -463,55 +443,66 @@ public final class AdsManager {
     }
 
     /**
-     * Check if manager can load ads by alias
-     *
-     * @param alias alias of ads
      * @return true if manager can load ads
      */
     public boolean isCanLoadAds(String alias) {
-        return isCanLoadAds(getAds(alias, BaseAds.class));
-    }
-
-    /**
-     * Check if manager can load ads by model
-     *
-     * @param ads ads model
-     * @return true if manager can load ads
-     */
-    public boolean isCanLoadAds(BaseAds<?> ads) {
+        BaseAds<?> ads = getAds(alias, BaseAds.class);
         if (checkAdsCondition(ads, null)) {
+            assert ads != null;
             return ads.isCanLoadAds();
         }
         return false;
     }
 
     /**
-     * Check if manager can show ads by alias
-     *
-     * @param alias alias of ads
      * @return true if manager can show ads
      */
     public boolean isCanShowAds(String alias) {
-        return isCanShowAds(getAds(alias, BaseAds.class));
-    }
-
-    /**
-     * Check if manager can show ads by model
-     *
-     * @param ads ads model
-     * @return true if manager can show ads
-     */
-    public boolean isCanShowAds(BaseAds<?> ads) {
+        BaseAds<?> ads = getAds(alias, BaseAds.class);
         if (checkAdsCondition(ads, null)) {
+            assert ads != null;
             return ads.isCanShowAds();
         }
         return false;
     }
 
     /**
-     * Check if manager contains ads by alias
-     *
-     * @param alias alias of ads
+     * @return true if ads is loading
+     */
+    public boolean isLoading(String alias) {
+        BaseAds<?> ads = getAds(alias, BaseAds.class);
+        if (checkAdsCondition(ads, null)) {
+            assert ads != null;
+            return ads.isLoading();
+        }
+        return false;
+    }
+
+    /**
+     * @return true if ads is showing
+     */
+    public boolean isShowing(String alias) {
+        BaseAds<?> ads = getAds(alias, BaseAds.class);
+        if (checkAdsCondition(ads, null)) {
+            assert ads != null;
+            return ads.isShowing();
+        }
+        return false;
+    }
+
+    /**
+     * @return true if ads is can show
+     */
+    public boolean isCanShow(String alias) {
+        BaseAds<?> ads = getAds(alias, BaseAds.class);
+        if (checkAdsCondition(ads, null)) {
+            assert ads != null;
+            return ads.isCanShow();
+        }
+        return false;
+    }
+
+    /**
      * @return true if manager contains ads
      */
     public boolean containsAds(String alias) {
@@ -519,9 +510,7 @@ public final class AdsManager {
     }
 
     /**
-     * Remove ads from manager by alias
-     *
-     * @param alias alias of ads
+     * Remove ads from manager
      */
     public void removeAds(String alias) {
         mAds.remove(alias);
@@ -531,15 +520,15 @@ public final class AdsManager {
      * Put ads to manager. Used in {@link AdsConfigurator}
      */
     public void putAds(String alias, BaseAds<?> ads) {
+        Objects.requireNonNull(alias);
+        Objects.requireNonNull(ads);
         if (containsAds(alias)) {
             Log.e(TAG, "Failed to put ads: " + ads + " with alias: " + alias + " already exists");
             return;
         }
-        ads.setDebugSupplier(mDebug::get);
-        ads.setOnPaidEventListenerSupplier(() -> getOnPaidEventListener(alias));
         if (ads instanceof BaseFullScreenAds) {
             if (ads instanceof AppOpenAds) {
-                setAppOpenObserverAds((AppOpenAds) ads);
+                setAppOpenAdsAlias(alias);
             }
             BaseFullScreenAds<?> baseFullScreenAds = (BaseFullScreenAds<?>) ads;
             baseFullScreenAds.setOnAdsShowChangeListener(new BaseFullScreenAds.OnAdsShowChangeListener() {
@@ -568,6 +557,7 @@ public final class AdsManager {
                 }
             });
         }
+        ads.setAlias(alias);
         mAds.put(alias, ads);
     }
 
@@ -605,36 +595,23 @@ public final class AdsManager {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    // Private methods
+    // Helper methods
     ///////////////////////////////////////////////////////////////////////////
 
-    private void invalidatePremium() {
-        if (mApplication == null) {
-            return;
-        }
-        if (mIsPremium.get()) {
-            mAdsLoadObserver.release(mApplication);
-            mAppOpenObserver.release(mApplication);
-        } else {
-            mAdsLoadObserver.init(mApplication);
-            mAppOpenObserver.init(mApplication);
-        }
-    }
-
-    private boolean checkShowFullScreenAdsCondition(BaseAds<?> ads, Callback callback) {
+    private static boolean checkShowFullScreenAdsCondition(BaseAds<?> ads, Callback callback) {
         // check ads condition first
         if (!checkAdsCondition(ads, callback)) {
             return false;
         }
         // check has any full screen ads is show
-        if (mAds.values().stream().anyMatch(a -> a instanceof BaseFullScreenAds && a.isShowing())) {
+        if (getInstance().getAdsList().stream().anyMatch(a -> a instanceof BaseFullScreenAds && a.isShowing())) {
             invokeCallback(callback);
             return false;
         }
         return true;
     }
 
-    private boolean checkAdsCondition(BaseAds<?> ads, Callback callback) {
+    private static boolean checkAdsCondition(BaseAds<?> ads, Callback callback) {
         if (ads == null) {
             invokeCallback(callback);
             return false;
@@ -647,9 +624,9 @@ public final class AdsManager {
     }
 
     @NonNull
-    private List<Pair<View, Integer>> getBannerAndNativeViews() {
+    private static List<Pair<View, Integer>> getBannerAndNativeViews() {
         List<Pair<View, Integer>> viewAds = new ArrayList<>();
-        for (BaseAds<?> ads : mAds.values()) {
+        for (BaseAds<?> ads : getInstance().getAdsList()) {
             if (ads instanceof BaseViewAds) {
                 BaseViewAds<?> baseViewAds = (BaseViewAds<?>) ads;
                 if (baseViewAds.getAds() != null) {
@@ -660,7 +637,7 @@ public final class AdsManager {
                 }
             }
         }
-        for (NativeAdsAdapter adapter : mNativeAdsAdapters) {
+        for (NativeAdsAdapter adapter : getInstance().mNativeAdsAdapters) {
             for (RecyclerView.ViewHolder holder : adapter.getBoundAdsViewHolders()) {
                 viewAds.add(new Pair<>(
                         holder.itemView,

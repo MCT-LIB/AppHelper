@@ -110,7 +110,11 @@ public class NativeTemplateView extends FrameLayout {
      * <a href="https://developers.google.com/admob/android/native-unified#destroy_ad">destroy_ad</a>
      */
     public void destroyNativeAd() {
+        if (nativeAd == null) {
+            return;
+        }
         nativeAd.destroy();
+        nativeAd = null;
     }
 
     public void setNativeAd(@NonNull NativeAd nativeAd) {

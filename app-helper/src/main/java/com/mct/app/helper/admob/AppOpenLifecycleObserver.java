@@ -10,7 +10,7 @@ import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.ProcessLifecycleOwner;
 
-import com.mct.app.helper.admob.ads.AppOpenAds;
+import com.mct.app.helper.admob.ads.BaseAds;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 
 class AppOpenLifecycleObserver {
 
-    private AppOpenAds appOpenAds;
+    private String appOpenAdsAlias;
     private Activity currentActivity;
 
     private final LifecycleImpl lifecycleImpl = new LifecycleImpl();
@@ -37,8 +37,8 @@ class AppOpenLifecycleObserver {
         unregisterLifecycle(application);
     }
 
-    public void setAppOpenAds(AppOpenAds appOpenAds) {
-        this.appOpenAds = appOpenAds;
+    public void setAppOpenAdsAlias(String alias) {
+        this.appOpenAdsAlias = alias;
     }
 
     public void pendingShowAd() {
@@ -85,7 +85,7 @@ class AppOpenLifecycleObserver {
                 // Don't show app open ad when the observer is not enabled
                 return;
             }
-            if (appOpenAds == null || currentActivity == null) {
+            if (appOpenAdsAlias == null || currentActivity == null) {
                 // Ads is not ready or activity is not resumed yet.
                 return;
             }
@@ -99,7 +99,7 @@ class AppOpenLifecycleObserver {
                 pendingShowAd.set(false);
                 return;
             }
-            AdsManager.getInstance().show(appOpenAds, currentActivity, null);
+            AdsManager.getInstance().show(appOpenAdsAlias, currentActivity, null);
         }
 
         /* --- ActivityLifecycleCallback methods. --- */
@@ -114,7 +114,8 @@ class AppOpenLifecycleObserver {
             // SDK or another activity class implemented by a third party mediation partner. Updating the
             // currentActivity only when an ad is not showing will ensure it is not an ad activity, but the
             // one that shows the ad.
-            if (appOpenAds != null && !appOpenAds.isShowing()) {
+            BaseAds<?> ads = AdsManager.getInstance().getAds(appOpenAdsAlias, BaseAds.class);
+            if (ads != null && !ads.isShowing()) {
                 currentActivity = activity;
             }
         }
