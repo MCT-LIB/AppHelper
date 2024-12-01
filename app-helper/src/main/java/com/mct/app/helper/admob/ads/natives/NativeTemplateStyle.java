@@ -13,6 +13,7 @@ public class NativeTemplateStyle {
     private Integer callToActionBackgroundColor;
     private Integer callToActionRippleColor;
     private Integer callToActionCornerRadius;
+    private Integer callToActionBackgroundDrawable;
 
     private Typeface primaryTextTypeface;
     private float primaryTextSize;
@@ -29,9 +30,12 @@ public class NativeTemplateStyle {
     private Integer tertiaryTextColor;
     private Integer tertiaryTextBackgroundColor;
 
+    private Typeface adIndicatorTextTypeface;
+    private Integer adIndicatorTextColor;
+    private Integer adIndicatorBackgroundDrawable;
+
     // The background color of the ad.
     private Integer mainBackgroundColor;
-    private Integer adIndicatorTint;
     private Integer ratingBarTint;
 
     private NativeTemplateStyle() {
@@ -59,6 +63,10 @@ public class NativeTemplateStyle {
 
     public Integer getCallToActionCornerRadius() {
         return callToActionCornerRadius;
+    }
+
+    public Integer getCallToActionBackgroundDrawable() {
+        return callToActionBackgroundDrawable;
     }
 
     public Typeface getPrimaryTextTypeface() {
@@ -109,12 +117,20 @@ public class NativeTemplateStyle {
         return tertiaryTextBackgroundColor;
     }
 
-    public Integer getMainBackgroundColor() {
-        return mainBackgroundColor;
+    public Typeface getAdIndicatorTextTypeface() {
+        return adIndicatorTextTypeface;
     }
 
-    public Integer getAdIndicatorTint() {
-        return adIndicatorTint;
+    public Integer getAdIndicatorTextColor() {
+        return adIndicatorTextColor;
+    }
+
+    public Integer getAdIndicatorBackgroundDrawable() {
+        return adIndicatorBackgroundDrawable;
+    }
+
+    public Integer getMainBackgroundColor() {
+        return mainBackgroundColor;
     }
 
     public Integer getRatingBarTint() {
@@ -159,6 +175,11 @@ public class NativeTemplateStyle {
 
         public Builder withCallToActionCornerRadius(int callToActionCornerRadius) {
             this.styles.callToActionCornerRadius = callToActionCornerRadius;
+            return this;
+        }
+
+        public Builder withCallToActionBackgroundDrawable(int callToActionBackgroundDrawable) {
+            this.styles.callToActionBackgroundDrawable = callToActionBackgroundDrawable;
             return this;
         }
 
@@ -222,13 +243,23 @@ public class NativeTemplateStyle {
             return this;
         }
 
-        public Builder withMainBackgroundColor(int mainBackgroundColor) {
-            this.styles.mainBackgroundColor = mainBackgroundColor;
+        public Builder withAdIndicatorTextTypeface(Typeface adIndicatorTextTypeface) {
+            this.styles.adIndicatorTextTypeface = adIndicatorTextTypeface;
             return this;
         }
 
-        public Builder withAdIndicatorTint(int adIndicatorTint) {
-            this.styles.adIndicatorTint = adIndicatorTint;
+        public Builder withAdIndicatorTextColor(int adIndicatorTextColor) {
+            this.styles.adIndicatorTextColor = adIndicatorTextColor;
+            return this;
+        }
+
+        public Builder withAdIndicatorBackgroundDrawable(int adIndicatorBackgroundDrawable) {
+            this.styles.adIndicatorBackgroundDrawable = adIndicatorBackgroundDrawable;
+            return this;
+        }
+
+        public Builder withMainBackgroundColor(int mainBackgroundColor) {
+            this.styles.mainBackgroundColor = mainBackgroundColor;
             return this;
         }
 

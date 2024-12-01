@@ -133,7 +133,6 @@ public class NativeTemplateView extends FrameLayout {
         nativeAdView.setCallToActionView(callToActionView);
         nativeAdView.setHeadlineView(primaryView);
         nativeAdView.setMediaView(mediaView);
-        secondaryView.setVisibility(VISIBLE);
         if (!TextUtils.isEmpty(store) && TextUtils.isEmpty(advertiser)) {
             nativeAdView.setStoreView(secondaryView);
             secondaryText = store;
@@ -191,80 +190,82 @@ public class NativeTemplateView extends FrameLayout {
             }
         }
 
-        Integer indicatorTint = styles.getAdIndicatorTint();
-        if (indicatorTint != null) {
-            adIndicator.setTextColor(indicatorTint);
-            adIndicator.setBackgroundTintList(ColorStateList.valueOf(indicatorTint));
-        }
-
         Integer ratingBarTint = styles.getRatingBarTint();
-        if (ratingBarTint != null) {
+        if (ratingBar != null && ratingBarTint != null) {
             ratingBar.setProgressTintList(ColorStateList.valueOf(ratingBarTint));
             ratingBar.setProgressBackgroundTintList(ColorStateList.valueOf(ratingBarTint));
             ratingBar.setSecondaryProgressTintList(ColorStateList.valueOf(ratingBarTint));
         }
 
+        Typeface adIndicatorTextTypeface = styles.getAdIndicatorTextTypeface();
+        if (adIndicator != null && adIndicatorTextTypeface != null) {
+            adIndicator.setTypeface(adIndicatorTextTypeface);
+        }
+
         Typeface primary = styles.getPrimaryTextTypeface();
-        if (primary != null && primaryView != null) {
+        if (primaryView != null && primary != null) {
             primaryView.setTypeface(primary);
         }
 
         Typeface secondary = styles.getSecondaryTextTypeface();
-        if (secondary != null && secondaryView != null) {
+        if (secondaryView != null && secondary != null) {
             secondaryView.setTypeface(secondary);
         }
 
         Typeface tertiary = styles.getTertiaryTextTypeface();
-        if (tertiary != null && tertiaryView != null) {
+        if (tertiaryView != null && tertiary != null) {
             tertiaryView.setTypeface(tertiary);
         }
 
         Typeface ctaTypeface = styles.getCallToActionTextTypeface();
-        if (ctaTypeface != null && callToActionView != null) {
+        if (callToActionView != null && ctaTypeface != null) {
             callToActionView.setTypeface(ctaTypeface);
         }
 
-        if (styles.getPrimaryTextColor() != null && primaryView != null) {
+        if (adIndicator != null && styles.getAdIndicatorTextColor() != null) {
+            adIndicator.setTextColor(styles.getAdIndicatorTextColor());
+        }
+
+        if (primaryView != null && styles.getPrimaryTextColor() != null) {
             primaryView.setTextColor(styles.getPrimaryTextColor());
         }
 
-        if (styles.getSecondaryTextColor() != null && secondaryView != null) {
+        if (secondaryView != null && styles.getSecondaryTextColor() != null) {
             secondaryView.setTextColor(styles.getSecondaryTextColor());
         }
 
-        if (styles.getTertiaryTextColor() != null && tertiaryView != null) {
+        if (tertiaryView != null && styles.getTertiaryTextColor() != null) {
             tertiaryView.setTextColor(styles.getTertiaryTextColor());
         }
 
-        if (styles.getCallToActionColor() != null && callToActionView != null) {
+        if (callToActionView != null && styles.getCallToActionColor() != null) {
             callToActionView.setTextColor(styles.getCallToActionColor());
         }
 
         float ctaTextSize = styles.getCallToActionTextSize();
-        if (ctaTextSize > 0 && callToActionView != null) {
+        if (callToActionView != null && ctaTextSize > 0) {
             callToActionView.setTextSize(ctaTextSize);
         }
 
         float primaryTextSize = styles.getPrimaryTextSize();
-        if (primaryTextSize > 0 && primaryView != null) {
+        if (primaryView != null && primaryTextSize > 0) {
             primaryView.setTextSize(primaryTextSize);
         }
 
         float secondaryTextSize = styles.getSecondaryTextSize();
-        if (secondaryTextSize > 0 && secondaryView != null) {
+        if (secondaryView != null && secondaryTextSize > 0) {
             secondaryView.setTextSize(secondaryTextSize);
         }
 
         float tertiaryTextSize = styles.getTertiaryTextSize();
-        if (tertiaryTextSize > 0 && tertiaryView != null) {
+        if (tertiaryView != null && tertiaryTextSize > 0) {
             tertiaryView.setTextSize(tertiaryTextSize);
         }
 
         Integer ctaBackgroundColor = styles.getCallToActionBackgroundColor();
-        if (ctaBackgroundColor != null && callToActionView != null) {
+        if (callToActionView != null && ctaBackgroundColor != null) {
             Integer ctaRippleColor = styles.getCallToActionRippleColor();
             Integer ctaCornerRadius = styles.getCallToActionCornerRadius();
-
             if (ctaRippleColor == null) {
                 ctaRippleColor = Color.parseColor("#80FFFFFF");
             }
@@ -272,6 +273,16 @@ public class NativeTemplateView extends FrameLayout {
                 ctaCornerRadius = 0;
             }
             callToActionView.setBackground(getRippleDrawable(ctaBackgroundColor, ctaRippleColor, ctaCornerRadius));
+        }
+
+        Integer ctaBackgroundDrawable = styles.getCallToActionBackgroundDrawable();
+        if (callToActionView != null && ctaBackgroundDrawable != null) {
+            callToActionView.setBackgroundResource(ctaBackgroundDrawable);
+        }
+
+        Integer adIndicatorBackgroundDrawable = styles.getAdIndicatorBackgroundDrawable();
+        if (adIndicator != null && adIndicatorBackgroundDrawable != null) {
+            adIndicator.setBackgroundResource(adIndicatorBackgroundDrawable);
         }
 
         Integer primaryBackground = styles.getPrimaryTextBackgroundColor();
