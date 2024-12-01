@@ -32,6 +32,7 @@ public class NativeTemplateStyle {
 
     private Typeface adIndicatorTextTypeface;
     private Integer adIndicatorTextColor;
+    private Integer adIndicatorBackgroundTint;
     private Integer adIndicatorBackgroundDrawable;
 
     // The background color of the ad.
@@ -123,6 +124,10 @@ public class NativeTemplateStyle {
 
     public Integer getAdIndicatorTextColor() {
         return adIndicatorTextColor;
+    }
+
+    public Integer getAdIndicatorBackgroundTint() {
+        return adIndicatorBackgroundTint;
     }
 
     public Integer getAdIndicatorBackgroundDrawable() {
@@ -250,6 +255,11 @@ public class NativeTemplateStyle {
 
         public Builder withAdIndicatorTextColor(int adIndicatorTextColor) {
             this.styles.adIndicatorTextColor = adIndicatorTextColor;
+            return this;
+        }
+
+        public Builder withAdIndicatorBackgroundTint(int adIndicatorBackgroundTint) {
+            this.styles.adIndicatorBackgroundTint = adIndicatorBackgroundTint;
             return this;
         }
 

@@ -9,7 +9,7 @@
         <item name="android:id">@id/gnt_indicator_view</item>
         <item name="android:layout_width">@dimen/gnt_ad_indicator_width</item>
         <item name="android:layout_height">@dimen/gnt_ad_indicator_height</item>
-        <item name="android:background">@drawable/gnt_ad_indicator_background</item>
+        <item name="android:background">@drawable/gnt_ad_indicator_background_stroke</item>
         <item name="android:gravity">center</item>
         <item name="android:textColor">@color/gnt_ad_indicator_color</item>
         <item name="android:textSize">@dimen/gnt_ad_indicator_text_size</item>

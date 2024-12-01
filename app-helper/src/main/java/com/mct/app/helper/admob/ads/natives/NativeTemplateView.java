@@ -280,6 +280,11 @@ public class NativeTemplateView extends FrameLayout {
             callToActionView.setBackgroundResource(ctaBackgroundDrawable);
         }
 
+        Integer adIndicatorBackgroundTint = styles.getAdIndicatorBackgroundTint();
+        if (adIndicator != null && adIndicatorBackgroundTint != null) {
+            adIndicator.setBackgroundTintList(ColorStateList.valueOf(adIndicatorBackgroundTint));
+        }
+
         Integer adIndicatorBackgroundDrawable = styles.getAdIndicatorBackgroundDrawable();
         if (adIndicator != null && adIndicatorBackgroundDrawable != null) {
             adIndicator.setBackgroundResource(adIndicatorBackgroundDrawable);
