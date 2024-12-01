@@ -103,7 +103,11 @@ class AdsLoadObserver {
     private void onNetworkAvailable(Application application) {
         AdsManager.getInstance().getAdsList().stream()
                 .filter(ads -> ads instanceof AppOpenAds || ads instanceof InterstitialAds)
-                .forEach(ads -> AdsManager.getInstance().load(ads, application, null, null));
+                .forEach(ads -> {
+                    if (ads.isCanLoadAds()) {
+                        AdsManager.getInstance().load(ads, application, null, null);
+                    }
+                });
     }
 
     // clear and load
