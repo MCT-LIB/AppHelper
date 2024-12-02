@@ -48,8 +48,8 @@ public final class AdsManager {
     private final AtomicBoolean mIsPremium = new AtomicBoolean(false);
     private final AtomicBoolean mDebug = new AtomicBoolean(false);
     private final AtomicReference<OnPaidEventListeners> mOnPaidEventListener = new AtomicReference<>();
-    private final AdsLoadObserver mAdsLoadObserver = new AdsLoadObserver();
-    private final AppOpenLifecycleObserver mAppOpenObserver = new AppOpenLifecycleObserver();
+    private final ObserverConnection mObserverConnection = new ObserverConnection();
+    private final ObserverLifecycleAppOpen mObserverLifecycle = new ObserverLifecycleAppOpen();
 
     // ads holder
     private final Map<String, BaseAds<?>> mAds = new LinkedHashMap<>();
@@ -125,6 +125,19 @@ public final class AdsManager {
         configuratorConsumer.accept(new AdsConfigurator(this));
     }
 
+    void updateObserver() {
+        if (mApplication == null) {
+            return;
+        }
+        if (isPremium()) {
+            mObserverConnection.release(mApplication);
+            mObserverLifecycle.release(mApplication);
+        } else {
+            mObserverConnection.init(mApplication);
+            mObserverLifecycle.init(mApplication);
+        }
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     // Settings methods
     ///////////////////////////////////////////////////////////////////////////
@@ -145,16 +158,7 @@ public final class AdsManager {
      */
     public void setPremium(boolean isPremium) {
         mIsPremium.set(isPremium);
-        // init or release observer
-        if (mApplication != null) {
-            if (mIsPremium.get()) {
-                mAdsLoadObserver.release(mApplication);
-                mAppOpenObserver.release(mApplication);
-            } else {
-                mAdsLoadObserver.init(mApplication);
-                mAppOpenObserver.init(mApplication);
-            }
-        }
+        updateObserver();
     }
 
     /**
@@ -181,7 +185,7 @@ public final class AdsManager {
      * @param enable true if auto load
      */
     public void setAutoLoadFullscreenAdsWhenHasInternet(boolean enable) {
-        mAdsLoadObserver.setAutoLoadFullscreenAdsWhenHasInternet(enable);
+        mObserverConnection.setAutoLoadFullscreenAdsWhenHasInternet(enable);
     }
 
     /**
@@ -190,21 +194,21 @@ public final class AdsManager {
      * @param enable true if auto reload
      */
     public void setAutoReloadFullscreenAdsWhenOrientationChanged(boolean enable) {
-        mAdsLoadObserver.setAutoReloadFullscreenAdsWhenOrientationChanged(enable);
+        mObserverConnection.setAutoReloadFullscreenAdsWhenOrientationChanged(enable);
     }
 
     /**
      * Pending app open observer one time
      */
     public void pendingAppOpenObserver() {
-        mAppOpenObserver.pendingShowAd();
+        mObserverLifecycle.pendingShowAd();
     }
 
     /**
      * Remove pending app open observer
      */
     public void removePendingAppOpenObserver() {
-        mAppOpenObserver.removePendingShowAd();
+        mObserverLifecycle.removePendingShowAd();
     }
 
     /**
@@ -213,7 +217,7 @@ public final class AdsManager {
      * @param enabled true if enabled
      */
     public void setAppOpenObserverEnabled(boolean enabled) {
-        mAppOpenObserver.setEnabled(enabled);
+        mObserverLifecycle.setEnabled(enabled);
     }
 
     /**
@@ -222,7 +226,7 @@ public final class AdsManager {
      * @param classes black list activity classes
      */
     public void setAppOpenObserverBlackListActivity(Class<?>... classes) {
-        mAppOpenObserver.setBlackListActivity(classes);
+        mObserverLifecycle.setBlackListActivity(classes);
     }
 
     /**
@@ -231,7 +235,7 @@ public final class AdsManager {
      * @param alias app open ads alias
      */
     public void setAppOpenAdsAlias(String alias) {
-        mAppOpenObserver.setAppOpenAdsAlias(alias);
+        mObserverLifecycle.setAppOpenAdsAlias(alias);
     }
 
     /**

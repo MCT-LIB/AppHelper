@@ -9,7 +9,7 @@ import com.mct.app.helper.admob.ads.NativeAds;
 import com.mct.app.helper.admob.ads.RewardedAds;
 import com.mct.app.helper.admob.ads.RewardedInterstitialAds;
 
-public class AdsUtils {
+public class TestAdsUtils {
 
     public static final String APP_OPEN_ID = "ca-app-pub-3940256099942544/9257395921";
     public static final String BANNER_ID = "ca-app-pub-3940256099942544/6300978111";
@@ -64,7 +64,7 @@ public class AdsUtils {
         return -1;
     }
 
-    private AdsUtils() {
+    private TestAdsUtils() {
         //no instance
     }
 }

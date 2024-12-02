@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 
-class AdsLoadObserver {
+class ObserverConnection {
 
     private final AtomicBoolean autoLoadFullscreenAdsWhenHasInternet = new AtomicBoolean(true);
     private final AtomicBoolean autoReloadFullscreenAdsWhenOrientationChanged = new AtomicBoolean(true);

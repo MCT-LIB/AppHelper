@@ -19,9 +19,9 @@ public class AdsConfigurator {
     private static final long APP_OPEN_ADS_INTERVAL = 60 * 1000;
     private static final long INTERSTITIAL_ADS_INTERVAL = 30 * 1000;
 
-    private final AdsManager mAdsManager;
-    private final Callback mCallback;
-    private final Map<String, BaseAds<?>> mAds;
+    private final @NonNull AdsManager mAdsManager;
+    private final @NonNull Callback mCallback;
+    private final @NonNull Map<String, BaseAds<?>> mAds;
 
     private Boolean mPremium;
     private Boolean mDebug;
@@ -31,11 +31,12 @@ public class AdsConfigurator {
     private Class<?>[] mAppOpenObserverBlackListActivity;
     private OnPaidEventListeners mOnPaidEventListener;
 
-    AdsConfigurator(AdsManager adsManager) {
-        this(adsManager, null);
+    AdsConfigurator(@NonNull AdsManager adsManager) {
+        this(adsManager, () -> {
+        });
     }
 
-    AdsConfigurator(AdsManager adsManager, Callback callback) {
+    AdsConfigurator(@NonNull AdsManager adsManager, @NonNull Callback callback) {
         this.mAdsManager = adsManager;
         this.mCallback = callback;
         this.mAds = new LinkedHashMap<>();
@@ -215,12 +216,9 @@ public class AdsConfigurator {
         if (mOnPaidEventListener != null) {
             mAdsManager.setOnPaidEventListener(mOnPaidEventListener);
         }
-        if (!mAds.isEmpty()) {
-            mAds.forEach(mAdsManager::putAds);
-        }
-        if (mCallback != null) {
-            mCallback.callback();
-        }
+        mAds.forEach(mAdsManager::putAds);
+        mAdsManager.updateObserver();
+        mCallback.callback();
     }
 
 }

@@ -16,7 +16,7 @@ import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.OnPaidEventListener;
 import com.mct.app.helper.admob.AdsManager;
 import com.mct.app.helper.admob.Callback;
-import com.mct.app.helper.admob.utils.AdsUtils;
+import com.mct.app.helper.admob.utils.TestAdsUtils;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -140,14 +140,14 @@ public abstract class BaseAds<Ads> {
      * @return ads unit id to load based on debug
      */
     protected String getLoadAdsUnitId() {
-        return AdsManager.getInstance().isDebug() ? AdsUtils.getAdsUnitIdTest(this) : adsUnitId;
+        return AdsManager.getInstance().isDebug() ? TestAdsUtils.getAdsUnitIdTest(this) : adsUnitId;
     }
 
     /**
      * @return ads interval to load based on debug
      */
     protected long getLoadAdsInterval() {
-        return AdsManager.getInstance().isDebug() ? AdsUtils.getIntervalTest(this) : adsInterval;
+        return AdsManager.getInstance().isDebug() ? TestAdsUtils.getIntervalTest(this) : adsInterval;
     }
 
     public String getAlias() {

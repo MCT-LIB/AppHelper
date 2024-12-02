@@ -20,7 +20,7 @@ import com.google.android.ump.UserMessagingPlatform;
  * you can choose another consent management platform to capture consent.
  */
 @SuppressWarnings("NonFinalStaticField")
-public class GoogleMobileAdsConsentManager {
+class GoogleMobileAdsConsentManager {
     private static GoogleMobileAdsConsentManager instance;
     private final ConsentInformation consentInformation;
 

@@ -19,7 +19,7 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-class AppOpenLifecycleObserver {
+class ObserverLifecycleAppOpen {
 
     private String appOpenAdsAlias;
     private Activity currentActivity;
@@ -33,7 +33,7 @@ class AppOpenLifecycleObserver {
         registerLifecycle(application);
     }
 
-    public void release(Application application) {
+    public void release(@NonNull Application application) {
         unregisterLifecycle(application);
     }
 
@@ -65,17 +65,28 @@ class AppOpenLifecycleObserver {
     }
 
     private void registerLifecycle(@NonNull Application application) {
-        unregisterLifecycle(application);
+        if (lifecycleImpl.isRegister) {
+            return;
+        }
+        lifecycleImpl.isRegister = true;
         ProcessLifecycleOwner.get().getLifecycle().addObserver(lifecycleImpl);
         application.registerActivityLifecycleCallbacks(lifecycleImpl);
     }
 
     private void unregisterLifecycle(@NonNull Application application) {
+        if (!lifecycleImpl.isRegister) {
+            return;
+        }
+        lifecycleImpl.isRegister = false;
         ProcessLifecycleOwner.get().getLifecycle().removeObserver(lifecycleImpl);
         application.unregisterActivityLifecycleCallbacks(lifecycleImpl);
     }
 
     private class LifecycleImpl implements Application.ActivityLifecycleCallbacks, DefaultLifecycleObserver {
+
+        // Flag to check if the observer is registered
+        private boolean isRegister = false;
+
         /**
          * DefaultLifecycleObserver method that shows the app open ad when the app moves to foreground.
          */

@@ -14,7 +14,7 @@ import com.google.android.gms.ads.VideoOptions;
 import com.google.android.gms.ads.nativead.NativeAd;
 import com.google.android.gms.ads.nativead.NativeAdOptions;
 import com.mct.app.helper.admob.AdsManager;
-import com.mct.app.helper.admob.utils.AdsUtils;
+import com.mct.app.helper.admob.utils.TestAdsUtils;
 
 import java.util.ArrayDeque;
 
@@ -40,7 +40,7 @@ public class NativeAdsPool {
             adLoader = null;
         } else {
             Handler handler = new Handler(Looper.getMainLooper());
-            String adsUnit = AdsManager.getInstance().isDebug() ? AdsUtils.NATIVE_ID : adsUnitId;
+            String adsUnit = AdsManager.getInstance().isDebug() ? TestAdsUtils.NATIVE_ID : adsUnitId;
             adLoader = new AdLoader.Builder(context, adsUnit)
                     .withNativeAdOptions(new NativeAdOptions.Builder()
                             .setVideoOptions(new VideoOptions.Builder().setStartMuted(true).build())
