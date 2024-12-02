@@ -14,13 +14,13 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.mct.app.helper.admob.AdsManager;
 import com.mct.app.helper.admob.ads.NativeAdsPool;
-import com.mct.app.helper.demo.Constant;
-import com.mct.app.helper.demo.R;
 import com.mct.app.helper.admob.ads.natives.NativeAdsAdapter;
 import com.mct.app.helper.admob.ads.natives.NativeTemplate;
 import com.mct.app.helper.admob.ads.natives.NativeTemplateStyle;
 import com.mct.app.helper.admob.ads.natives.manager.NpaGridLayoutManager;
 import com.mct.app.helper.admob.ads.natives.manager.NpaLinearLayoutManager;
+import com.mct.app.helper.demo.Constant;
+import com.mct.app.helper.demo.R;
 import com.mct.app.helper.demo.native_rcv.adapter.GridSpacingItemDecoration;
 import com.mct.app.helper.demo.native_rcv.adapter.UserAdapter;
 
@@ -75,10 +75,20 @@ public class NativeRecyclerActivity extends AppCompatActivity {
                 int dragPos = drag.getAdapterPosition();
                 int dropPos = drop.getAdapterPosition();
 
-                int dragIndex = dragPos - adapter.getTotalAdsItemBeforePosition(dragPos);
-                int dropIndex = dropPos - adapter.getTotalAdsItemBeforePosition(dropPos);
-                Collections.swap(userAdapter.getUsers(), dragIndex, dropIndex);
-                userAdapter.notifyItemMoved(dragPos, dropPos);
+                int dragIndex = adapter.convertAdPositionToOriginPosition(dragPos);
+                int dropIndex = adapter.convertAdPositionToOriginPosition(dropPos);
+
+                if (dragIndex < dropIndex) {
+                    for (int i = dragIndex; i < dropIndex; i++) {
+                        Collections.swap(userAdapter.getUsers(), i, i + 1);
+                    }
+                } else {
+                    for (int i = dragIndex; i > dropIndex; i--) {
+                        Collections.swap(userAdapter.getUsers(), i, i - 1);
+                    }
+                }
+
+                adapter.notifyItemMoved(dragPos, dropPos);
                 return true;
             }
 
