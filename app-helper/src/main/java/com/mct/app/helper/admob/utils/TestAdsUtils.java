@@ -6,6 +6,7 @@ import com.mct.app.helper.admob.ads.AppOpenAds;
 import com.mct.app.helper.admob.ads.BannerAds;
 import com.mct.app.helper.admob.ads.InterstitialAds;
 import com.mct.app.helper.admob.ads.NativeAds;
+import com.mct.app.helper.admob.ads.NativeAdsPool;
 import com.mct.app.helper.admob.ads.RewardedAds;
 import com.mct.app.helper.admob.ads.RewardedInterstitialAds;
 
@@ -33,6 +34,9 @@ public class TestAdsUtils {
         if (object instanceof NativeAds) {
             return NATIVE_ID;
         }
+        if (object instanceof NativeAdsPool) {
+            return NATIVE_ID;
+        }
         if (object instanceof RewardedAds) {
             return REWARDED_ID;
         }
@@ -50,6 +54,9 @@ public class TestAdsUtils {
             return 15 * 1000;
         }
         if (object instanceof NativeAds) {
+            return 0;
+        }
+        if (object instanceof NativeAdsPool) {
             return 0;
         }
         if (object instanceof AppOpenAds) {

@@ -220,15 +220,15 @@ public abstract class BaseAds<Ads> {
         }
     }
 
-    protected void post(Runnable runnable){
+    protected void post(Runnable runnable) {
         handler.post(runnable);
     }
 
-    protected void postDelayed(Runnable runnable, long delayMillis){
+    protected void postDelayed(Runnable runnable, long delayMillis) {
         handler.postDelayed(runnable, delayMillis);
     }
 
-    protected void removeCallbacks(Runnable runnable){
+    protected void removeCallbacks(Runnable runnable) {
         handler.removeCallbacks(runnable);
     }
 

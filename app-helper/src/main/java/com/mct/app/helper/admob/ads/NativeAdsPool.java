@@ -20,7 +20,6 @@ import java.util.Set;
 /**
  * A simple implementation of cache for preloaded native ads
  */
-// TODO: 02/12/2024 Check and fix this
 public class NativeAdsPool extends BaseAds<Object> {
 
     private static final int POOL_MAX_SIZE = 10;
