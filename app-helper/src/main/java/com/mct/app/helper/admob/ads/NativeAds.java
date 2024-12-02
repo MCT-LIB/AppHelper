@@ -62,10 +62,10 @@ public class NativeAds extends BaseViewAds<NativeTemplateView> {
                     }
                 })
                 .forNativeAd(nativeAd -> {
+                    nativeAd.setOnPaidEventListener(getOnPaidEventListener());
                     templateView = new NativeTemplateView(context, layoutRes);
                     templateView.setStyles(templateStyle);
                     templateView.setNativeAd(nativeAd);
-                    nativeAd.setOnPaidEventListener(getOnPaidEventListener());
                     callback.onAdLoaded(templateView);
                 })
                 .build()

@@ -220,6 +220,18 @@ public abstract class BaseAds<Ads> {
         }
     }
 
+    protected void post(Runnable runnable){
+        handler.post(runnable);
+    }
+
+    protected void postDelayed(Runnable runnable, long delayMillis){
+        handler.postDelayed(runnable, delayMillis);
+    }
+
+    protected void removeCallbacks(Runnable runnable){
+        handler.removeCallbacks(runnable);
+    }
+
     protected static boolean validateActivityToShow(Activity activity) {
         return activity != null && !activity.isFinishing() && !activity.isDestroyed();
     }

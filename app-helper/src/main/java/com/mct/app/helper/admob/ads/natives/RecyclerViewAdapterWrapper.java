@@ -11,7 +11,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.RecyclerView.ViewHolder;
 
 @SuppressWarnings("rawtypes,unchecked")
-class RecyclerViewAdapterWrapper extends RecyclerView.Adapter {
+public class RecyclerViewAdapterWrapper extends RecyclerView.Adapter {
 
     private final RecyclerView.Adapter wrapped;
     private final AdapterDataObserver dataObserver;
@@ -90,12 +90,18 @@ class RecyclerViewAdapterWrapper extends RecyclerView.Adapter {
     @Override
     public void onAttachedToRecyclerView(@NonNull RecyclerView recyclerView) {
         wrapped.onAttachedToRecyclerView(recyclerView);
-        wrapped.registerAdapterDataObserver(dataObserver);
+        try {
+            wrapped.registerAdapterDataObserver(dataObserver);
+        } catch (Exception ignored) {
+        }
     }
 
     @Override
     public void onDetachedFromRecyclerView(@NonNull RecyclerView recyclerView) {
-        wrapped.unregisterAdapterDataObserver(dataObserver);
+        try {
+            wrapped.unregisterAdapterDataObserver(dataObserver);
+        } catch (Exception ignored) {
+        }
         wrapped.onDetachedFromRecyclerView(recyclerView);
     }
 

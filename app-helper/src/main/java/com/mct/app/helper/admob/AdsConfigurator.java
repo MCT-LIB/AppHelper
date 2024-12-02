@@ -8,6 +8,7 @@ import com.mct.app.helper.admob.configurator.AppOpenAdsConfigurator;
 import com.mct.app.helper.admob.configurator.BannerAdsConfigurator;
 import com.mct.app.helper.admob.configurator.InterstitialAdsConfigurator;
 import com.mct.app.helper.admob.configurator.NativeAdsConfigurator;
+import com.mct.app.helper.admob.configurator.NativeAdsPoolConfigurator;
 import com.mct.app.helper.admob.configurator.RewardedAdsConfigurator;
 import com.mct.app.helper.admob.configurator.RewardedInterstitialAdsConfigurator;
 
@@ -157,6 +158,16 @@ public class AdsConfigurator {
      */
     public NativeAdsConfigurator nativeAds(String adsUnitId) {
         return new NativeAdsConfigurator(this, adsUnitId).template(NativeTemplate.MEDIUM_1);
+    }
+
+    /**
+     * Configures settings for native ads pool
+     *
+     * @param adsUnitId The unit ID for native ads
+     * @return A NativeAdsPoolConfigurator instance for further configuration
+     */
+    public NativeAdsPoolConfigurator nativeAdsPool(String adsUnitId) {
+        return new NativeAdsPoolConfigurator(this, adsUnitId).setPoolSize(3);
     }
 
     /**

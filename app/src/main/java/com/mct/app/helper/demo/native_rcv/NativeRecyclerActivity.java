@@ -12,6 +12,8 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.mct.app.helper.admob.AdsManager;
+import com.mct.app.helper.admob.ads.NativeAdsPool;
 import com.mct.app.helper.demo.Constant;
 import com.mct.app.helper.demo.R;
 import com.mct.app.helper.admob.ads.natives.NativeAdsAdapter;
@@ -104,7 +106,7 @@ public class NativeRecyclerActivity extends AppCompatActivity {
         String adsUnitId = Constant.NATIVE_ID;
         int numberOfAds = 3;
         if (view.getId() == R.id.btn_style_1) {
-            adapter = new NativeAdsAdapter.Builder(createUserAdapter(R.layout.item_user), adsUnitId, numberOfAds)
+            adapter = new NativeAdsAdapter.Builder(createUserAdapter(R.layout.item_user), AdsManager.getInstance().getAds("native_pool", NativeAdsPool.class))
                     .setNativeTemplate(NativeTemplate.SMALL)
                     .setAdsItemConfig(3, 3)
                     .build();
@@ -114,7 +116,7 @@ public class NativeRecyclerActivity extends AppCompatActivity {
             return;
         }
         if (view.getId() == R.id.btn_style_2) {
-            adapter = new NativeAdsAdapter.Builder(createUserAdapter(R.layout.item_user), adsUnitId, numberOfAds)
+            adapter = new NativeAdsAdapter.Builder(createUserAdapter(R.layout.item_user), AdsManager.getInstance().getAds("native_pool", NativeAdsPool.class))
                     .setNativeTemplate(NativeTemplate.MEDIUM_1)
                     .setAdsItemConfig(6, 1)
                     .build();
@@ -134,7 +136,7 @@ public class NativeRecyclerActivity extends AppCompatActivity {
             return;
         }
         if (view.getId() == R.id.btn_style_3) {
-            adapter = new NativeAdsAdapter.Builder(createUserAdapter(R.layout.item_user_a4), adsUnitId, numberOfAds)
+            adapter = new NativeAdsAdapter.Builder(createUserAdapter(R.layout.item_user_a4), AdsManager.getInstance().getAds("native_pool", NativeAdsPool.class))
                     .setNativeTemplate(NativeTemplate.SMALL_A4)
                     .setAdsItemConfig(5, 3)
                     .build();
@@ -150,7 +152,7 @@ public class NativeRecyclerActivity extends AppCompatActivity {
                     .withCallToActionBackgroundColor(Color.parseColor("#ff0063"))
                     .withCallToActionCornerRadius(16)
                     .build();
-            adapter = new NativeAdsAdapter.Builder(createUserAdapter(R.layout.item_user_square), adsUnitId, numberOfAds)
+            adapter = new NativeAdsAdapter.Builder(createUserAdapter(R.layout.item_user_square), AdsManager.getInstance().getAds("native_pool", NativeAdsPool.class))
                     .setNativeTemplate(NativeTemplate.SMALL_SQUARE)
                     .setNativeTemplateStyle(style)
                     .setAdsItemConfig(5, 3)

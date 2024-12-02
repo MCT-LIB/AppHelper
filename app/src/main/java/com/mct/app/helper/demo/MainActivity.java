@@ -15,6 +15,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.mct.app.helper.admob.AdsManager;
+import com.mct.app.helper.admob.ads.NativeAdsPool;
 import com.mct.app.helper.admob.ads.natives.NativeTemplate;
 import com.mct.app.helper.admob.utils.BannerCollapseUtils;
 import com.mct.app.helper.demo.native_rcv.NativeRecyclerActivity;
@@ -48,7 +49,10 @@ public class MainActivity extends AppCompatActivity {
                 .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.SMALL_A4).alias(SMALL_A4).and()
                 .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.SMALL_RECT).alias(SMALL_RECT).and()
                 .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.SMALL_SQUARE).alias(SMALL_SQUARE).and()
+                .nativeAdsPool(Constant.NATIVE_ID).alias("native_pool").and()
                 .apply());
+
+        AdsManager.getInstance().load("native_pool", this, null, null);
 
         container = findViewById(R.id.frame_container);
         findViewById(R.id.btn_show_banner).setOnClickListener(this::clickButton);

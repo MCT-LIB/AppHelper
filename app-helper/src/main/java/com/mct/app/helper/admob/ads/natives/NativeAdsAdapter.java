@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.gms.ads.nativead.NativeAd;
 import com.mct.app.helper.R;
 import com.mct.app.helper.admob.AdsManager;
+import com.mct.app.helper.admob.ads.NativeAdsPool;
 import com.mct.app.helper.admob.ads.natives.manager.NpaGridLayoutManager;
 import com.mct.app.helper.admob.ads.natives.manager.NpaLinearLayoutManager;
 
@@ -54,14 +55,13 @@ import java.util.Set;
  * Invalid view holder adapter position...",
  * please use {@link NpaLinearLayoutManager} or {@link NpaGridLayoutManager}
  */
-public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
+public class NativeAdsAdapter extends RecyclerViewAdapterWrapper implements NativeAdsPool.OnPoolRefreshedListener {
 
     public static final int TYPE_ADS = 9999;
     private static final int DEFAULT_AD_ITEM_INTERVAL = 4;
     private static final int DEFAULT_AD_ITEM_OFFSET = 2;
 
-    private final String adsUnitId;
-    private final int adsCacheSize;
+    private final NativeAdsPool nativeAdsPool;
     private final int adsItemInterval;
     private final int adsItemOffset;
     private final NativeTemplateStyle templateStyle;
@@ -71,13 +71,11 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
     private final int itemContainerId;
     private final Set<AdViewHolder> boundAdsViewHolders;
 
-    private RecyclerView rcv;
-    private NativeAdsPool nativeAdsPool;
+    private RecyclerView recyclerView;
 
     private NativeAdsAdapter(@NonNull Builder builder) {
         super(builder.adapter);
-        this.adsUnitId = builder.adsUnitId;
-        this.adsCacheSize = builder.adsCacheSize;
+        this.nativeAdsPool = builder.nativeAdsPool;
         this.adsItemInterval = builder.adsItemInterval;
         this.adsItemOffset = builder.adsItemOffset;
         this.templateStyle = builder.templateStyle;
@@ -86,6 +84,11 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
         this.itemContainerLayoutRes = builder.itemContainerLayoutRes;
         this.itemContainerId = builder.itemContainerId;
         this.boundAdsViewHolders = new LinkedHashSet<>();
+    }
+
+    @Override
+    public void onPoolRefreshed() {
+        updateNativeAdsHolders();
     }
 
     @NonNull
@@ -116,24 +119,19 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
     }
 
     @Override
-    public void onAttachedToRecyclerView(@NonNull RecyclerView recyclerView) {
-        super.onAttachedToRecyclerView(recyclerView);
+    public void onAttachedToRecyclerView(@NonNull RecyclerView rcv) {
+        super.onAttachedToRecyclerView(rcv);
         AdsManager.getInstance().registerNativeAdsAdapter(this);
-        rcv = recyclerView;
-        nativeAdsPool = new NativeAdsPool(recyclerView.getContext(), adsUnitId);
-        nativeAdsPool.loadAds(adsCacheSize);
-        nativeAdsPool.setOnPoolRefreshedListener(this::updateNativeAdsHolders);
+        recyclerView = rcv;
+        nativeAdsPool.addOnPoolRefreshedListener(this);
     }
 
     @Override
-    public void onDetachedFromRecyclerView(@NonNull RecyclerView recyclerView) {
-        super.onDetachedFromRecyclerView(recyclerView);
+    public void onDetachedFromRecyclerView(@NonNull RecyclerView rcv) {
+        super.onDetachedFromRecyclerView(rcv);
         AdsManager.getInstance().unregisterNativeAdsAdapter(this);
-        nativeAdsPool.setOnPoolRefreshedListener(null);
-        nativeAdsPool.clearAds();
-        nativeAdsPool.dispose();
-        nativeAdsPool = null;
-        rcv = null;
+        nativeAdsPool.removeOnPoolRefreshedListener(this);
+        recyclerView = null;
     }
 
     @NonNull
@@ -156,7 +154,7 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
         if (holder instanceof AdViewHolder) {
             AdViewHolder adViewHolder = (AdViewHolder) holder;
             if (adViewHolder.isUnbindAds()) {
-                adViewHolder.setNativeAd(rcv.getLayoutManager(),
+                adViewHolder.setNativeAd(recyclerView.getLayoutManager(),
                         nativeAdsPool.isLoading(),
                         nativeAdsPool.get(),
                         templateStyle
@@ -188,7 +186,7 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
 
     @Override
     public int getItemCount() {
-        if (isAdsUnavailable()) {
+        if (isEmptyPool()) {
             return super.getItemCount();
         }
         int realCount = super.getItemCount();
@@ -196,21 +194,21 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
     }
 
     public int convertAdPositionToOriginPosition(int position) {
-        if (isAdsUnavailable()) {
+        if (isEmptyPool()) {
             return position;
         }
         return position - getTotalAdsItemBeforePosition(position);
     }
 
     public int getTotalAdsItemBeforePosition(int position) {
-        if (isAdsUnavailable()) {
+        if (isEmptyPool()) {
             return 0;
         }
         return (position + 1 + adsItemOffset) / (adsItemInterval + 1);
     }
 
     public boolean isAdPosition(int position) {
-        if (isAdsUnavailable()) {
+        if (isEmptyPool()) {
             return false;
         }
         return (position + 1 + adsItemOffset) % (adsItemInterval + 1) == 0;
@@ -220,32 +218,22 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
         return Collections.unmodifiableSet(boundAdsViewHolders);
     }
 
-    public void loadAdsIfNecessary() {
-        if (isAdsUnavailable()) {
-            return;
-        }
-        if (nativeAdsPool.size() >= adsCacheSize) {
-            return;
-        }
-        nativeAdsPool.loadAds(adsCacheSize);
-    }
-
     public void updateNativeAdsHolders() {
-        if (isAdsUnavailable()) {
+        if (isEmptyPool()) {
             return;
         }
         boundAdsViewHolders.stream()
                 .filter(AdViewHolder::isUnbindAds)
                 .forEach(holder -> holder.setNativeAd(
-                        rcv.getLayoutManager(),
+                        recyclerView.getLayoutManager(),
                         nativeAdsPool.isLoading(),
                         nativeAdsPool.get(),
                         templateStyle
                 ));
     }
 
-    public boolean isAdsUnavailable() {
-        return nativeAdsPool == null || nativeAdsPool.isAdsUnavailable();
+    public boolean isEmptyPool() {
+        return nativeAdsPool.size() == 0;
     }
 
     public static class AdViewHolder extends ViewHolder {
@@ -333,8 +321,7 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
     public static class Builder {
 
         private RecyclerView.Adapter<?> adapter;
-        private String adsUnitId;
-        private int adsCacheSize;
+        private NativeAdsPool nativeAdsPool;
         private int adsItemInterval;
         private int adsItemOffset;
         private NativeTemplateStyle templateStyle;
@@ -344,14 +331,12 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
         private int itemContainerId;
 
         /**
-         * @param adapter      adapter will be wrapped
-         * @param adsUnitId    your ads unit id
-         * @param adsCacheSize how many ads will be load
+         * @param adapter       adapter will be wrapped
+         * @param nativeAdsPool native ads pool
          */
-        public Builder(RecyclerView.Adapter<?> adapter, String adsUnitId, int adsCacheSize) {
+        public Builder(RecyclerView.Adapter<?> adapter, NativeAdsPool nativeAdsPool) {
             this.adapter = adapter;
-            this.adsUnitId = adsUnitId;
-            this.adsCacheSize = adsCacheSize;
+            this.nativeAdsPool = nativeAdsPool;
             this.templateStyle = null;
             this.templateLayoutRes = R.layout.gnt_template_view_medium_1;
             this.itemLoadingLayoutRes = R.layout.gnt_item_loading;
@@ -366,13 +351,8 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper {
             return this;
         }
 
-        public Builder setAdsUnitId(String adsUnitId) {
-            this.adsUnitId = adsUnitId;
-            return this;
-        }
-
-        public Builder setAdsCacheSize(int adsCacheSize) {
-            this.adsCacheSize = adsCacheSize;
+        public Builder setNativeAdsPool(NativeAdsPool pool) {
+            this.nativeAdsPool = pool;
             return this;
         }
 
