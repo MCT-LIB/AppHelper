@@ -32,8 +32,8 @@ public class SplashActivity extends AppCompatActivity {
                 .rewardedInterstitialAds(Constant.REWARDED_INTERSTITIAL_ID).and()
                 .apply());
 
-        AdsManager.getInstance().load(Constant.INTERSTITIAL_ID, this, null, null);
-        AdsManager.getInstance().load(Constant.NATIVE_ID, this, null, null);
+        AdsManager.getInstance().load(Constant.INTERSTITIAL_ID, getApplicationContext(), null, null);
+        AdsManager.getInstance().load(Constant.NATIVE_ID, getApplicationContext(), null, null);
 
         SplashUtils.with(this, Constant.APP_OPEN_ID)
                 .setGoToNextScreen(() -> {
