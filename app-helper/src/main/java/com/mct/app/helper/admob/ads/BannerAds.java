@@ -8,7 +8,6 @@ import androidx.annotation.NonNull;
 
 import com.google.ads.mediation.admob.AdMobAdapter;
 import com.google.android.gms.ads.AdListener;
-import com.google.android.gms.ads.AdLoadCallback;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdSize;
 import com.google.android.gms.ads.AdView;
@@ -34,7 +33,7 @@ public class BannerAds extends BaseViewAds<AdView> {
     }
 
     @Override
-    protected void onLoadAds(@NonNull Context context, @NonNull AdLoadCallback<AdView> callback) {
+    protected void onLoadAds(@NonNull Context context, @NonNull AdsLoadCallback<AdView> callback) {
         AdView adView = new AdView(context);
         adView.setAdUnitId(getLoadAdsUnitId());
         adView.setAdSize(getAdSize(context));
@@ -43,12 +42,12 @@ public class BannerAds extends BaseViewAds<AdView> {
             @Override
             public void onAdLoaded() {
                 adView.setOnPaidEventListener(getOnPaidEventListener());
-                callback.onAdLoaded(adView);
+                callback.onAdsLoaded(adView);
             }
 
             @Override
             public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-                callback.onAdFailedToLoad(loadAdError);
+                callback.onAdsFailedToLoad(loadAdError);
             }
         });
     }

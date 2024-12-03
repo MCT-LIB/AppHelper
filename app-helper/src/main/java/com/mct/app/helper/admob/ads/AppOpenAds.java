@@ -5,7 +5,6 @@ import android.content.Context;
 
 import androidx.annotation.NonNull;
 
-import com.google.android.gms.ads.AdLoadCallback;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.FullScreenContentCallback;
 import com.google.android.gms.ads.LoadAdError;
@@ -18,7 +17,7 @@ public class AppOpenAds extends BaseFullScreenAds<AppOpenAd> {
     }
 
     @Override
-    protected void onLoadAds(@NonNull Context context, @NonNull AdLoadCallback<AppOpenAd> callback) {
+    protected void onLoadAds(@NonNull Context context, @NonNull AdsLoadCallback<AppOpenAd> callback) {
         AppOpenAd.load(
                 context,
                 getLoadAdsUnitId(),
@@ -27,12 +26,12 @@ public class AppOpenAds extends BaseFullScreenAds<AppOpenAd> {
                     @Override
                     public void onAdLoaded(@NonNull AppOpenAd openAd) {
                         openAd.setOnPaidEventListener(getOnPaidEventListener());
-                        callback.onAdLoaded(openAd);
+                        callback.onAdsLoaded(openAd);
                     }
 
                     @Override
                     public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-                        callback.onAdFailedToLoad(loadAdError);
+                        callback.onAdsFailedToLoad(loadAdError);
                     }
                 });
     }

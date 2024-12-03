@@ -6,7 +6,6 @@ import androidx.annotation.NonNull;
 
 import com.google.android.gms.ads.AdError;
 import com.google.android.gms.ads.AdListener;
-import com.google.android.gms.ads.AdLoadCallback;
 import com.google.android.gms.ads.AdLoader;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.VideoOptions;
@@ -73,15 +72,15 @@ public class NativeAdsPool extends BaseAds<Object> {
     }
 
     @Override
-    protected void onLoadAds(@NonNull Context context, @NonNull AdLoadCallback<Object> callback) {
+    protected void onLoadAds(@NonNull Context context, @NonNull AdsLoadCallback<Object> callback) {
         // Check if pool size is valid
         if (poolSize <= 0) {
-            callback.onAdFailedToLoad(new LoadAdError(88, "Pool size is 0", AdError.UNDEFINED_DOMAIN, null, null));
+            callback.onAdsFailedToLoad(new LoadAdError(88, "Pool size is 0", AdError.UNDEFINED_DOMAIN, null, null));
             return;
         }
         // Check if pool is already full
         if (nativeAdsList.size() >= poolSize) {
-            callback.onAdLoaded(new Object());
+            callback.onAdsLoaded(new Object());
             return;
         }
         // Load ads
@@ -94,22 +93,22 @@ public class NativeAdsPool extends BaseAds<Object> {
                 .withAdListener(new AdListener() {
                     @Override
                     public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-                        if (callback instanceof Disposed && ((Disposed) callback).isDisposed()) {
-                            return;
+                        boolean disposed = callback.isDisposed();
+                        callback.onAdsFailedToLoad(loadAdError);
+                        if (!disposed) {
+                            notifyPoolRefreshed();
                         }
-                        callback.onAdFailedToLoad(loadAdError);
-                        notifyPoolRefreshed();
                     }
                 })
                 .forNativeAd(nativeAd -> {
                     nativeAd.setOnPaidEventListener(getOnPaidEventListener());
                     nativeAdsList.add(nativeAd);
                     if (adRequestSize.decrementAndGet() == 0) {
-                        if (callback instanceof Disposed && ((Disposed) callback).isDisposed()) {
-                            return;
+                        boolean disposed = callback.isDisposed();
+                        callback.onAdsLoaded(1);
+                        if (!disposed) {
+                            notifyPoolRefreshed();
                         }
-                        callback.onAdLoaded(1);
-                        notifyPoolRefreshed();
                     }
                 }).build();
 

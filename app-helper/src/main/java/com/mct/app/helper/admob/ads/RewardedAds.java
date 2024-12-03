@@ -7,7 +7,6 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.google.android.gms.ads.AdLoadCallback;
 import com.google.android.gms.ads.FullScreenContentCallback;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.rewarded.RewardedAd;
@@ -21,7 +20,7 @@ public class RewardedAds extends BaseRewardedAds<RewardedAd> {
     }
 
     @Override
-    protected void onLoadAds(@NonNull Context context, @NonNull AdLoadCallback<RewardedAd> callback) {
+    protected void onLoadAds(@NonNull Context context, @NonNull AdsLoadCallback<RewardedAd> callback) {
         RewardedAd.load(
                 context,
                 getLoadAdsUnitId(),
@@ -30,12 +29,12 @@ public class RewardedAds extends BaseRewardedAds<RewardedAd> {
                     @Override
                     public void onAdLoaded(@NonNull RewardedAd rewardedAd) {
                         rewardedAd.setOnPaidEventListener(getOnPaidEventListener());
-                        callback.onAdLoaded(rewardedAd);
+                        callback.onAdsLoaded(rewardedAd);
                     }
 
                     @Override
                     public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-                        callback.onAdFailedToLoad(loadAdError);
+                        callback.onAdsFailedToLoad(loadAdError);
                     }
                 });
     }

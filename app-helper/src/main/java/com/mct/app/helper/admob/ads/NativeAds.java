@@ -6,7 +6,6 @@ import androidx.annotation.LayoutRes;
 import androidx.annotation.NonNull;
 
 import com.google.android.gms.ads.AdListener;
-import com.google.android.gms.ads.AdLoadCallback;
 import com.google.android.gms.ads.AdLoader;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.VideoOptions;
@@ -50,7 +49,7 @@ public class NativeAds extends BaseViewAds<NativeTemplateView> {
     }
 
     @Override
-    protected void onLoadAds(@NonNull Context context, @NonNull AdLoadCallback<NativeTemplateView> callback) {
+    protected void onLoadAds(@NonNull Context context, @NonNull AdsLoadCallback<NativeTemplateView> callback) {
         new AdLoader.Builder(context, getLoadAdsUnitId())
                 .withNativeAdOptions(new NativeAdOptions.Builder()
                         .setVideoOptions(new VideoOptions.Builder().setStartMuted(true).build())
@@ -58,7 +57,7 @@ public class NativeAds extends BaseViewAds<NativeTemplateView> {
                 .withAdListener(new AdListener() {
                     @Override
                     public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-                        callback.onAdFailedToLoad(loadAdError);
+                        callback.onAdsFailedToLoad(loadAdError);
                     }
                 })
                 .forNativeAd(nativeAd -> {
@@ -66,7 +65,7 @@ public class NativeAds extends BaseViewAds<NativeTemplateView> {
                     templateView = new NativeTemplateView(context, layoutRes);
                     templateView.setStyles(templateStyle);
                     templateView.setNativeAd(nativeAd);
-                    callback.onAdLoaded(templateView);
+                    callback.onAdsLoaded(templateView);
                 })
                 .build()
                 .loadAd(getAdRequest());

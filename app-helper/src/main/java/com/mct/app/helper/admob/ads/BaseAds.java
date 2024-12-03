@@ -10,7 +10,6 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.core.util.Supplier;
 
-import com.google.android.gms.ads.AdLoadCallback;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.OnPaidEventListener;
@@ -36,7 +35,7 @@ public abstract class BaseAds<Ads> {
     private boolean isLoading = false;
     private boolean isShowing = false;
     private boolean isCanShow = true;
-    private AdLoadCallbackImpl<Ads> adLoadCallback;
+    private AdsLoadCallbackImpl<Ads> adLoadCallback;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable delayShowFlagRunnable = () -> setCanShow(true);
 
@@ -45,7 +44,7 @@ public abstract class BaseAds<Ads> {
         this.adsInterval = adsInterval;
     }
 
-    protected abstract void onLoadAds(@NonNull Context context, @NonNull AdLoadCallback<Ads> callback);
+    protected abstract void onLoadAds(@NonNull Context context, @NonNull AdsLoadCallback<Ads> callback);
 
     public final void load(@NonNull Context context, Callback success, Callback failure) {
         if (isLoading()) {
@@ -54,7 +53,7 @@ public abstract class BaseAds<Ads> {
         }
         if (isCanLoadAds()) {
             setLoading(true);
-            onLoadAds(context, adLoadCallback = new AdLoadCallbackImpl<>(this, success, failure));
+            onLoadAds(context, adLoadCallback = new AdsLoadCallbackImpl<>(this, success, failure));
         } else {
             invokeCallback(failure);
         }
@@ -220,18 +219,6 @@ public abstract class BaseAds<Ads> {
         }
     }
 
-    protected void post(Runnable runnable) {
-        handler.post(runnable);
-    }
-
-    protected void postDelayed(Runnable runnable, long delayMillis) {
-        handler.postDelayed(runnable, delayMillis);
-    }
-
-    protected void removeCallbacks(Runnable runnable) {
-        handler.removeCallbacks(runnable);
-    }
-
     protected static boolean validateActivityToShow(Activity activity) {
         return activity != null && !activity.isFinishing() && !activity.isDestroyed();
     }
@@ -242,14 +229,22 @@ public abstract class BaseAds<Ads> {
         }
     }
 
-    protected static class AdLoadCallbackImpl<Ads> extends AdLoadCallback<Ads> implements Disposed {
+    protected interface AdsLoadCallback<Ads> {
+        void onAdsLoaded(@NonNull Ads ads);
+
+        void onAdsFailedToLoad(@NonNull LoadAdError loadAdError);
+
+        boolean isDisposed();
+    }
+
+    private static class AdsLoadCallbackImpl<Ads> implements AdsLoadCallback<Ads> {
 
         private final AtomicBoolean dispose;
         private BaseAds<Ads> ads;
         private Callback success;
         private Callback failure;
 
-        public AdLoadCallbackImpl(BaseAds<Ads> ads, Callback success, Callback failure) {
+        public AdsLoadCallbackImpl(BaseAds<Ads> ads, Callback success, Callback failure) {
             this.dispose = new AtomicBoolean(false);
             this.ads = ads;
             this.success = success;
@@ -257,7 +252,7 @@ public abstract class BaseAds<Ads> {
         }
 
         @Override
-        public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
+        public void onAdsFailedToLoad(@NonNull LoadAdError loadAdError) {
             synchronized (dispose) {
                 if (isDisposed()) {
                     return;
@@ -271,7 +266,7 @@ public abstract class BaseAds<Ads> {
         }
 
         @Override
-        public void onAdLoaded(@NonNull Ads adsModel) {
+        public void onAdsLoaded(@NonNull Ads adsModel) {
             synchronized (dispose) {
                 if (isDisposed()) {
                     return;
@@ -301,10 +296,6 @@ public abstract class BaseAds<Ads> {
                 failure = null;
             }
         }
-    }
-
-    protected interface Disposed {
-        boolean isDisposed();
     }
 
 }
