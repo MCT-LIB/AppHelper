@@ -27,18 +27,25 @@ import com.mct.app.helper.demo.native_rcv.adapter.UserAdapter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 public class NativeRecyclerActivity extends AppCompatActivity {
 
-    NativeAdsAdapter adapter;
-    ItemTouchHelper touchHelper;
+    private static final String NATIVE_POOL = "native_pool";
 
-    RecyclerView rcvData;
+    private NativeAdsAdapter adapter;
+    private ItemTouchHelper touchHelper;
+
+    private RecyclerView rcvData;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_native_recycler);
+
+        AdsManager.getInstance().config(adsConfigurator -> adsConfigurator
+                .nativeAdsPool(Constant.NATIVE_ID).alias(NATIVE_POOL).and()
+                .apply());
 
         initData();
         initListener();
@@ -109,14 +116,14 @@ public class NativeRecyclerActivity extends AppCompatActivity {
         findViewById(R.id.btn_style_2).setOnClickListener(this::onClick);
         findViewById(R.id.btn_style_3).setOnClickListener(this::onClick);
         findViewById(R.id.btn_style_4).setOnClickListener(this::onClick);
-        findViewById(R.id.btn_style_3).performClick();
+        findViewById(R.id.btn_clear).setOnClickListener(this::onClick);
+        findViewById(R.id.btn_load).setOnClickListener(this::onClick);
+        findViewById(R.id.btn_style_1).performClick();
     }
 
     private void onClick(@NonNull View view) {
-        String adsUnitId = Constant.NATIVE_ID;
-        int numberOfAds = 3;
         if (view.getId() == R.id.btn_style_1) {
-            adapter = new NativeAdsAdapter.Builder(createUserAdapter(R.layout.item_user), AdsManager.getInstance().getAds("native_pool", NativeAdsPool.class))
+            adapter = new NativeAdsAdapter.Builder(createUserAdapter(R.layout.item_user), getAdsPool())
                     .setNativeTemplate(NativeTemplate.SMALL)
                     .setAdsItemConfig(3, 3)
                     .build();
@@ -126,7 +133,7 @@ public class NativeRecyclerActivity extends AppCompatActivity {
             return;
         }
         if (view.getId() == R.id.btn_style_2) {
-            adapter = new NativeAdsAdapter.Builder(createUserAdapter(R.layout.item_user), AdsManager.getInstance().getAds("native_pool", NativeAdsPool.class))
+            adapter = new NativeAdsAdapter.Builder(createUserAdapter(R.layout.item_user), getAdsPool())
                     .setNativeTemplate(NativeTemplate.MEDIUM_1)
                     .setAdsItemConfig(6, 1)
                     .build();
@@ -146,7 +153,7 @@ public class NativeRecyclerActivity extends AppCompatActivity {
             return;
         }
         if (view.getId() == R.id.btn_style_3) {
-            adapter = new NativeAdsAdapter.Builder(createUserAdapter(R.layout.item_user_a4), AdsManager.getInstance().getAds("native_pool", NativeAdsPool.class))
+            adapter = new NativeAdsAdapter.Builder(createUserAdapter(R.layout.item_user_a4), getAdsPool())
                     .setNativeTemplate(NativeTemplate.SMALL_A4)
                     .setAdsItemConfig(5, 3)
                     .build();
@@ -162,7 +169,7 @@ public class NativeRecyclerActivity extends AppCompatActivity {
                     .withCallToActionBackgroundColor(Color.parseColor("#ff0063"))
                     .withCallToActionCornerRadius(16)
                     .build();
-            adapter = new NativeAdsAdapter.Builder(createUserAdapter(R.layout.item_user_square), AdsManager.getInstance().getAds("native_pool", NativeAdsPool.class))
+            adapter = new NativeAdsAdapter.Builder(createUserAdapter(R.layout.item_user_square), getAdsPool())
                     .setNativeTemplate(NativeTemplate.SMALL_SQUARE)
                     .setNativeTemplateStyle(style)
                     .setAdsItemConfig(5, 3)
@@ -173,6 +180,22 @@ public class NativeRecyclerActivity extends AppCompatActivity {
             setItemDecoration(new GridSpacingItemDecoration(2, 24, true, 0));
             return;
         }
+        if (view.getId() == R.id.btn_clear) {
+            getAdsPoolOptional().ifPresent(NativeAdsPool::destroy);
+            return;
+        }
+        if (view.getId() == R.id.btn_load) {
+            AdsManager.getInstance().load(NATIVE_POOL, getApplicationContext(), null, null);
+            return;
+        }
+    }
+
+    private NativeAdsPool getAdsPool() {
+        return getAdsPoolOptional().orElse(null);
+    }
+
+    private Optional<NativeAdsPool> getAdsPoolOptional() {
+        return Optional.ofNullable(AdsManager.getInstance().getAds(NATIVE_POOL, NativeAdsPool.class));
     }
 
     @NonNull

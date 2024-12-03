@@ -48,10 +48,7 @@ public class MainActivity extends AppCompatActivity {
                 .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.SMALL_A4).alias(SMALL_A4).and()
                 .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.SMALL_RECT).alias(SMALL_RECT).and()
                 .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.SMALL_SQUARE).alias(SMALL_SQUARE).and()
-                .nativeAdsPool(Constant.NATIVE_ID).alias("native_pool").and()
                 .apply());
-
-        AdsManager.getInstance().load("native_pool", getApplicationContext(), null, null);
 
         container = findViewById(R.id.frame_container);
         findViewById(R.id.btn_show_banner).setOnClickListener(this::clickButton);

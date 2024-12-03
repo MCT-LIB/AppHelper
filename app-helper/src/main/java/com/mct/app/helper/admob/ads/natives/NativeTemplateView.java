@@ -118,6 +118,9 @@ public class NativeTemplateView extends FrameLayout {
     }
 
     public void setNativeAd(@NonNull NativeAd nativeAd) {
+        if (this.nativeAd == nativeAd) {
+            return;
+        }
         this.nativeAd = nativeAd;
 
         String store = nativeAd.getStore();

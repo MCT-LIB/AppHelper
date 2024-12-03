@@ -13,9 +13,11 @@ import com.google.android.gms.ads.VideoOptions;
 import com.google.android.gms.ads.nativead.NativeAd;
 import com.google.android.gms.ads.nativead.NativeAdOptions;
 
-import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A simple implementation of cache for preloaded native ads
@@ -23,14 +25,31 @@ import java.util.Set;
 public class NativeAdsPool extends BaseAds<Object> {
 
     private static final int POOL_MAX_SIZE = 10;
+    private static final int POOL_MAX_LOAD_SIZE = 5;
 
     private final int poolSize;
-    private final ArrayDeque<NativeAd> nativeAdsList = new ArrayDeque<>();
+    private final List<NativeAd> nativeAdsList = new ArrayList<>();
     private final Set<OnPoolRefreshedListener> onPoolRefreshedListeners = new HashSet<>();
+
+    private int position = -1;
 
     public NativeAdsPool(String adsUnitId, int poolSize) {
         super(adsUnitId, 0);
         this.poolSize = Math.min(poolSize, POOL_MAX_SIZE);
+    }
+
+    public NativeAd get() {
+        return get(++position);
+    }
+
+    public NativeAd get(int position) {
+        return nativeAdsList.isEmpty() ? null : nativeAdsList.get(position % nativeAdsList.size());
+    }
+
+    public void destroy() {
+        forceClear();
+        nativeAdsList.forEach(NativeAd::destroy);
+        nativeAdsList.clear();
     }
 
     public void addOnPoolRefreshedListener(OnPoolRefreshedListener listener) {
@@ -45,25 +64,6 @@ public class NativeAdsPool extends BaseAds<Object> {
             return;
         }
         onPoolRefreshedListeners.remove(listener);
-    }
-
-    public int size() {
-        return nativeAdsList.size();
-    }
-
-    public NativeAd get() {
-        if (nativeAdsList.isEmpty()) {
-            return null;
-        }
-        NativeAd nativeAd = nativeAdsList.pollLast();
-        nativeAdsList.addFirst(nativeAd);
-        return nativeAd;
-    }
-
-    public void destroy() {
-        forceClear();
-        nativeAdsList.forEach(NativeAd::destroy);
-        nativeAdsList.clear();
     }
 
     private void notifyPoolRefreshed() {
@@ -85,38 +85,40 @@ public class NativeAdsPool extends BaseAds<Object> {
             return;
         }
         // Load ads
-        final long refreshedDelay = 100;
-        Runnable refreshed = this::notifyPoolRefreshed;
+        notifyPoolRefreshed();
+        AtomicInteger adRequestSize = new AtomicInteger();
         AdLoader adLoader = new AdLoader.Builder(context, getLoadAdsUnitId())
                 .withNativeAdOptions(new NativeAdOptions.Builder()
                         .setVideoOptions(new VideoOptions.Builder().setStartMuted(true).build())
                         .build())
                 .withAdListener(new AdListener() {
                     @Override
-                    public void onAdLoaded() {
-                        super.onAdLoaded();
-                        postDelayed(() -> callback.onAdLoaded(new Object()), 200);
-                    }
-
-                    @Override
                     public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
+                        if (callback instanceof Disposed && ((Disposed) callback).isDisposed()) {
+                            return;
+                        }
                         callback.onAdFailedToLoad(loadAdError);
-                        removeCallbacks(refreshed);
-                        postDelayed(refreshed, refreshedDelay);
+                        notifyPoolRefreshed();
                     }
                 })
                 .forNativeAd(nativeAd -> {
                     nativeAd.setOnPaidEventListener(getOnPaidEventListener());
-                    nativeAdsList.addLast(nativeAd);
-                    removeCallbacks(refreshed);
-                    postDelayed(refreshed, refreshedDelay);
+                    nativeAdsList.add(nativeAd);
+                    if (adRequestSize.decrementAndGet() == 0) {
+                        if (callback instanceof Disposed && ((Disposed) callback).isDisposed()) {
+                            return;
+                        }
+                        callback.onAdLoaded(1);
+                        notifyPoolRefreshed();
+                    }
                 }).build();
 
-        int size = poolSize - nativeAdsList.size();
-        if (size == 1) {
+        adRequestSize.set(Math.min(poolSize - nativeAdsList.size(), POOL_MAX_LOAD_SIZE)); // Number of ads to load
+
+        if (adRequestSize.get() == 1) {
             adLoader.loadAd(getAdRequest());
         } else {
-            adLoader.loadAds(getAdRequest(), size);
+            adLoader.loadAds(getAdRequest(), adRequestSize.get());
         }
     }
 

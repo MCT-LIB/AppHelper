@@ -242,7 +242,7 @@ public abstract class BaseAds<Ads> {
         }
     }
 
-    protected static class AdLoadCallbackImpl<Ads> extends AdLoadCallback<Ads> {
+    protected static class AdLoadCallbackImpl<Ads> extends AdLoadCallback<Ads> implements Disposed {
 
         private final AtomicBoolean dispose;
         private BaseAds<Ads> ads;
@@ -285,6 +285,7 @@ public abstract class BaseAds<Ads> {
             }
         }
 
+        @Override
         public boolean isDisposed() {
             return dispose.get();
         }
@@ -300,6 +301,10 @@ public abstract class BaseAds<Ads> {
                 failure = null;
             }
         }
+    }
+
+    protected interface Disposed {
+        boolean isDisposed();
     }
 
 }
