@@ -19,7 +19,6 @@ import java.util.Optional;
 public class NativeAds extends BaseViewAds<NativeTemplateView> {
 
     private final int layoutRes;
-    private NativeTemplateView templateView;
     private NativeTemplateStyle templateStyle;
 
     public NativeAds(String adsUnitId) {
@@ -62,7 +61,7 @@ public class NativeAds extends BaseViewAds<NativeTemplateView> {
                 })
                 .forNativeAd(nativeAd -> {
                     nativeAd.setOnPaidEventListener(getOnPaidEventListener());
-                    templateView = new NativeTemplateView(context, layoutRes);
+                    NativeTemplateView templateView = new NativeTemplateView(context, layoutRes);
                     templateView.setStyles(templateStyle);
                     templateView.setNativeAd(nativeAd);
                     callback.onAdsLoaded(templateView);
