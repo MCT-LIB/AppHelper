@@ -13,11 +13,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@color/gnt_main_background_color"
-            android:padding="@dimen/gnt_default_margin"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
+            android:padding="@dimen/gnt_default_margin">
 
             <com.google.android.gms.ads.nativead.MediaView
                 android:id="@+id/media_view"

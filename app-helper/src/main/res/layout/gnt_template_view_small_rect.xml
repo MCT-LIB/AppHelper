@@ -16,9 +16,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="@color/gnt_main_background_color"
-            android:padding="@dimen/gnt_small_margin"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
+            android:padding="@dimen/gnt_small_margin">
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/headline"

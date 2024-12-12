@@ -63,9 +63,9 @@ public class NativeTemplateView extends FrameLayout {
 
     public NativeTemplateView(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        TypedArray attributes = context.getTheme().obtainStyledAttributes(attrs, R.styleable.TemplateView, 0, 0);
+        TypedArray attributes = context.getTheme().obtainStyledAttributes(attrs, R.styleable.NativeTemplateView, 0, 0);
         try {
-            initView(attributes.getResourceId(R.styleable.TemplateView_gnt_template, R.layout.gnt_template_view_medium_1));
+            initView(attributes.getResourceId(R.styleable.NativeTemplateView_gnt_template, R.layout.gnt_template_view_medium_1));
         } finally {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 attributes.close();

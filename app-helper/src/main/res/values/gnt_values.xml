@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <declare-styleable name="TemplateView">
+    <declare-styleable name="NativeTemplateView">
         <attr name="gnt_template" format="reference" />
     </declare-styleable>
 

@@ -19,8 +19,7 @@
                 android:id="@+id/icon"
                 android:layout_width="0dp"
                 android:layout_height="0dp"
-                android:adjustViewBounds="true"
-                app:layout_constraintBottom_toBottomOf="@id/body"
+                app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintDimensionRatio="H,1:1"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="@id/gnt_indicator_view"
@@ -30,6 +29,7 @@
                 android:id="@+id/gnt_indicator_view"
                 style="@style/GntAdIndicator"
                 android:layout_marginStart="@dimen/gnt_small_margin"
+                android:elevation="1dp"
                 app:layout_constraintStart_toEndOf="@id/icon"
                 app:layout_constraintTop_toTopOf="parent" />
 
