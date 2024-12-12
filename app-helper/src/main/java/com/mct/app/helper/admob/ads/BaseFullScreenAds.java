@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public abstract class BaseFullScreenAds<Ads> extends BaseAds<Ads> {
 
+    private long lastDismissTime;
     private OnAdsShowChangeListener onAdsShowChangeListener;
 
     public BaseFullScreenAds(String adsUnitId, long adsInterval) {
@@ -63,6 +64,18 @@ public abstract class BaseFullScreenAds<Ads> extends BaseAds<Ads> {
         this.onAdsShowChangeListener = listener;
     }
 
+    public boolean isDismissNearly() {
+        return System.currentTimeMillis() - lastDismissTime < 3000;
+    }
+
+    public long getLastDismissTime() {
+        return lastDismissTime;
+    }
+
+    private void setLastDismissTime(long lastDismissTime) {
+        this.lastDismissTime = lastDismissTime;
+    }
+
     private void onAdShowedFullScreen() {
         if (onAdsShowChangeListener != null) {
             onAdsShowChangeListener.onShow(this);
@@ -103,6 +116,7 @@ public abstract class BaseFullScreenAds<Ads> extends BaseAds<Ads> {
             Log.d(TAG, "onAdDismissedFullScreenContent");
             ads.onAdDismissedFullScreen();
             ads.postDelayShowFlag();
+            ads.setLastDismissTime(System.currentTimeMillis());
             ads.setAds(null);
             ads.setShowing(false);
             ads.load(context, null, null);
@@ -116,6 +130,7 @@ public abstract class BaseFullScreenAds<Ads> extends BaseAds<Ads> {
                 return;
             }
             Log.d(TAG, "onAdFailedToShowFullScreenContent: " + adError);
+            ads.setLastDismissTime(0);
             ads.setAds(null);
             ads.setShowing(false);
             invokeCallback(callback);

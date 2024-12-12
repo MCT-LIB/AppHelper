@@ -67,9 +67,14 @@ public abstract class BaseAds<Ads> {
     }
 
     public final void postDelayShowFlag() {
-        isCanShow = false;
+        long adsInterval = getLoadAdsInterval();
+        if (adsInterval <= 0) {
+            setCanShow(true);
+            return;
+        }
+        setCanShow(false);
         handler.removeCallbacks(delayShowFlagRunnable);
-        handler.postDelayed(delayShowFlagRunnable, getLoadAdsInterval());
+        handler.postDelayed(delayShowFlagRunnable, adsInterval);
     }
 
     public final boolean isCanLoadAds() {

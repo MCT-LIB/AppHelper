@@ -4,6 +4,9 @@ import com.mct.app.helper.R;
 
 public enum NativeTemplate {
 
+    FULL_SCREEN_1(R.layout.gnt_template_view_full_screen_1),
+    FULL_SCREEN_2(R.layout.gnt_template_view_full_screen_2),
+    FULL_SCREEN_3(R.layout.gnt_template_view_full_screen_3),
     EXTRA_LARGE(R.layout.gnt_template_view_extra_large),
     LARGE_1(R.layout.gnt_template_view_large_1),
     LARGE_2(R.layout.gnt_template_view_large_2),

@@ -9,6 +9,7 @@ import com.mct.app.helper.admob.configurator.BannerAdsConfigurator;
 import com.mct.app.helper.admob.configurator.InterstitialAdsConfigurator;
 import com.mct.app.helper.admob.configurator.NativeAdsConfigurator;
 import com.mct.app.helper.admob.configurator.NativeAdsPoolConfigurator;
+import com.mct.app.helper.admob.configurator.NativeFullScreenAdsConfigurator;
 import com.mct.app.helper.admob.configurator.RewardedAdsConfigurator;
 import com.mct.app.helper.admob.configurator.RewardedInterstitialAdsConfigurator;
 
@@ -168,6 +169,16 @@ public class AdsConfigurator {
      */
     public NativeAdsPoolConfigurator nativeAdsPool(String adsUnitId) {
         return new NativeAdsPoolConfigurator(this, adsUnitId).setPoolSize(3);
+    }
+
+    /**
+     * Configures settings for native full screen ads
+     *
+     * @param adsUnitId The unit ID for native full screen ads
+     * @return A NativeFullScreenAdsConfigurator instance for further configuration
+     */
+    public NativeFullScreenAdsConfigurator nativeFullScreenAds(String adsUnitId) {
+        return new NativeFullScreenAdsConfigurator(this, adsUnitId).template(NativeTemplate.FULL_SCREEN_1);
     }
 
     /**

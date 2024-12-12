@@ -30,6 +30,9 @@ public class MainActivity extends AppCompatActivity {
     private static final String SMALL_A4 = "SMALL_A4";
     private static final String SMALL_RECT = "SMALL_RECT";
     private static final String SMALL_SQUARE = "SMALL_SQUARE";
+    private static final String NATIVE_FULL_SCREEN_1 = "NATIVE_FULL_SCREEN_1";
+    private static final String NATIVE_FULL_SCREEN_2 = "NATIVE_FULL_SCREEN_2";
+    private static final String NATIVE_FULL_SCREEN_3 = "NATIVE_FULL_SCREEN_3";
 
     private ViewGroup container;
 
@@ -48,6 +51,9 @@ public class MainActivity extends AppCompatActivity {
                 .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.SMALL_A4).alias(SMALL_A4).and()
                 .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.SMALL_RECT).alias(SMALL_RECT).and()
                 .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.SMALL_SQUARE).alias(SMALL_SQUARE).and()
+                .nativeFullScreenAds(Constant.NATIVE_ID).template(NativeTemplate.FULL_SCREEN_1).alias(NATIVE_FULL_SCREEN_1).and()
+                .nativeFullScreenAds(Constant.NATIVE_ID).template(NativeTemplate.FULL_SCREEN_2).alias(NATIVE_FULL_SCREEN_2).and()
+                .nativeFullScreenAds(Constant.NATIVE_ID).template(NativeTemplate.FULL_SCREEN_3).alias(NATIVE_FULL_SCREEN_3).and()
                 .apply());
 
         container = findViewById(R.id.frame_container);
@@ -68,6 +74,9 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btn_show_native_small_square).setOnClickListener(this::clickButton);
         findViewById(R.id.btn_hide_native).setOnClickListener(this::clickButton);
         findViewById(R.id.btn_show_paywall).setOnClickListener(this::clickButton);
+        findViewById(R.id.btn_btn_show_native_fullscreen_1).setOnClickListener(this::clickButton);
+        findViewById(R.id.btn_btn_show_native_fullscreen_2).setOnClickListener(this::clickButton);
+        findViewById(R.id.btn_btn_show_native_fullscreen_3).setOnClickListener(this::clickButton);
         findViewById(R.id.btn_test_native_recycler).setOnClickListener(this::clickButton);
     }
 
@@ -168,6 +177,18 @@ public class MainActivity extends AppCompatActivity {
         }
         if (view.getId() == R.id.btn_show_paywall) {
             Paywall.show(this);
+            return;
+        }
+        if (view.getId() == R.id.btn_btn_show_native_fullscreen_1) {
+            AdsManager.getInstance().showSyncLoad(NATIVE_FULL_SCREEN_1, this, null);
+            return;
+        }
+        if (view.getId() == R.id.btn_btn_show_native_fullscreen_2) {
+            AdsManager.getInstance().showSyncLoad(NATIVE_FULL_SCREEN_2, this, null);
+            return;
+        }
+        if (view.getId() == R.id.btn_btn_show_native_fullscreen_3) {
+            AdsManager.getInstance().showSyncLoad(NATIVE_FULL_SCREEN_3, this, null);
             return;
         }
         if (view.getId() == R.id.btn_test_native_recycler) {

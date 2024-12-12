@@ -5,6 +5,17 @@
         <attr name="gnt_template" format="reference" />
     </declare-styleable>
 
+    <style name="Gnt_AlertDialog_FullScreen">
+        <item name="android:colorBackgroundCacheHint">@null</item>
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:windowFrame">@null</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowIsTranslucent">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
+
     <style name="GntAdIndicator" parent="Widget.AppCompat.TextView">
         <item name="android:id">@id/gnt_indicator_view</item>
         <item name="android:layout_width">@dimen/gnt_ad_indicator_width</item>
@@ -47,6 +58,7 @@
     <dimen name="gnt_ad_indicator_width">@dimen/_22sdp</dimen>
     <dimen name="gnt_ad_indicator_height">@dimen/_18sdp</dimen>
     <dimen name="gnt_ad_indicator_text_size">@dimen/_7ssp</dimen>
+    <dimen name="gnt_large_margin">@dimen/_12sdp</dimen>
     <dimen name="gnt_default_margin">@dimen/_8sdp</dimen>
     <dimen name="gnt_small_margin">@dimen/_4sdp</dimen>
     <dimen name="gnt_extra_small_margin">@dimen/_2sdp</dimen>
