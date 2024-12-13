@@ -58,6 +58,12 @@
                     android:text="S interstitial" />
 
                 <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_show_interstitial_native"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="S interstitial native" />
+
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_show_rewarded"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"

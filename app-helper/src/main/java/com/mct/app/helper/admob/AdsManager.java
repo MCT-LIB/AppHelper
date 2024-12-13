@@ -507,6 +507,18 @@ public final class AdsManager {
     }
 
     /**
+     * @return true if ads is dismiss nearly
+     */
+    public boolean isDismissNearly(String alias) {
+        BaseAds<?> ads = getAds(alias, BaseAds.class);
+        if (checkAdsCondition(ads, null)) {
+            assert ads != null;
+            return ads instanceof BaseFullScreenAds && ((BaseFullScreenAds<?>) ads).isDismissNearly();
+        }
+        return false;
+    }
+
+    /**
      * @return true if manager contains ads
      */
     public boolean containsAds(String alias) {

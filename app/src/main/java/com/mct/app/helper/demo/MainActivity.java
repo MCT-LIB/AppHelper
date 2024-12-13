@@ -61,6 +61,7 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btn_show_banner_collapse).setOnClickListener(this::clickButton);
         findViewById(R.id.btn_hide_banner).setOnClickListener(this::clickButton);
         findViewById(R.id.btn_show_interstitial).setOnClickListener(this::clickButton);
+        findViewById(R.id.btn_show_interstitial_native).setOnClickListener(this::clickButton);
         findViewById(R.id.btn_show_rewarded).setOnClickListener(this::clickButton);
         findViewById(R.id.btn_show_rewarded_interstitial).setOnClickListener(this::clickButton);
         findViewById(R.id.btn_show_native_extra_large).setOnClickListener(this::clickButton);
@@ -105,6 +106,15 @@ public class MainActivity extends AppCompatActivity {
         }
         if (view.getId() == R.id.btn_show_interstitial) {
             AdsManager.getInstance().showSyncLoad(Constant.INTERSTITIAL_ID, this, null);
+            return;
+        }
+        if (view.getId() == R.id.btn_show_interstitial_native) {
+            AdsManager.getInstance().load(NATIVE_FULL_SCREEN_1, getApplicationContext(), null, null);
+            AdsManager.getInstance().show(Constant.INTERSTITIAL_ID, this, () -> {
+                if (AdsManager.getInstance().isDismissNearly(Constant.INTERSTITIAL_ID)) {
+                    AdsManager.getInstance().showSyncLoad(NATIVE_FULL_SCREEN_1, this, null);
+                }
+            });
             return;
         }
         if (view.getId() == R.id.btn_show_rewarded) {
