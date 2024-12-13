@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Iap_AlertDialog" parent="@style/ThemeOverlay.AppCompat.Dialog.Alert">
+    <style name="Iap_AlertDialog" parent="@style/Theme.AppCompat.Dialog.Alert">
         <item name="android:windowBackground">@android:color/transparent</item>
     </style>
 
