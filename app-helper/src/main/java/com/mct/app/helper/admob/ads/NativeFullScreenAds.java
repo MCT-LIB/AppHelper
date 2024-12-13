@@ -1,5 +1,6 @@
 package com.mct.app.helper.admob.ads;
 
+import static com.mct.app.helper.admob.ads.NativeFullScreenAds.DismissButtonGravity.GRAVITY_RANDOM;
 import static com.mct.app.helper.admob.ads.NativeFullScreenAds.DismissButtonGravity.GRAVITY_TOP_END;
 import static com.mct.app.helper.admob.ads.NativeFullScreenAds.DismissButtonGravity.GRAVITY_TOP_START;
 import static com.mct.app.helper.admob.ads.NativeFullScreenAds.MediaRatioOptions.MEDIA_RATIO_ANY;
@@ -48,10 +49,11 @@ import com.mct.app.helper.admob.ads.natives.NativeTemplateView;
 
 public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
 
-    @IntDef({GRAVITY_TOP_START, GRAVITY_TOP_END})
+    @IntDef({GRAVITY_TOP_START, GRAVITY_TOP_END, GRAVITY_RANDOM})
     public @interface DismissButtonGravity {
         int GRAVITY_TOP_START = Gravity.TOP | Gravity.START;
         int GRAVITY_TOP_END = Gravity.TOP | Gravity.END;
+        int GRAVITY_RANDOM = -1;
     }
 
     @IntDef({MEDIA_RATIO_UNKNOWN, MEDIA_RATIO_ANY, MEDIA_RATIO_LANDSCAPE, MEDIA_RATIO_PORTRAIT, MEDIA_RATIO_SQUARE})
@@ -244,10 +246,14 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
                 animate(true, dismissButton);
             }
 
+            int gravity = dismissButtonGravity == GRAVITY_RANDOM
+                    ? Math.random() < 0.5 ? GRAVITY_TOP_START : GRAVITY_TOP_END
+                    : dismissButtonGravity;
+
             view.setLayoutParams(new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT,
-                    dismissButtonGravity
+                    gravity
             ));
             return view;
         }
