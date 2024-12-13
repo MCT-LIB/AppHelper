@@ -549,9 +549,9 @@ public final class AdsManager {
 
                 @Override
                 public void onDismiss(BaseFullScreenAds<?> fullScreenAds) {
-                    if (isInterstitialOrOpenAd(ads)) {
+                    if (ads.isAllowAdsInterval()) {
                         // post delay show flag
-                        getAdsList().stream().filter(AdsManager::isInterstitialOrOpenAd).forEach(BaseAds::postDelayShowFlag);
+                        getAdsList().stream().filter(Objects::nonNull).forEach(BaseAds::postDelayShowFlag);
                     }
                     if (viewAds != null) {
                         viewAds.forEach(view -> view.first.setVisibility(view.second));
@@ -654,10 +654,6 @@ public final class AdsManager {
             }
         }
         return viewAds;
-    }
-
-    private static boolean isInterstitialOrOpenAd(BaseAds<?> ads) {
-        return ads instanceof InterstitialAds || ads instanceof AppOpenAds;
     }
 
     private static void invokeCallback(Callback callback) {

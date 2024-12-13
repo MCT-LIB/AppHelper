@@ -52,6 +52,7 @@ public abstract class BaseAds<Ads> {
             return;
         }
         if (isCanLoadAds()) {
+            Log.d(TAG, "onAdsLoad: " + getClass().getSimpleName());
             setLoading(true);
             onLoadAds(context, adLoadCallback = new AdsLoadCallbackImpl<>(this, success, failure));
         } else {
@@ -67,6 +68,11 @@ public abstract class BaseAds<Ads> {
     }
 
     public final void postDelayShowFlag() {
+        boolean allowAdsInterval = isAllowAdsInterval();
+        if (!allowAdsInterval) {
+            setCanShow(true);
+            return;
+        }
         long adsInterval = getLoadAdsInterval();
         if (adsInterval <= 0) {
             setCanShow(true);
@@ -75,6 +81,10 @@ public abstract class BaseAds<Ads> {
         setCanShow(false);
         handler.removeCallbacks(delayShowFlagRunnable);
         handler.postDelayed(delayShowFlagRunnable, adsInterval);
+    }
+
+    public final boolean isAllowAdsInterval() {
+        return allowAdsInterval();
     }
 
     public final boolean isCanLoadAds() {
@@ -152,6 +162,10 @@ public abstract class BaseAds<Ads> {
      */
     protected long getLoadAdsInterval() {
         return AdsManager.getInstance().isDebug() ? TestAdsUtils.getIntervalTest(this) : adsInterval;
+    }
+
+    protected boolean allowAdsInterval() {
+        return false;
     }
 
     public String getAlias() {

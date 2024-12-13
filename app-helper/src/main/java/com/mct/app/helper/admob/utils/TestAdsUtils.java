@@ -1,7 +1,5 @@
 package com.mct.app.helper.admob.utils;
 
-import androidx.annotation.Nullable;
-
 import com.mct.app.helper.admob.ads.AppOpenAds;
 import com.mct.app.helper.admob.ads.BannerAds;
 import com.mct.app.helper.admob.ads.InterstitialAds;
@@ -18,10 +16,10 @@ public class TestAdsUtils {
     public static final String BANNER_COLLAPSE_ID = "ca-app-pub-3940256099942544/2014213617";
     public static final String INTERSTITIAL_ID = "ca-app-pub-3940256099942544/1033173712";
     public static final String NATIVE_ID = "ca-app-pub-3940256099942544/2247696110";
+    public static final String NATIVE_FULL_SCREEN_ID = "ca-app-pub-3940256099942544/7342230711";
     public static final String REWARDED_ID = "ca-app-pub-3940256099942544/5224354917";
     public static final String REWARDED_INTERSTITIAL_ID = "ca-app-pub-3940256099942544/5354046379";
 
-    @Nullable
     public static String getAdsUnitIdTest(Object object) {
         if (object instanceof AppOpenAds) {
             return APP_OPEN_ID;
@@ -39,7 +37,7 @@ public class TestAdsUtils {
             return NATIVE_ID;
         }
         if (object instanceof NativeFullScreenAds) {
-            return NATIVE_ID;
+            return NATIVE_FULL_SCREEN_ID;
         }
         if (object instanceof RewardedAds) {
             return REWARDED_ID;
@@ -47,10 +45,13 @@ public class TestAdsUtils {
         if (object instanceof RewardedInterstitialAds) {
             return REWARDED_INTERSTITIAL_ID;
         }
-        return null;
+        throw new IllegalArgumentException("Unsupported ads type: " + object.getClass().getSimpleName());
     }
 
     public static long getIntervalTest(Object object) {
+        if (object instanceof AppOpenAds) {
+            return 30 * 1000;
+        }
         if (object instanceof BannerAds) {
             return 0;
         }
@@ -63,8 +64,8 @@ public class TestAdsUtils {
         if (object instanceof NativeAdsPool) {
             return 0;
         }
-        if (object instanceof AppOpenAds) {
-            return 30 * 1000;
+        if (object instanceof NativeFullScreenAds) {
+            return 0;
         }
         if (object instanceof RewardedAds) {
             return 0;
@@ -72,7 +73,7 @@ public class TestAdsUtils {
         if (object instanceof RewardedInterstitialAds) {
             return 0;
         }
-        return -1;
+        throw new IllegalArgumentException("Unsupported ads type: " + object.getClass().getSimpleName());
     }
 
     private TestAdsUtils() {

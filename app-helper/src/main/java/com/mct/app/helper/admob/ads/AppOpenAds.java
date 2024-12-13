@@ -43,6 +43,11 @@ public class AppOpenAds extends BaseFullScreenAds<AppOpenAd> {
     }
 
     @Override
+    protected boolean allowAdsInterval() {
+        return true;
+    }
+
+    @Override
     public AdRequest getAdRequest() {
         return new AdRequest.Builder().setHttpTimeoutMillis(5000).build();
     }

@@ -10,7 +10,6 @@ import com.google.android.gms.ads.AdLoader;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.VideoOptions;
 import com.google.android.gms.ads.nativead.NativeAdOptions;
-import com.mct.app.helper.admob.ads.natives.NativeTemplate;
 import com.mct.app.helper.admob.ads.natives.NativeTemplateStyle;
 import com.mct.app.helper.admob.ads.natives.NativeTemplateView;
 
@@ -20,15 +19,6 @@ public class NativeAds extends BaseViewAds<NativeTemplateView> {
 
     private final int layoutRes;
     private NativeTemplateStyle templateStyle;
-
-    public NativeAds(String adsUnitId) {
-        this(adsUnitId, NativeTemplate.MEDIUM_1);
-    }
-
-    public NativeAds(String adsUnitId, @NonNull NativeTemplate nativeTemplate) {
-        super(adsUnitId);
-        this.layoutRes = nativeTemplate.layoutRes;
-    }
 
     public NativeAds(String adsUnitId, @LayoutRes int layoutRes) {
         super(adsUnitId);

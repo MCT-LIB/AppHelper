@@ -42,4 +42,9 @@ public class InterstitialAds extends BaseFullScreenAds<InterstitialAd> {
         interstitialAd.show(activity);
     }
 
+    @Override
+    protected boolean allowAdsInterval() {
+        return true;
+    }
+
 }
