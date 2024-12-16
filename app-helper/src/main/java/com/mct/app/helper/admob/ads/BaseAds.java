@@ -15,7 +15,7 @@ import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.OnPaidEventListener;
 import com.mct.app.helper.admob.AdsManager;
 import com.mct.app.helper.admob.Callback;
-import com.mct.app.helper.admob.utils.TestAdsUtils;
+import com.mct.app.helper.admob.utils.AdUnitTestIds;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -69,12 +69,8 @@ public abstract class BaseAds<Ads> {
 
     public final void postDelayShowFlag() {
         boolean allowAdsInterval = isAllowAdsInterval();
-        if (!allowAdsInterval) {
-            setCanShow(true);
-            return;
-        }
-        long adsInterval = getLoadAdsInterval();
-        if (adsInterval <= 0) {
+        long adsInterval = getAdsInterval();
+        if (!allowAdsInterval || adsInterval <= 0) {
             setCanShow(true);
             return;
         }
@@ -145,7 +141,7 @@ public abstract class BaseAds<Ads> {
     /**
      * @return on paid event listener
      */
-    protected OnPaidEventListener getOnPaidEventListener() {
+    public OnPaidEventListener getOnPaidEventListener() {
         Supplier<String> a = () -> TextUtils.isEmpty(customAlias) ? alias : customAlias.trim();
         return AdsManager.getInstance().getOnPaidEventListener(a);
     }
@@ -153,15 +149,8 @@ public abstract class BaseAds<Ads> {
     /**
      * @return ads unit id to load based on debug
      */
-    protected String getLoadAdsUnitId() {
-        return AdsManager.getInstance().isDebug() ? TestAdsUtils.getAdsUnitIdTest(this) : adsUnitId;
-    }
-
-    /**
-     * @return ads interval to load based on debug
-     */
-    protected long getLoadAdsInterval() {
-        return AdsManager.getInstance().isDebug() ? TestAdsUtils.getIntervalTest(this) : adsInterval;
+    public String getLoadAdsUnitId() {
+        return AdsManager.getInstance().isDebug() ? AdUnitTestIds.getAdsUnitId(this) : getAdsUnitId();
     }
 
     protected boolean allowAdsInterval() {

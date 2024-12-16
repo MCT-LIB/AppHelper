@@ -18,8 +18,10 @@ import java.util.Map;
 
 public class AdsConfigurator {
 
-    private static final long APP_OPEN_ADS_INTERVAL = 60 * 1000;
-    private static final long INTERSTITIAL_ADS_INTERVAL = 30 * 1000;
+    private static final long APP_OPEN_ADS_INTERVAL_MS = 60 * 1000;
+    private static final long INTERSTITIAL_ADS_INTERVAL_MS = 45 * 1000;
+    private static final long NATIVE_FULLSCREEN_ADS_INTERVAL_MS = 0;
+    private static final int NATIVE_ADS_POOL_SIZE = 3;
 
     private final @NonNull AdsManager mAdsManager;
     private final @NonNull Callback mCallback;
@@ -128,7 +130,7 @@ public class AdsConfigurator {
      * @return An AppOpenAdsConfigurator instance for further configuration
      */
     public AppOpenAdsConfigurator appOpenAds(String adsUnitId) {
-        return new AppOpenAdsConfigurator(this, adsUnitId).adsInterval(APP_OPEN_ADS_INTERVAL);
+        return new AppOpenAdsConfigurator(this, adsUnitId).adsInterval(APP_OPEN_ADS_INTERVAL_MS);
     }
 
     /**
@@ -148,7 +150,7 @@ public class AdsConfigurator {
      * @return An InterstitialAdsConfigurator instance for further configuration
      */
     public InterstitialAdsConfigurator interstitialAds(String adsUnitId) {
-        return new InterstitialAdsConfigurator(this, adsUnitId).adsInterval(INTERSTITIAL_ADS_INTERVAL);
+        return new InterstitialAdsConfigurator(this, adsUnitId).adsInterval(INTERSTITIAL_ADS_INTERVAL_MS);
     }
 
     /**
@@ -168,7 +170,7 @@ public class AdsConfigurator {
      * @return A NativeAdsPoolConfigurator instance for further configuration
      */
     public NativeAdsPoolConfigurator nativeAdsPool(String adsUnitId) {
-        return new NativeAdsPoolConfigurator(this, adsUnitId).setPoolSize(3);
+        return new NativeAdsPoolConfigurator(this, adsUnitId).setPoolSize(NATIVE_ADS_POOL_SIZE);
     }
 
     /**
@@ -178,7 +180,7 @@ public class AdsConfigurator {
      * @return A NativeFullScreenAdsConfigurator instance for further configuration
      */
     public NativeFullScreenAdsConfigurator nativeFullScreenAds(String adsUnitId) {
-        return new NativeFullScreenAdsConfigurator(this, adsUnitId).template(NativeTemplate.FULL_SCREEN_1);
+        return new NativeFullScreenAdsConfigurator(this, adsUnitId).adsInterval(NATIVE_FULLSCREEN_ADS_INTERVAL_MS).template(NativeTemplate.FULL_SCREEN_1);
     }
 
     /**

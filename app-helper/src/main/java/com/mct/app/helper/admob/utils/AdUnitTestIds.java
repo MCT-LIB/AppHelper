@@ -9,7 +9,7 @@ import com.mct.app.helper.admob.ads.NativeFullScreenAds;
 import com.mct.app.helper.admob.ads.RewardedAds;
 import com.mct.app.helper.admob.ads.RewardedInterstitialAds;
 
-public class TestAdsUtils {
+public class AdUnitTestIds {
 
     public static final String APP_OPEN_ID = "ca-app-pub-3940256099942544/9257395921";
     public static final String BANNER_ID = "ca-app-pub-3940256099942544/6300978111";
@@ -20,7 +20,7 @@ public class TestAdsUtils {
     public static final String REWARDED_ID = "ca-app-pub-3940256099942544/5224354917";
     public static final String REWARDED_INTERSTITIAL_ID = "ca-app-pub-3940256099942544/5354046379";
 
-    public static String getAdsUnitIdTest(Object object) {
+    public static String getAdsUnitId(Object object) {
         if (object instanceof AppOpenAds) {
             return APP_OPEN_ID;
         }
@@ -48,35 +48,7 @@ public class TestAdsUtils {
         throw new IllegalArgumentException("Unsupported ads type: " + object.getClass().getSimpleName());
     }
 
-    public static long getIntervalTest(Object object) {
-        if (object instanceof AppOpenAds) {
-            return 30 * 1000;
-        }
-        if (object instanceof BannerAds) {
-            return 0;
-        }
-        if (object instanceof InterstitialAds) {
-            return 15 * 1000;
-        }
-        if (object instanceof NativeAds) {
-            return 0;
-        }
-        if (object instanceof NativeAdsPool) {
-            return 0;
-        }
-        if (object instanceof NativeFullScreenAds) {
-            return 0;
-        }
-        if (object instanceof RewardedAds) {
-            return 0;
-        }
-        if (object instanceof RewardedInterstitialAds) {
-            return 0;
-        }
-        throw new IllegalArgumentException("Unsupported ads type: " + object.getClass().getSimpleName());
-    }
-
-    private TestAdsUtils() {
+    private AdUnitTestIds() {
         //no instance
     }
 }
