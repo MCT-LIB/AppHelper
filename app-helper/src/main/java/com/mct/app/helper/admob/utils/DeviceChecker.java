@@ -1,9 +1,17 @@
 package com.mct.app.helper.admob.utils;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.os.Build;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.util.Consumer;
+
+import com.google.android.gms.ads.AdListener;
+import com.google.android.gms.ads.AdLoader;
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.LoadAdError;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -11,10 +19,50 @@ import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
-public class EmulatorChecker {
+public class DeviceChecker {
 
-    public static boolean isEmulator() {
+    private static Boolean isEmulator;
+    private static Boolean isTestDevice;
+    private static TestDeviceChecker testDeviceChecker;
+
+    public static boolean isRealDevice() {
+        if (!isInit()) {
+            return false;
+        }
+        return !isEmulator && !isTestDevice;
+    }
+
+    public static boolean isInit() {
+        return isEmulator != null && isTestDevice != null;
+    }
+
+    public static void init(Context context, String nativeId) {
+        // already initialized
+        if (isInit()) {
+            return;
+        }
+        // check emulator
+        if (isEmulator == null) {
+            isEmulator = checkEmulator();
+        }
+        // check test device
+        if (testDeviceChecker == null) {
+            testDeviceChecker = new TestDeviceChecker();
+        }
+        testDeviceChecker.checkTestDevice(context, nativeId, result -> {
+            testDeviceChecker = null;
+            isTestDevice = result;
+        }, error -> {
+            testDeviceChecker = null;
+            isTestDevice = null;
+        });
+    }
+
+    /* --- emulator check --- */
+
+    private static boolean checkEmulator() {
         return (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic"))
                 || Build.FINGERPRINT.startsWith("generic")
                 || Build.FINGERPRINT.startsWith("unknown")
@@ -126,4 +174,43 @@ public class EmulatorChecker {
             return def;
         }
     }
+
+    /* --- test device check --- */
+
+    private static class TestDeviceChecker {
+        private AdLoader adLoader;
+
+        public void checkTestDevice(Context context, String nativeId, Consumer<Boolean> onSuccess, Consumer<Throwable> onFailure) {
+            // ad is already loading
+            if (adLoader != null && adLoader.isLoading()) {
+                return;
+            }
+
+            // create ad loader
+            adLoader = new AdLoader.Builder(context, nativeId)
+                    .withAdListener(new AdListener() {
+                        @Override
+                        public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
+                            onFailure.accept(new RuntimeException(loadAdError.getMessage()));
+                        }
+                    })
+                    .forNativeAd(nativeAd -> {
+                        String t1 = "Test Ad";
+                        String t2 = context.getString(com.google.android.gms.ads.impl.R.string.s7);
+                        String header = nativeAd.getHeadline();
+                        nativeAd.destroy();
+                        onSuccess.accept(Optional.ofNullable(header)
+                                .map(String::toLowerCase)
+                                .map(String::trim)
+                                .map(h -> h.startsWith(t1) || h.startsWith(t2))
+                                .orElse(false));
+                    })
+                    .build();
+
+            // load ad
+            adLoader.loadAd(new AdRequest.Builder().build());
+        }
+
+    }
+
 }
