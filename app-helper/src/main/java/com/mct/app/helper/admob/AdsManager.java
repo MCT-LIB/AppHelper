@@ -159,7 +159,7 @@ public final class AdsManager {
      */
     public void setPremium(boolean isPremium) {
         mIsPremium.set(isPremium);
-        updateObserver();
+        //updateObserver();
     }
 
     /**
@@ -186,7 +186,7 @@ public final class AdsManager {
      * @return true if real device
      */
     public boolean isRealDevice() {
-        return isDebug() || DeviceChecker.isRealDevice();
+        return DeviceChecker.isRealDevice(isDebug());
     }
 
     /**
