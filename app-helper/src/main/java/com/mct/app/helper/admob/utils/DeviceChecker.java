@@ -165,12 +165,15 @@ public class DeviceChecker {
 
         @SuppressWarnings("unchecked")
         private static <V> V cast(Object value, V def, Class<V> c) {
-            if (value == null) return def;
-            if (c.isInstance(value)) return c.cast(value);
-            if (c == String.class) return c.cast(value.toString());
-            if (c == int.class) return (V) Integer.valueOf(Integer.parseInt(value.toString()));
-            if (c == long.class) return (V) Long.valueOf(Long.parseLong(value.toString()));
-            if (c == boolean.class) return (V) Boolean.valueOf(value.toString());
+            try {
+                if (value == null) return def;
+                if (c.isInstance(value)) return c.cast(value);
+                if (c == String.class) return c.cast(value.toString());
+                if (c == int.class) return (V) Integer.valueOf(value.toString());
+                if (c == long.class) return (V) Long.valueOf(value.toString());
+                if (c == boolean.class) return (V) Boolean.valueOf(value.toString());
+            } catch (NumberFormatException | ClassCastException ignored) {
+            }
             return def;
         }
     }
