@@ -27,6 +27,7 @@ import com.mct.app.helper.admob.ads.NativeAds;
 import com.mct.app.helper.admob.ads.RewardedAds;
 import com.mct.app.helper.admob.ads.RewardedInterstitialAds;
 import com.mct.app.helper.admob.ads.natives.NativeAdsAdapter;
+import com.mct.app.helper.admob.utils.DeviceChecker;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -158,7 +159,7 @@ public final class AdsManager {
      */
     public void setPremium(boolean isPremium) {
         mIsPremium.set(isPremium);
-        updateObserver();
+        //updateObserver();
     }
 
     /**
@@ -177,6 +178,24 @@ public final class AdsManager {
      */
     public void setDebug(boolean debug) {
         mDebug.set(debug);
+    }
+
+    /**
+     * Check if device is real device
+     *
+     * @return true if real device
+     */
+    public boolean isRealDevice() {
+        return DeviceChecker.isRealDevice(isDebug());
+    }
+
+    /**
+     * Set auto check device when has internet
+     *
+     * @param enable true if auto check
+     */
+    public void setAutoCheckDeviceWhenHasInternet(boolean enable) {
+        mObserverConnection.setAutoCheckDeviceWhenHasInternet(enable);
     }
 
     /**

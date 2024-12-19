@@ -29,6 +29,7 @@ public class AdsConfigurator {
 
     private Boolean mPremium;
     private Boolean mDebug;
+    private Boolean mAutoCheckDeviceWhenHasInternet;
     private Boolean mAutoLoadFullscreenAdsWhenHasInternet;
     private Boolean mAutoReloadFullscreenAdsWhenOrientationChanged;
     private Boolean mAppOpenObserverEnabled;
@@ -80,18 +81,35 @@ public class AdsConfigurator {
     }
 
     /**
+     * Sets whether to automatically check the device when the device has internet
+     * <br/>
+     * Default: false
+     *
+     * @param enable true if you want to check the device automatically
+     * @return This AdsConfigurator instance for method chaining
+     */
+    public AdsConfigurator autoCheckDeviceWhenHasInternet(boolean enable) {
+        mAutoCheckDeviceWhenHasInternet = enable;
+        return this;
+    }
+
+    /**
      * Sets whether to automatically load ads when the device has internet
+     * <br/>
+     * Default: true
      *
      * @param enable true if you want to load ads automatically
      * @return This AdsConfigurator instance for method chaining
      */
-    public AdsConfigurator autoLoadWhenHasInternet(boolean enable) {
+    public AdsConfigurator autoLoadFullscreenAdsWhenHasInternet(boolean enable) {
         mAutoLoadFullscreenAdsWhenHasInternet = enable;
         return this;
     }
 
     /**
      * Sets whether to automatically reload fullscreen ads when the orientation changes
+     * <br/>
+     * Default: true
      *
      * @param enable true if you want to reload fullscreen ads automatically
      * @return This AdsConfigurator instance for method chaining
@@ -224,6 +242,9 @@ public class AdsConfigurator {
         }
         if (mDebug != null) {
             mAdsManager.setDebug(mDebug);
+        }
+        if (mAutoCheckDeviceWhenHasInternet != null) {
+            mAdsManager.setAutoCheckDeviceWhenHasInternet(mAutoCheckDeviceWhenHasInternet);
         }
         if (mAutoLoadFullscreenAdsWhenHasInternet != null) {
             mAdsManager.setAutoLoadFullscreenAdsWhenHasInternet(mAutoLoadFullscreenAdsWhenHasInternet);
