@@ -47,8 +47,12 @@ import com.mct.app.helper.R;
 import com.mct.app.helper.admob.ads.natives.NativeTemplateStyle;
 import com.mct.app.helper.admob.ads.natives.NativeTemplateView;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
 public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
 
+    @Retention(RetentionPolicy.SOURCE)
     @IntDef({GRAVITY_TOP_START, GRAVITY_TOP_END, GRAVITY_RANDOM})
     public @interface DismissButtonGravity {
         int GRAVITY_TOP_START = Gravity.TOP | Gravity.START;
@@ -56,6 +60,7 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
         int GRAVITY_RANDOM = -1;
     }
 
+    @Retention(RetentionPolicy.SOURCE)
     @IntDef({MEDIA_RATIO_UNKNOWN, MEDIA_RATIO_ANY, MEDIA_RATIO_LANDSCAPE, MEDIA_RATIO_PORTRAIT, MEDIA_RATIO_SQUARE})
     public @interface MediaRatioOptions {
         int MEDIA_RATIO_UNKNOWN = NativeAdOptions.NATIVE_MEDIA_ASPECT_RATIO_UNKNOWN;
