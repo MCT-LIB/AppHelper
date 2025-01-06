@@ -29,12 +29,11 @@ public class NativeAds extends BaseViewAds<NativeTemplateView> {
         this.templateStyle = templateStyle;
     }
 
-    public void applyStyle() {
-        Optional.ofNullable(getAds()).ifPresent(ads -> ads.setStyles(templateStyle));
-    }
-
-    public void destroy() {
-        Optional.ofNullable(getAds()).ifPresent(NativeTemplateView::destroyNativeAd);
+    public void setTemplateStyleAndApply(NativeTemplateStyle templateStyle) {
+        this.templateStyle = templateStyle;
+        if (getAds() != null) {
+            getAds().setStyles(templateStyle);
+        }
     }
 
     @Override
@@ -58,5 +57,11 @@ public class NativeAds extends BaseViewAds<NativeTemplateView> {
                 })
                 .build()
                 .loadAd(getAdRequest());
+    }
+
+    @Override
+    protected void onClear() {
+        super.onClear();
+        Optional.ofNullable(getAds()).ifPresent(NativeTemplateView::destroyNativeAd);
     }
 }

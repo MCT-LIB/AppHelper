@@ -45,12 +45,6 @@ public class NativeAdsPool extends BaseAds<Object> {
         return nativeAdsList.isEmpty() ? null : nativeAdsList.get(position % nativeAdsList.size());
     }
 
-    public void destroy() {
-        forceClear();
-        nativeAdsList.forEach(NativeAd::destroy);
-        nativeAdsList.clear();
-    }
-
     public void addOnPoolRefreshedListener(OnPoolRefreshedListener listener) {
         if (listener == null) {
             return;
@@ -119,6 +113,13 @@ public class NativeAdsPool extends BaseAds<Object> {
         } else {
             adLoader.loadAds(getAdRequest(), adRequestSize.get());
         }
+    }
+
+    @Override
+    protected void onClear() {
+        super.onClear();
+        nativeAdsList.forEach(NativeAd::destroy);
+        nativeAdsList.clear();
     }
 
     public interface OnPoolRefreshedListener {

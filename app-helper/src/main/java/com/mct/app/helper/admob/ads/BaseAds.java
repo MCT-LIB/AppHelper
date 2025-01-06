@@ -60,11 +60,14 @@ public abstract class BaseAds<Ads> {
         }
     }
 
-    public final void forceClear() {
+    public final void clear() {
+        onClear();
         clearAdLoadCallback();
         setAds(null);
+        setAdsLoadedTime(0);
         setLoading(false);
         setShowing(false);
+        setCanShow(true);
     }
 
     public final void postDelayShowFlag() {
@@ -151,6 +154,9 @@ public abstract class BaseAds<Ads> {
      */
     public String getLoadAdsUnitId() {
         return AdsManager.getInstance().isDebug() ? AdUnitTestIds.getAdsUnitId(this) : getAdsUnitId();
+    }
+
+    protected void onClear() {
     }
 
     protected boolean allowAdsInterval() {

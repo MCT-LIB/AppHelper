@@ -17,7 +17,7 @@ public abstract class BaseViewAds<AdsView extends View> extends BaseAds<AdsView>
             // already showing in another container so need hide it
             hide();
         }
-        forceClear();
+        clear();
         show(alias, container);
     }
 

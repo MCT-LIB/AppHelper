@@ -147,7 +147,7 @@ class ObserverConnection {
         AdsManager.getInstance().getAdsList().stream()
                 .filter(check)
                 .forEach(ads -> {
-                    ads.forceClear();
+                    ads.clear();
                     AdsManager.getInstance().load(ads, application, null, null);
                 });
     }

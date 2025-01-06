@@ -49,6 +49,7 @@ import com.mct.app.helper.admob.ads.natives.NativeTemplateView;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.util.Optional;
 
 public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
 
@@ -161,6 +162,12 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
         fullScreenDialog.setCancelable(cancelable);
         fullScreenDialog.setCanceledOnTouchOutside(cancelable);
         fullScreenDialog.show();
+    }
+
+    @Override
+    protected void onClear() {
+        super.onClear();
+        Optional.ofNullable(getAds()).ifPresent(NativeAd::destroy);
     }
 
     @Override

@@ -181,7 +181,7 @@ public class NativeRecyclerActivity extends AppCompatActivity {
             return;
         }
         if (view.getId() == R.id.btn_clear) {
-            getAdsPoolOptional().ifPresent(NativeAdsPool::destroy);
+            getAdsPoolOptional().ifPresent(NativeAdsPool::clear);
             return;
         }
         if (view.getId() == R.id.btn_load) {

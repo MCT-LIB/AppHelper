@@ -71,7 +71,16 @@ public final class AdsManager {
     ///////////////////////////////////////////////////////////////////////////
 
     /**
-     * Initialize ads(Usually called in Splash)
+     * Check if ads is initialized
+     *
+     * @return is initialized
+     */
+    public boolean isInit() {
+        return mIsInitialized.get();
+    }
+
+    /**
+     * Initialize ads
      *
      * @param activity             activity
      * @param configuratorConsumer configurator
@@ -83,13 +92,14 @@ public final class AdsManager {
         }
         mApplication = activity.getApplication();
         configuratorConsumer.accept(new AdsConfigurator(this, () -> {
-            GoogleMobileAdsConsentManager.getInstance(mApplication).gatherConsent(activity, e -> {
+            GoogleMobileAdsConsentManager manager = GoogleMobileAdsConsentManager.getInstance(mApplication);
+            manager.gatherConsent(activity, e -> {
             });
         }));
     }
 
     /**
-     * Initialize ads(Usually called in Splash)
+     * Initialize ads
      *
      * @param activity             activity
      * @param configuratorConsumer configurator
@@ -98,6 +108,7 @@ public final class AdsManager {
     public void initAsync(@NonNull Activity activity, @NonNull Consumer<AdsConfigurator> configuratorConsumer, @NonNull Callback callback) {
         if (mIsInitialized.getAndSet(true)) {
             // already initialized
+            callback.callback();
             return;
         }
         mApplication = activity.getApplication();
@@ -106,9 +117,7 @@ public final class AdsManager {
                 // Initialize the Google Mobile Ads SDK on a background thread.
                 MobileAds.initialize(mApplication, status -> activity.runOnUiThread(callback::callback));
             }));
-            Runnable initialize = () -> Optional
-                    .ofNullable(initThreadAtomic.getAndSet(null))
-                    .ifPresent(Thread::start);
+            Runnable initialize = () -> Optional.ofNullable(initThreadAtomic.getAndSet(null)).ifPresent(Thread::start);
             GoogleMobileAdsConsentManager manager = GoogleMobileAdsConsentManager.getInstance(mApplication);
             manager.gatherConsent(activity, e -> initialize.run());
             if (manager.canRequestAds()) {
@@ -124,6 +133,24 @@ public final class AdsManager {
      */
     public void config(@NonNull Consumer<AdsConfigurator> configuratorConsumer) {
         configuratorConsumer.accept(new AdsConfigurator(this));
+    }
+
+    /**
+     * Clear ads
+     */
+    public void clear() {
+        if (mApplication != null) {
+            mObserverConnection.release(mApplication);
+            mObserverLifecycle.release(mApplication);
+            mApplication = null;
+        }
+        mAds.values().forEach(BaseAds::clear);
+        mAds.clear();
+        mNativeAdsAdapters.clear();
+        mOnPaidEventListener.set(null);
+        mDebug.set(false);
+        mIsPremium.set(false);
+        mIsInitialized.set(false);
     }
 
     void updateObserver() {
