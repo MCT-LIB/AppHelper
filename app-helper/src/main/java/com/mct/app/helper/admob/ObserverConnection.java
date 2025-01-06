@@ -20,7 +20,7 @@ import com.mct.app.helper.admob.ads.InterstitialAds;
 import com.mct.app.helper.admob.ads.NativeAds;
 import com.mct.app.helper.admob.ads.NativeAdsPool;
 import com.mct.app.helper.admob.ads.NativeFullScreenAds;
-import com.mct.app.helper.admob.utils.DeviceChecker;
+import com.mct.app.helper.admob.utils.DVC;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -71,7 +71,7 @@ class ObserverConnection {
                 @Override
                 public void onAvailable(@NonNull Network network) {
                     if (autoCheckDeviceWhenHasInternet.get()) {
-                        handler.post(() -> initCheckDevice(application));
+                        handler.post(() -> initDvc(application));
                     }
                     if (autoLoadFullscreenAdsWhenHasInternet.get()) {
                         handler.post(() -> loadFullScreenAds(application));
@@ -111,7 +111,7 @@ class ObserverConnection {
         }
     }
 
-    private void initCheckDevice(Application application) {
+    private void initDvc(Application application) {
         // check device when has internet and has native ads
         AdsManager.getInstance().getAdsList().stream()
                 .filter(ads -> ads instanceof NativeAds ||
@@ -119,7 +119,7 @@ class ObserverConnection {
                         ads instanceof NativeFullScreenAds)
                 .findFirst()
                 .map(BaseAds::getLoadAdsUnitId)
-                .ifPresent(unitId -> DeviceChecker.init(application, unitId));
+                .ifPresent(unitId -> DVC.init(application, unitId));
     }
 
     // just load if not loaded

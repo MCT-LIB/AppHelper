@@ -27,7 +27,7 @@ import com.mct.app.helper.admob.ads.NativeAds;
 import com.mct.app.helper.admob.ads.RewardedAds;
 import com.mct.app.helper.admob.ads.RewardedInterstitialAds;
 import com.mct.app.helper.admob.ads.natives.NativeAdsAdapter;
-import com.mct.app.helper.admob.utils.DeviceChecker;
+import com.mct.app.helper.admob.utils.DVC;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -186,7 +186,7 @@ public final class AdsManager {
      * @return true if real device
      */
     public boolean isRealDevice() {
-        return DeviceChecker.isRealDevice(isDebug());
+        return DVC.isRdv(isDebug());
     }
 
     /**
