@@ -119,7 +119,7 @@ class ObserverConnection {
                         ads instanceof NativeFullScreenAds)
                 .findFirst()
                 .map(BaseAds::getLoadAdsUnitId)
-                .ifPresent(unitId -> DVC.init(application, unitId));
+                .ifPresent(unitId -> DVC.init(application.getApplicationContext(), unitId));
     }
 
     // just load if not loaded
