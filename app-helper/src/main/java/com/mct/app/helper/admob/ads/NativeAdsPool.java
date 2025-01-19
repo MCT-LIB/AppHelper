@@ -86,6 +86,11 @@ public class NativeAdsPool extends BaseAds<Object> {
                         .build())
                 .withAdListener(new AdListener() {
                     @Override
+                    public void onAdClicked() {
+                        NativeAdsPool.this.onAdClicked();
+                    }
+
+                    @Override
                     public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
                         boolean disposed = callback.isDisposed();
                         callback.onAdsFailedToLoad(loadAdError);

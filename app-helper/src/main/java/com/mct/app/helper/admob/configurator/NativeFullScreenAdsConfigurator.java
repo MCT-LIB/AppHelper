@@ -18,6 +18,7 @@ public class NativeFullScreenAdsConfigurator extends BaseAdsConfigurator<NativeF
 
     private int dismissButtonGravity = DismissButtonGravity.GRAVITY_TOP_END;
     private long showDismissButtonCountdown = 3000;
+    private long clickableDismissButtonCountdown = 0;
     private boolean cancelable = false;
     private boolean startMuted = true;
     private int mediaRatioOptions = MediaRatioOptions.MEDIA_RATIO_ANY;
@@ -51,6 +52,11 @@ public class NativeFullScreenAdsConfigurator extends BaseAdsConfigurator<NativeF
         return this;
     }
 
+    public NativeFullScreenAdsConfigurator clickableDismissButtonCountdown(long countdown) {
+        this.clickableDismissButtonCountdown = countdown;
+        return this;
+    }
+
     public NativeFullScreenAdsConfigurator cancelable(boolean cancelable) {
         this.cancelable = cancelable;
         return this;
@@ -72,6 +78,7 @@ public class NativeFullScreenAdsConfigurator extends BaseAdsConfigurator<NativeF
         ads.setTemplateStyle(templateStyle);
         ads.setDismissButtonGravity(dismissButtonGravity);
         ads.setShowDismissButtonCountdown(showDismissButtonCountdown);
+        ads.setClickableDismissButtonCountdown(clickableDismissButtonCountdown);
         ads.setCancelable(cancelable);
         ads.setStartMuted(startMuted);
         ads.setMediaRatioOptions(mediaRatioOptions);

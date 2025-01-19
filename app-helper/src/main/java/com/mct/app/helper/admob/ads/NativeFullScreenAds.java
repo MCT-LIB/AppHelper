@@ -76,6 +76,7 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
 
     private int dismissButtonGravity = GRAVITY_TOP_END;
     private long showDismissButtonCountdown = 3000;
+    private long clickableDismissButtonCountdown = 0;  // 0 means enable immediately
     private boolean cancelable = false;
     private boolean startMuted = true;
     private int mediaRatioOptions = MEDIA_RATIO_ANY;
@@ -97,6 +98,10 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
 
     public void setShowDismissButtonCountdown(long countdown) {
         this.showDismissButtonCountdown = countdown;
+    }
+
+    public void setClickableDismissButtonCountdown(long countdown) {
+        this.clickableDismissButtonCountdown = countdown;
     }
 
     public void setCancelable(boolean cancelable) {
@@ -127,6 +132,11 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
                         .build())
                 .withAdListener(new AdListener() {
                     @Override
+                    public void onAdClicked() {
+                        NativeFullScreenAds.this.onAdClicked();
+                    }
+
+                    @Override
                     public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
                         callback.onAdsFailedToLoad(loadAdError);
                     }
@@ -144,7 +154,7 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
         NativeTemplateView templateView = new NativeTemplateView(activity, layoutRes);
         templateView.setStyles(templateStyle);
         templateView.setNativeAd(nativeAd);
-        fullScreenDialog = new FullScreenDialog(activity, templateView, dismissButtonGravity, showDismissButtonCountdown) {
+        fullScreenDialog = new FullScreenDialog(activity, templateView, dismissButtonGravity, showDismissButtonCountdown, clickableDismissButtonCountdown) {
             @Override
             public void onShow(DialogInterface dialog) {
                 super.onShow(dialog);
@@ -171,18 +181,28 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
     }
 
     @Override
+    protected void onAdClicked() {
+        super.onAdClicked();
+        if (fullScreenDialog != null) {
+            fullScreenDialog.onAdClicked();
+        }
+    }
+
+    @Override
     protected boolean allowAdsInterval() {
         return true;
     }
 
     private static class FullScreenDialog extends Dialog implements DialogInterface.OnShowListener, DialogInterface.OnDismissListener {
 
+        private View dismissView;
         private ValueAnimator dismissAnimator;
 
         public FullScreenDialog(@NonNull Context context,
                                 @NonNull NativeTemplateView templateView,
                                 int dismissButtonGravity,
-                                long showDismissButtonCountdown) {
+                                long showDismissButtonCountdown,
+                                long clickableDismissButtonCountdown) {
             super(context, R.style.Gnt_AlertDialog_FullScreen);
             initWindow(getWindow());
 
@@ -190,11 +210,22 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
             super.setOnShowListener(this);
             super.setOnDismissListener(this);
 
-            templateView.addView(initDismissView(context, dismissButtonGravity, showDismissButtonCountdown));
+            templateView.addView(initDismissView(
+                    context,
+                    dismissButtonGravity,
+                    showDismissButtonCountdown,
+                    clickableDismissButtonCountdown
+            ));
             setContentView(templateView, new ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
             ));
+        }
+
+        public void onAdClicked() {
+            if (dismissView != null) {
+                dismissView.setEnabled(true);
+            }
         }
 
         private void initWindow(Window window) {
@@ -211,7 +242,10 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
 
         @SuppressLint("InflateParams")
         @NonNull
-        private View initDismissView(Context context, int dismissButtonGravity, long showDismissButtonCountdown) {
+        private View initDismissView(Context context,
+                                     int dismissButtonGravity,
+                                     long showDismissButtonCountdown,
+                                     long clickableDismissButtonCountdown) {
 
             // Inflate the dismiss view layout
             View view = LayoutInflater.from(context).inflate(R.layout.gnt_item_loading_dismiss, null);
@@ -221,10 +255,13 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
             TextView progressText = view.findViewById(R.id.gnt_progress_text);
             ImageView dismissButton = view.findViewById(R.id.gnt_button_dismiss);
             dismissButton.setOnClickListener(v -> dismiss());
+            dismissButton.setEnabled(false);
 
             // Set initial state
             animate(true, progressBar, progressText);
             animate(false, dismissButton);
+
+            this.dismissView = dismissButton;
 
             // Start countdown if the value is greater than 0
             if (showDismissButtonCountdown > 0) {
@@ -250,12 +287,14 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
                         progressBar.postDelayed(() -> {
                             animate(false, progressBar, progressText);
                             animate(true, dismissButton);
+                            dismissButton.postDelayed(() -> dismissButton.setEnabled(true), clickableDismissButtonCountdown);
                         }, 200);
                     }
                 });
             } else {
                 animate(false, progressBar, progressText);
                 animate(true, dismissButton);
+                dismissButton.postDelayed(() -> dismissButton.setEnabled(true), clickableDismissButtonCountdown);
             }
 
             int gravity = dismissButtonGravity == GRAVITY_RANDOM
@@ -304,6 +343,7 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
             if (dismissAnimator != null) {
                 dismissAnimator.cancel();
             }
+            dismissView = null;
         }
     }
 
