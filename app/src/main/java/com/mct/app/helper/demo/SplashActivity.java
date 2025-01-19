@@ -22,7 +22,7 @@ public class SplashActivity extends AppCompatActivity {
                 .premium(false)
                 .debug(BuildConfig.DEBUG)
                 .onPaidEventListener(null)
-                .autoCheckDeviceWhenHasInternet(true)
+                .autoCheckDeviceWhenHasInternet(Constant.NATIVE_ID)
                 .autoLoadFullscreenAdsWhenHasInternet(true)
                 .autoReloadFullscreenAdsWhenOrientationChanged(true)
                 .appOpenObserverBlackListActivity(SplashActivity.class)

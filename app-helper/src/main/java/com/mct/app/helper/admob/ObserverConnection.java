@@ -17,21 +17,20 @@ import androidx.annotation.NonNull;
 import com.mct.app.helper.admob.ads.AppOpenAds;
 import com.mct.app.helper.admob.ads.BaseAds;
 import com.mct.app.helper.admob.ads.InterstitialAds;
-import com.mct.app.helper.admob.ads.NativeAds;
 import com.mct.app.helper.admob.ads.NativeAdsPool;
-import com.mct.app.helper.admob.ads.NativeFullScreenAds;
 import com.mct.app.helper.admob.utils.DVC;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 
 class ObserverConnection {
 
-    private final AtomicBoolean autoCheckDeviceWhenHasInternet = new AtomicBoolean(false);
-    private final AtomicBoolean autoLoadFullscreenAdsWhenHasInternet = new AtomicBoolean(true);
-    private final AtomicBoolean autoReloadFullscreenAdsWhenOrientationChanged = new AtomicBoolean(true);
+    private final AtomicReference<String> autoCheckDeviceWhenHasInternet = new AtomicReference<>(null);
+    private final AtomicBoolean autoLoadFullscreenAdsWhenHasInternet = new AtomicBoolean(false);
+    private final AtomicBoolean autoReloadFullscreenAdsWhenOrientationChanged = new AtomicBoolean(false);
 
     private final Handler handler = new Handler(Looper.getMainLooper());
 
@@ -50,8 +49,8 @@ class ObserverConnection {
         unregisterObserver(application);
     }
 
-    public void setAutoCheckDeviceWhenHasInternet(boolean enable) {
-        this.autoCheckDeviceWhenHasInternet.set(enable);
+    public void setAutoCheckDeviceWhenHasInternet(String unitId) {
+        this.autoCheckDeviceWhenHasInternet.set(unitId);
     }
 
     public void setAutoLoadFullscreenAdsWhenHasInternet(boolean enable) {
@@ -70,8 +69,9 @@ class ObserverConnection {
             connectivityManager.registerDefaultNetworkCallback(networkCallback = new ConnectivityManager.NetworkCallback() {
                 @Override
                 public void onAvailable(@NonNull Network network) {
-                    if (autoCheckDeviceWhenHasInternet.get()) {
-                        handler.post(() -> initDvc(application));
+                    String unitId = autoCheckDeviceWhenHasInternet.get();
+                    if (unitId != null) {
+                        handler.post(() -> DVC.init(application.getApplicationContext(), unitId));
                     }
                     if (autoLoadFullscreenAdsWhenHasInternet.get()) {
                         handler.post(() -> loadFullScreenAds(application));
@@ -109,17 +109,6 @@ class ObserverConnection {
             application.unregisterReceiver(orientationReceiver);
             orientationReceiver = null;
         }
-    }
-
-    private void initDvc(Application application) {
-        // check device when has internet and has native ads
-        AdsManager.getInstance().getAdsList().stream()
-                .filter(ads -> ads instanceof NativeAds ||
-                        ads instanceof NativeAdsPool ||
-                        ads instanceof NativeFullScreenAds)
-                .findFirst()
-                .map(BaseAds::getLoadAdsUnitId)
-                .ifPresent(unitId -> DVC.init(application.getApplicationContext(), unitId));
     }
 
     // just load if not loaded
