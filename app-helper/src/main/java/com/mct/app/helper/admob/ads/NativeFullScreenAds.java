@@ -33,7 +33,10 @@ import androidx.annotation.IntDef;
 import androidx.annotation.LayoutRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
 import com.google.android.gms.ads.AdListener;
@@ -195,13 +198,14 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
             ));
+            applyInsets(templateView, WindowInsetsCompat.Type.systemBars());
         }
 
         private void initWindow(Window window) {
             if (window == null) {
                 return;
             }
-            WindowCompat.setDecorFitsSystemWindows(window, true);
+            WindowCompat.setDecorFitsSystemWindows(window, false);
             WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(window, window.getDecorView());
             controller.setAppearanceLightStatusBars(false);
             controller.setAppearanceLightNavigationBars(false);
@@ -280,6 +284,14 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
                         .withEndAction(visible ? null : () -> view.setVisibility(View.GONE))
                         .start();
             }
+        }
+
+        private void applyInsets(@NonNull View view, @WindowInsetsCompat.Type.InsetsType int insetsType) {
+            ViewCompat.setOnApplyWindowInsetsListener(view, (v, insets) -> {
+                Insets inset = insets.getInsets(insetsType);
+                view.setPadding(inset.left, inset.top, inset.right, inset.bottom);
+                return WindowInsetsCompat.CONSUMED;
+            });
         }
 
         @Override
