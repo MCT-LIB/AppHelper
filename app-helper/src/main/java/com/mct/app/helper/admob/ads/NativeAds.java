@@ -44,6 +44,11 @@ public class NativeAds extends BaseViewAds<NativeTemplateView> {
                         .build())
                 .withAdListener(new AdListener() {
                     @Override
+                    public void onAdClicked() {
+                        NativeAds.this.onAdClicked();
+                    }
+
+                    @Override
                     public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
                         callback.onAdsFailedToLoad(loadAdError);
                     }

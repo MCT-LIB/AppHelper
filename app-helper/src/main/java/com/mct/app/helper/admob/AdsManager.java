@@ -219,10 +219,10 @@ public final class AdsManager {
     /**
      * Set auto check device when has internet
      *
-     * @param enable true if auto check
+     * @param unitId ad unit id
      */
-    public void setAutoCheckDeviceWhenHasInternet(boolean enable) {
-        mObserverConnection.setAutoCheckDeviceWhenHasInternet(enable);
+    public void setAutoCheckDeviceWhenHasInternet(String unitId) {
+        mObserverConnection.setAutoCheckDeviceWhenHasInternet(unitId);
     }
 
     /**
@@ -562,6 +562,16 @@ public final class AdsManager {
             return ads instanceof BaseFullScreenAds && ((BaseFullScreenAds<?>) ads).isDismissNearly();
         }
         return false;
+    }
+
+    /**
+     * Clear ads
+     */
+    public void clearAds(String alias) {
+        BaseAds<?> ads = getAds(alias, BaseAds.class);
+        if (ads != null) {
+            ads.clear();
+        }
     }
 
     /**

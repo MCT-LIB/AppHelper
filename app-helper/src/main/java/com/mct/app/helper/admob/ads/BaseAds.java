@@ -159,6 +159,9 @@ public abstract class BaseAds<Ads> {
     protected void onClear() {
     }
 
+    protected void onAdClicked() {
+    }
+
     protected boolean allowAdsInterval() {
         return false;
     }

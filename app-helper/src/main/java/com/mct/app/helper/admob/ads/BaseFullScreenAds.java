@@ -109,6 +109,15 @@ public abstract class BaseFullScreenAds<Ads> extends BaseAds<Ads> {
         }
 
         @Override
+        public void onAdClicked() {
+            if (isDispose()) {
+                return;
+            }
+            Log.d(TAG, "onAdClicked");
+            ads.onAdClicked();
+        }
+
+        @Override
         public void onAdDismissedFullScreenContent() {
             if (isDispose()) {
                 return;
