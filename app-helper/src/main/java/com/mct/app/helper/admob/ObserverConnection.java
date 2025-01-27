@@ -18,6 +18,7 @@ import com.mct.app.helper.admob.ads.AppOpenAds;
 import com.mct.app.helper.admob.ads.BaseAds;
 import com.mct.app.helper.admob.ads.InterstitialAds;
 import com.mct.app.helper.admob.ads.NativeAdsPool;
+import com.mct.app.helper.admob.utils.AdUnitTestIds;
 import com.mct.app.helper.admob.utils.DVC;
 
 import java.util.List;
@@ -71,7 +72,8 @@ class ObserverConnection {
                 public void onAvailable(@NonNull Network network) {
                     String unitId = autoCheckDeviceWhenHasInternet.get();
                     if (unitId != null) {
-                        handler.post(() -> DVC.init(application.getApplicationContext(), unitId));
+                        String finalUnitId = AdsManager.getInstance().isDebug() ? AdUnitTestIds.NATIVE_ID : unitId;
+                        handler.post(() -> DVC.init(application.getApplicationContext(), finalUnitId));
                     }
                     if (autoLoadFullscreenAdsWhenHasInternet.get()) {
                         handler.post(() -> loadFullScreenAds(application));
