@@ -14,11 +14,17 @@
             android:background="@android:color/black"
             android:orientation="vertical">
 
-            <com.google.android.gms.ads.nativead.MediaView
-                android:id="@+id/media_view"
+            <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_weight="1" />
+                android:layout_weight="1">
+
+                <com.google.android.gms.ads.nativead.MediaView
+                    android:id="@+id/media_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center" />
+            </FrameLayout>
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/background"
@@ -52,9 +58,9 @@
                     android:layout_marginStart="@dimen/gnt_small_margin"
                     android:layout_marginEnd="@dimen/gnt_small_margin"
                     android:ellipsize="end"
-                    android:maxLines="2"
+                    android:maxLines="1"
                     android:textColor="@android:color/white"
-                    android:textSize="@dimen/gnt_text_size_small"
+                    android:textSize="@dimen/gnt_text_size_large"
                     android:textStyle="bold"
                     app:layout_constraintEnd_toStartOf="@id/cta"
                     app:layout_constraintStart_toEndOf="@id/gnt_indicator_view"
@@ -66,7 +72,6 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="@dimen/gnt_small_margin"
-                    android:layout_marginTop="@dimen/gnt_extra_small_margin"
                     android:layout_marginEnd="@dimen/gnt_small_margin"
                     android:ellipsize="end"
                     android:maxLines="2"
@@ -74,7 +79,7 @@
                     android:textSize="@dimen/gnt_text_size_small"
                     app:layout_constraintEnd_toStartOf="@id/cta"
                     app:layout_constraintStart_toEndOf="@id/icon"
-                    app:layout_constraintTop_toBottomOf="@id/primary"
+                    app:layout_constraintTop_toBottomOf="@id/gnt_indicator_view"
                     tools:text="@tools:sample/lorem/random" />
 
                 <androidx.appcompat.widget.AppCompatButton

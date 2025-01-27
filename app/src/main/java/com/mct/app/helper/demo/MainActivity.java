@@ -51,9 +51,9 @@ public class MainActivity extends AppCompatActivity {
                 .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.SMALL_A4).alias(SMALL_A4).and()
                 .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.SMALL_RECT).alias(SMALL_RECT).and()
                 .nativeAds(Constant.NATIVE_ID).template(NativeTemplate.SMALL_SQUARE).alias(SMALL_SQUARE).and()
-                .nativeFullScreenAds(Constant.NATIVE_ID).template(NativeTemplate.FULL_SCREEN_1).alias(NATIVE_FULL_SCREEN_1).and()
-                .nativeFullScreenAds(Constant.NATIVE_ID).template(NativeTemplate.FULL_SCREEN_2).alias(NATIVE_FULL_SCREEN_2).and()
-                .nativeFullScreenAds(Constant.NATIVE_ID).template(NativeTemplate.FULL_SCREEN_3).alias(NATIVE_FULL_SCREEN_3).and()
+                .nativeFullScreenAds(Constant.NATIVE_ID).template(NativeTemplate.FULL_SCREEN_1).alias(NATIVE_FULL_SCREEN_1).clickableDismissButtonCountdown(1000).and()
+                .nativeFullScreenAds(Constant.NATIVE_ID).template(NativeTemplate.FULL_SCREEN_2).alias(NATIVE_FULL_SCREEN_2).clickableDismissButtonCountdown(1000).and()
+                .nativeFullScreenAds(Constant.NATIVE_ID).template(NativeTemplate.FULL_SCREEN_3).alias(NATIVE_FULL_SCREEN_3).clickableDismissButtonCountdown(1000).and()
                 .apply());
 
         container = findViewById(R.id.frame_container);
