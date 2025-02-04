@@ -20,14 +20,13 @@ import android.content.DialogInterface;
 import android.graphics.Color;
 import android.os.Build;
 import android.view.Gravity;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.animation.LinearInterpolator;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import androidx.annotation.IntDef;
@@ -238,7 +237,7 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
                 });
             } else {
                 // deprecated on API 35
-                WindowCompat.setDecorFitsSystemWindows(window, false);
+                WindowCompat.setDecorFitsSystemWindows(window, true);
                 WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(window, window.getDecorView());
                 controller.setAppearanceLightStatusBars(false);
                 controller.setAppearanceLightNavigationBars(false);
@@ -253,13 +252,11 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
                                      long showDismissButtonCountdown,
                                      long clickableDismissButtonCountdown) {
 
-            // Inflate the dismiss view layout
-            View view = LayoutInflater.from(templateView.getContext()).inflate(R.layout.gnt_item_loading_dismiss, null);
-
             // Initialize components
-            ProgressBar progressBar = view.findViewById(R.id.gnt_progress_bar);
-            TextView progressText = view.findViewById(R.id.gnt_progress_text);
-            ImageView dismissButton = view.findViewById(R.id.gnt_button_dismiss);
+            View loadingDismiss = templateView.findViewById(R.id.loading);
+            ProgressBar progressBar = loadingDismiss.findViewById(R.id.gnt_progress_bar);
+            TextView progressText = loadingDismiss.findViewById(R.id.gnt_progress_text);
+            ImageView dismissButton = loadingDismiss.findViewById(R.id.gnt_button_dismiss);
 
             // Set initial state
             animate(true, progressBar, progressText);
@@ -275,7 +272,7 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
                 progressBar.setProgress(0);
 
                 dismissAnimator = ValueAnimator.ofInt(0, countdown);
-                dismissAnimator.setStartDelay(200);
+                dismissAnimator.setStartDelay(400);
                 dismissAnimator.setDuration(countdown);
                 dismissAnimator.setInterpolator(new LinearInterpolator());
                 dismissAnimator.addUpdateListener(animation -> {
@@ -292,7 +289,7 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
                             animate(false, progressBar, progressText);
                             animate(true, dismissButton);
                             dismissButton.postDelayed(FullScreenDialog.this::initDismissViewClickListener, clickableDismissButtonCountdown);
-                        }, 200);
+                        }, 400);
                     }
                 });
             } else {
@@ -301,28 +298,26 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
                 dismissButton.postDelayed(this::initDismissViewClickListener, clickableDismissButtonCountdown);
             }
 
-            templateView.post(() -> {
-                FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        dismissButtonGravity == GRAVITY_RANDOM
-                                ? Math.random() < 0.5 ? GRAVITY_TOP_START : GRAVITY_TOP_END
-                                : dismissButtonGravity
-                );
-                View mediaView = findViewById(R.id.media_view);
-                if (mediaView instanceof ViewGroup) {
-                    ViewGroup mediaViewGroup = (ViewGroup) mediaView;
-                    mediaView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
-                        @Override
-                        public void onLayoutChange(View v, int i, int i1, int i2, int i3, int i4, int i5, int i6, int i7) {
-                            mediaViewGroup.addView(view, layoutParams);
-                            mediaView.removeOnLayoutChangeListener(this);
-                        }
-                    });
+            // init dismiss button gravity
+            ViewGroup.LayoutParams lp = loadingDismiss.getLayoutParams();
+            if (lp instanceof RelativeLayout.LayoutParams) {
+                int gravity;
+                if (dismissButtonGravity == GRAVITY_RANDOM) {
+                    gravity = Math.random() < 0.5 ? GRAVITY_TOP_START : GRAVITY_TOP_END;
                 } else {
-                    templateView.addView(view, layoutParams);
+                    gravity = dismissButtonGravity;
                 }
-            });
+                RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) lp;
+                params.removeRule(RelativeLayout.ALIGN_START);
+                params.removeRule(RelativeLayout.ALIGN_END);
+                if (gravity == GRAVITY_TOP_START) {
+                    params.addRule(RelativeLayout.ALIGN_TOP, R.id.media_view);
+                    params.addRule(RelativeLayout.ALIGN_START, R.id.media_view);
+                } else if (gravity == GRAVITY_TOP_END) {
+                    params.addRule(RelativeLayout.ALIGN_TOP, R.id.media_view);
+                    params.addRule(RelativeLayout.ALIGN_END, R.id.media_view);
+                }
+            }
         }
 
         private void initDismissViewClickListener() {

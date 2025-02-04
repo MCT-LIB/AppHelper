@@ -14,7 +14,7 @@
             android:background="@android:color/black"
             android:orientation="vertical">
 
-            <FrameLayout
+            <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1">
@@ -23,9 +23,18 @@
                     android:id="@+id/media_view"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="center"
+                    android:layout_centerInParent="true"
                     android:minHeight="120dp" />
-            </FrameLayout>
+
+                <include
+                    android:id="@+id/loading"
+                    layout="@layout/gnt_item_loading_dismiss"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignTop="@id/media_view"
+                    android:layout_alignEnd="@id/media_view" />
+
+            </RelativeLayout>
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/background"

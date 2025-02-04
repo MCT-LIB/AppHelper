@@ -56,6 +56,9 @@ public class MainActivity extends AppCompatActivity {
                 .nativeFullScreenAds(Constant.NATIVE_ID).template(NativeTemplate.FULL_SCREEN_3).alias(NATIVE_FULL_SCREEN_3).clickableDismissButtonCountdown(1000).and()
                 .apply());
 
+        AdsManager.getInstance().load(Constant.INTERSTITIAL_ID, getApplicationContext(), null, null);
+        AdsManager.getInstance().load(NATIVE_FULL_SCREEN_1, getApplicationContext(), null, null);
+
         container = findViewById(R.id.frame_container);
         findViewById(R.id.btn_show_banner).setOnClickListener(this::clickButton);
         findViewById(R.id.btn_show_banner_collapse).setOnClickListener(this::clickButton);
@@ -109,10 +112,9 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         if (view.getId() == R.id.btn_show_interstitial_native) {
-            AdsManager.getInstance().load(NATIVE_FULL_SCREEN_1, getApplicationContext(), null, null);
-            AdsManager.getInstance().show(Constant.INTERSTITIAL_ID, this, () -> {
+            AdsManager.getInstance().showSyncLoad(Constant.INTERSTITIAL_ID, this, () -> {
                 if (AdsManager.getInstance().isDismissNearly(Constant.INTERSTITIAL_ID)) {
-                    AdsManager.getInstance().showSyncLoad(NATIVE_FULL_SCREEN_1, this, null);
+                    AdsManager.getInstance().show(NATIVE_FULL_SCREEN_1, this, null);
                 }
             });
             return;

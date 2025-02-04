@@ -26,17 +26,14 @@ public class SplashActivity extends AppCompatActivity {
                 .autoLoadFullscreenAdsWhenHasInternet(true)
                 .autoReloadFullscreenAdsWhenOrientationChanged(true)
                 .appOpenObserverBlackListActivity(SplashActivity.class)
-                .appOpenAds(Constant.APP_OPEN_ID).and()
+                .appOpenAds(Constant.APP_OPEN_ID).adsInterval(5000).and()
                 .bannerAds(Constant.BANNER_ID).and()
                 .bannerAds(Constant.BANNER_COLLAPSE_ID).collapsible(true).and()
-                .interstitialAds(Constant.INTERSTITIAL_ID).and()
+                .interstitialAds(Constant.INTERSTITIAL_ID).adsInterval(5000).and()
                 .nativeAds(Constant.NATIVE_ID).and()
                 .rewardedAds(Constant.REWARDED_ID).and()
                 .rewardedInterstitialAds(Constant.REWARDED_INTERSTITIAL_ID).and()
                 .apply());
-
-        AdsManager.getInstance().load(Constant.INTERSTITIAL_ID, getApplicationContext(), null, null);
-        AdsManager.getInstance().load(Constant.NATIVE_ID, getApplicationContext(), null, null);
 
         SplashUtils.with(this, Constant.APP_OPEN_ID)
                 .setGoToNextScreen(() -> {

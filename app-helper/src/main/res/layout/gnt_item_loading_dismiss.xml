@@ -4,8 +4,7 @@
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:minWidth="48dp"
-    android:minHeight="48dp"
-    tools:background="#cccccc">
+    android:minHeight="48dp">
 
     <ProgressBar
         android:id="@+id/gnt_progress_bar"
@@ -13,9 +12,11 @@
         android:layout_width="32dp"
         android:layout_height="32dp"
         android:layout_gravity="center"
+        android:alpha="0"
         android:indeterminate="false"
         android:max="100"
         android:progressDrawable="@drawable/gnt_loading_progress_bar"
+        tools:alpha="1"
         tools:progress="65" />
 
     <androidx.appcompat.widget.AppCompatTextView
@@ -23,6 +24,7 @@
         android:layout_width="32dp"
         android:layout_height="32dp"
         android:layout_gravity="center"
+        android:alpha="0"
         android:gravity="center"
         android:shadowColor="#4D000000"
         android:shadowDx="1"
@@ -31,6 +33,7 @@
         android:textColor="@android:color/white"
         android:textSize="@dimen/gnt_text_size_small"
         android:textStyle="bold"
+        tools:alpha="1"
         tools:text="1" />
 
     <androidx.appcompat.widget.AppCompatImageView
@@ -38,6 +41,7 @@
         android:layout_width="20dp"
         android:layout_height="20dp"
         android:layout_gravity="center"
+        android:alpha="0"
         android:src="@drawable/gnt_loading_close"
         android:visibility="gone" />
 
