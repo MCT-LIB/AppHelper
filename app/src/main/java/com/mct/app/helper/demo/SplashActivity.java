@@ -35,7 +35,7 @@ public class SplashActivity extends AppCompatActivity {
                 .rewardedInterstitialAds(Constant.REWARDED_INTERSTITIAL_ID).and()
                 .apply());
 
-        SplashUtils.with(this, Constant.APP_OPEN_ID)
+        SplashUtils.with(this, Constant.APP_OPEN_ID, Constant.INTERSTITIAL_ID)
                 .setGoToNextScreen(() -> {
                     if (isDestroyed() || isFinishing()) {
                         return;

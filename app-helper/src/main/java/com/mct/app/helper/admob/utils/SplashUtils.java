@@ -8,6 +8,10 @@ import androidx.annotation.NonNull;
 
 import com.mct.app.helper.admob.AdsManager;
 
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+
 public class SplashUtils {
 
     private static final long DEF_MAX_LOAD_DURATION = 5000; // max time load ads
@@ -16,11 +20,23 @@ public class SplashUtils {
 
     /**
      * @param activity activity
-     * @param alias    open ads or interstitial ads (note: make sure alias not "loading")
+     * @param alias    open ads or interstitial ads alias
      */
     @NonNull
-    public static Builder with(Activity activity, String alias) {
-        return new Builder(activity, alias);
+    public static Builder with(@NonNull Activity activity, @NonNull String alias) {
+        return new Builder(activity, alias, null);
+    }
+
+    /**
+     * Priority alias1 > alias2
+     *
+     * @param activity activity
+     * @param alias1   alias1: open ads or interstitial ads alias
+     * @param alias2   alias2: open ads or interstitial ads alias
+     */
+    @NonNull
+    public static Builder with(@NonNull Activity activity, @NonNull String alias1, String alias2) {
+        return new Builder(activity, alias1, alias2);
     }
 
     public interface Starter {
@@ -34,16 +50,18 @@ public class SplashUtils {
         private long maxInitDuration = DEF_MAX_INIT_DURATION; // max time init
         private long minInitDuration = DEF_MIN_INIT_DURATION; // min time init
         private Activity activity;
-        private String alias;
+        private String alias1;
+        private String alias2;
         private Handler handler;
         private Runnable goToNextScreen;
 
         private boolean isStarted;
         private boolean isDisposed;
 
-        private StarterImpl(Activity activity, String alias) {
+        private StarterImpl(Activity activity, String alias1, String alias2) {
             this.activity = activity;
-            this.alias = alias;
+            this.alias1 = alias1;
+            this.alias2 = alias2;
         }
 
         @Override
@@ -66,7 +84,15 @@ public class SplashUtils {
             handler.postDelayed(nextScreen, maxLoadDuration);
 
             // load ads
-            AdsManager.getInstance().load(alias, activity.getApplicationContext(),
+            if (alias1 != null && alias2 != null) {
+                loadAdsScenario2(nextScreen);
+            } else {
+                loadAdsScenario1(nextScreen);
+            }
+        }
+
+        private void loadAdsScenario1(Runnable nextScreen) {
+            AdsManager.getInstance().load(alias1, activity.getApplicationContext(),
                     () -> {
                         if (isDisposed) {
                             return;
@@ -75,7 +101,7 @@ public class SplashUtils {
                         handler.removeCallbacks(nextScreen);
 
                         // load success -> show
-                        AdsManager.getInstance().show(alias, activity, nextScreen::run);
+                        AdsManager.getInstance().show(alias1, activity, nextScreen::run);
                     }, () -> {
                         if (isDisposed) {
                             return;
@@ -87,6 +113,74 @@ public class SplashUtils {
                         nextScreen.run();
                     }
             );
+        }
+
+        private void loadAdsScenario2(Runnable nextScreen) {
+
+            AtomicBoolean dispose = new AtomicBoolean(false);
+            AtomicReference<Boolean> load1 = new AtomicReference<>(null);
+            AtomicReference<Boolean> load2 = new AtomicReference<>(null);
+
+            Runnable onUpdate = () -> {
+                if (dispose.get()) {
+                    return;
+                }
+                if (isDisposed) {
+                    return;
+                }
+                Boolean l1 = load1.get();
+                Boolean l2 = load2.get();
+
+                // load alias 1 ok
+                if (l1 == Boolean.TRUE) {
+                    dispose.set(true);
+
+                    // remove schedule
+                    handler.removeCallbacks(nextScreen);
+
+                    // load success -> show
+                    AdsManager.getInstance().show(alias1, activity, nextScreen::run);
+                    return;
+                }
+
+                // load alias 1 false and load alias 2 ok
+                if (l1 == Boolean.FALSE && l2 == Boolean.TRUE) {
+                    dispose.set(true);
+
+                    // remove schedule
+                    handler.removeCallbacks(nextScreen);
+
+                    // load success -> show
+                    AdsManager.getInstance().show(alias2, activity, nextScreen::run);
+                    return;
+                }
+
+                // both false
+                if (l1 == Boolean.FALSE && l2 == Boolean.FALSE) {
+                    dispose.set(true);
+
+                    // remove schedule
+                    handler.removeCallbacks(nextScreen);
+
+                    // load fail -> next screen
+                    nextScreen.run();
+                }
+            };
+
+            AdsManager.getInstance().load(alias1, activity.getApplicationContext(), () -> {
+                load1.set(true);
+                onUpdate.run();
+            }, () -> {
+                load1.set(false);
+                onUpdate.run();
+            });
+            AdsManager.getInstance().load(alias2, activity.getApplicationContext(), () -> {
+                load2.set(true);
+                onUpdate.run();
+            }, () -> {
+                load2.set(false);
+                onUpdate.run();
+            });
         }
 
         private void handleNextScreen() {
@@ -113,7 +207,8 @@ public class SplashUtils {
                 handler = null;
             }
             activity = null;
-            alias = null;
+            alias1 = null;
+            alias2 = null;
             goToNextScreen = null;
         }
     }
@@ -123,8 +218,10 @@ public class SplashUtils {
         private boolean isCalledBuild;
         private StarterImpl start;
 
-        public Builder(Activity activity, String alias) {
-            this.start = new StarterImpl(activity, alias);
+        private Builder(@NonNull Activity activity, @NonNull String alias1, String alias2) {
+            Objects.requireNonNull(activity);
+            Objects.requireNonNull(alias1);
+            this.start = new StarterImpl(activity, alias1, alias2);
         }
 
         /**
