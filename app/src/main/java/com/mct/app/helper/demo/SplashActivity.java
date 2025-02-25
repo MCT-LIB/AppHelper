@@ -2,11 +2,14 @@ package com.mct.app.helper.demo;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
+import android.util.Log;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.color.MaterialColors;
 import com.mct.app.helper.admob.AdsManager;
+import com.mct.app.helper.admob.OnAdsLoadListener;
+import com.mct.app.helper.admob.ads.BaseAds;
 import com.mct.app.helper.admob.utils.SplashUtils;
 
 @SuppressLint("CustomSplashScreen")
@@ -21,6 +24,17 @@ public class SplashActivity extends AppCompatActivity {
         AdsManager.getInstance().init(this, adsConfigurator -> adsConfigurator
                 .premium(false)
                 .debug(BuildConfig.DEBUG)
+                .onAdsLoadListener(new OnAdsLoadListener() {
+                    @Override
+                    public void onAdsFailedToLoad(BaseAds<?> ads, int code, String message, String domain) {
+                        Log.e("ddd", "onAdsFailedToLoad: " + ads.getClass().getSimpleName() + "-" + ads.getAlias() + " code: " + code + " message: " + message);
+                    }
+
+                    @Override
+                    public void onAdsLoaded(BaseAds<?> ads) {
+                        Log.d("ddd", "onAdsLoaded: " + ads.getClass().getSimpleName() + "-" + ads.getAlias());
+                    }
+                })
                 .onPaidEventListener(null)
                 .autoCheckDeviceWhenHasInternet(Constant.NATIVE_ID)
                 .autoLoadFullscreenAdsWhenHasInternet(true)

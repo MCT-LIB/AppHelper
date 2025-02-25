@@ -29,6 +29,7 @@ public class AdsConfigurator {
 
     private Boolean mPremium;
     private Boolean mDebug;
+    private OnAdsLoadListener mOnAdsLoadListener;
     private OnPaidEventListeners mOnPaidEventListener;
 
     private String mAutoCheckDeviceWhenHasInternet;
@@ -67,6 +68,17 @@ public class AdsConfigurator {
      */
     public AdsConfigurator debug(boolean debug) {
         mDebug = debug;
+        return this;
+    }
+
+    /**
+     * Sets the listener for ads load
+     *
+     * @param listener The listener for ads load
+     * @return This AdsConfigurator instance for method chaining
+     */
+    public AdsConfigurator onAdsLoadListener(OnAdsLoadListener listener) {
+        mOnAdsLoadListener = listener;
         return this;
     }
 
@@ -258,6 +270,9 @@ public class AdsConfigurator {
         }
         if (mAppOpenObserverBlackListActivity != null) {
             mAdsManager.setAppOpenObserverBlackListActivity(mAppOpenObserverBlackListActivity);
+        }
+        if (mOnAdsLoadListener != null) {
+            mAdsManager.setOnAdsLoadListener(mOnAdsLoadListener);
         }
         if (mOnPaidEventListener != null) {
             mAdsManager.setOnPaidEventListener(mOnPaidEventListener);

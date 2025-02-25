@@ -8,7 +8,6 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.core.util.Supplier;
 
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.LoadAdError;
@@ -18,6 +17,8 @@ import com.mct.app.helper.admob.Callback;
 import com.mct.app.helper.admob.utils.AdUnitTestIds;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import io.reactivex.rxjava3.disposables.Disposable;
 
 /**
  * @noinspection SameParameterValue, unused
@@ -145,8 +146,10 @@ public abstract class BaseAds<Ads> {
      * @return on paid event listener
      */
     public OnPaidEventListener getOnPaidEventListener() {
-        Supplier<String> a = () -> TextUtils.isEmpty(customAlias) ? alias : customAlias.trim();
-        return AdsManager.getInstance().getOnPaidEventListener(a);
+        return AdsManager.getInstance().getOnPaidEventListener(() -> TextUtils.isEmpty(customAlias)
+                ? alias
+                : customAlias
+        );
     }
 
     /**
@@ -246,12 +249,10 @@ public abstract class BaseAds<Ads> {
         }
     }
 
-    protected interface AdsLoadCallback<Ads> {
+    protected interface AdsLoadCallback<Ads> extends Disposable {
         void onAdsLoaded(@NonNull Ads ads);
 
         void onAdsFailedToLoad(@NonNull LoadAdError loadAdError);
-
-        boolean isDisposed();
     }
 
     private static class AdsLoadCallbackImpl<Ads> implements AdsLoadCallback<Ads> {
@@ -274,10 +275,11 @@ public abstract class BaseAds<Ads> {
                 if (isDisposed()) {
                     return;
                 }
-                Log.d(TAG, "onAdFailedToLoad: " + loadAdError);
+                Log.d(TAG, "onAdFailedToLoad: " + ads.getClass().getSimpleName() + " " + loadAdError);
                 ads.setAds(null);
                 ads.setLoading(false);
                 invokeCallback(failure);
+                AdsManager.getInstance().onAdsFailedToLoad(ads, loadAdError);
                 dispose();
             }
         }
@@ -293,6 +295,7 @@ public abstract class BaseAds<Ads> {
                 ads.setLoading(false);
                 ads.setAdsLoadedTime(System.currentTimeMillis());
                 invokeCallback(success);
+                AdsManager.getInstance().onAdsLoaded(ads);
                 dispose();
             }
         }
@@ -302,6 +305,7 @@ public abstract class BaseAds<Ads> {
             return dispose.get();
         }
 
+        @Override
         public void dispose() {
             synchronized (dispose) {
                 if (dispose.getAndSet(true)) {

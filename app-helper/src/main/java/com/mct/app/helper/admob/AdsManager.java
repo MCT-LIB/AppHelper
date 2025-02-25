@@ -14,6 +14,7 @@ import androidx.core.util.Pair;
 import androidx.core.util.Supplier;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.ads.OnPaidEventListener;
 import com.mct.app.helper.admob.ads.AppOpenAds;
@@ -48,6 +49,7 @@ public final class AdsManager {
     private final AtomicBoolean mIsInitialized = new AtomicBoolean(false);
     private final AtomicBoolean mIsPremium = new AtomicBoolean(false);
     private final AtomicBoolean mDebug = new AtomicBoolean(false);
+    private final AtomicReference<OnAdsLoadListener> mOnAdsLoadListener = new AtomicReference<>();
     private final AtomicReference<OnPaidEventListeners> mOnPaidEventListener = new AtomicReference<>();
     private final ObserverConnection mObserverConnection = new ObserverConnection();
     private final ObserverLifecycleAppOpen mObserverLifecycle = new ObserverLifecycleAppOpen();
@@ -147,6 +149,7 @@ public final class AdsManager {
         mAds.values().forEach(BaseAds::clear);
         mAds.clear();
         mNativeAdsAdapters.clear();
+        mOnAdsLoadListener.set(null);
         mOnPaidEventListener.set(null);
         mDebug.set(false);
         mIsPremium.set(false);
@@ -285,6 +288,24 @@ public final class AdsManager {
     }
 
     /**
+     * Get on ads load listener
+     *
+     * @return on ads load listener
+     */
+    public OnAdsLoadListener getOnAdsLoadListener() {
+        return mOnAdsLoadListener.get();
+    }
+
+    /**
+     * Set on ads load listener
+     *
+     * @param listener on ads load listener
+     */
+    public void setOnAdsLoadListener(OnAdsLoadListener listener) {
+        mOnAdsLoadListener.set(listener);
+    }
+
+    /**
      * Get on paid event listener
      *
      * @return on paid event listener
@@ -311,6 +332,19 @@ public final class AdsManager {
 
     public void unregisterNativeAdsAdapter(NativeAdsAdapter adapter) {
         mNativeAdsAdapters.remove(adapter);
+    }
+
+    public <Ads> void onAdsFailedToLoad(BaseAds<Ads> ads, LoadAdError loadAdError) {
+        Optional.ofNullable(getOnAdsLoadListener()).ifPresent(listener -> {
+            int code = loadAdError.getCode();
+            String message = loadAdError.getMessage();
+            String domain = loadAdError.getDomain();
+            listener.onAdsFailedToLoad(ads, code, message, domain);
+        });
+    }
+
+    public <Ads> void onAdsLoaded(BaseAds<Ads> ads) {
+        Optional.ofNullable(getOnAdsLoadListener()).ifPresent(listener -> listener.onAdsLoaded(ads));
     }
 
     ///////////////////////////////////////////////////////////////////////////
