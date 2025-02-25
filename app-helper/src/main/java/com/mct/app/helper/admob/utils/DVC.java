@@ -101,7 +101,7 @@ public class DVC {
      * @noinspection SpellCheckingInspection
      */
     private static boolean checkEMU() {
-        return (Build.BRAND.startsWith(XOR.decrypt("DhQPEBANCg==", "aXFhdWJkaXY="))             // generic
+        return (Build.BRAND.startsWith(XOR.decrypt("DhQPEBANCg==", "aXFhdWJkaXY="))         // generic
                 && Build.DEVICE.startsWith(XOR.decrypt("AwsLER4YCg==", "ZG5ldGxxaXE=")))        // generic
                 || Build.FINGERPRINT.startsWith(XOR.decrypt("Ah8JHBEIBg==", "ZXpneWNhZXU="))    // generic
                 || Build.FINGERPRINT.startsWith(XOR.decrypt("GhQABgAVGA==", "b3praG9idmk="))    // unknown
@@ -120,7 +120,9 @@ public class DVC {
                 || Build.PRODUCT.contains(XOR.decrypt("AAkaHEBXGQ==", "dmt1ZHhhaWQ="))          // vbox86p
                 || Build.PRODUCT.contains(XOR.decrypt("FRoXGAIGAhs=", "cHdidGNybWk="))          // emulator
                 || Build.PRODUCT.contains(XOR.decrypt("BAEdEQkAFgIF", "d2hwZGVhYm0="))          // simulator
-                || SystemProperties.getInt(XOR.decrypt("HAJWDBwRDxUCQwkCFBY=", "bm14Z3ljYXA="), 0) == 1; // ro.kernel.qemu
+                || Build.MODEL.contains(XOR.decrypt("OAUVAAY=", "aGxtZWpkZGQ="))                // ₱łӾɆⱠ
+                || SystemProperties.getInt(XOR.decrypt("HAJWDBwRDxUCQwkCFBY=", "bm14Z3ljYXA="), 0) == 1 // ro.kernel.qemu
+                ;
     }
 
     /* --- test device check --- */
