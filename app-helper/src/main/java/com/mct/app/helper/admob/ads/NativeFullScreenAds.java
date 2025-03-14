@@ -145,7 +145,7 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
                     }
                 })
                 .forNativeAd(nativeAd -> {
-                    nativeAd.setOnPaidEventListener(getOnPaidEventListener());
+                    nativeAd.setOnPaidEventListener(NativeFullScreenAds.this::onPaidEvent);
                     callback.onAdsLoaded(nativeAd);
                 })
                 .build()

@@ -11,12 +11,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.util.Consumer;
 import androidx.core.util.Pair;
-import androidx.core.util.Supplier;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.MobileAds;
-import com.google.android.gms.ads.OnPaidEventListener;
 import com.mct.app.helper.admob.ads.AppOpenAds;
 import com.mct.app.helper.admob.ads.BannerAds;
 import com.mct.app.helper.admob.ads.BaseAds;
@@ -310,8 +308,8 @@ public final class AdsManager {
      *
      * @return on paid event listener
      */
-    public OnPaidEventListener getOnPaidEventListener(Supplier<String> alias) {
-        return Optional.ofNullable(mOnPaidEventListener.get()).map(l -> l.toGms(alias)).orElse(null);
+    public OnPaidEventListeners getOnPaidEventListener() {
+        return mOnPaidEventListener.get();
     }
 
     /**

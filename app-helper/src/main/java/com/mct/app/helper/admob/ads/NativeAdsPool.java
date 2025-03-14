@@ -100,7 +100,7 @@ public class NativeAdsPool extends BaseAds<Object> {
                     }
                 })
                 .forNativeAd(nativeAd -> {
-                    nativeAd.setOnPaidEventListener(getOnPaidEventListener());
+                    nativeAd.setOnPaidEventListener(NativeAdsPool.this::onPaidEvent);
                     nativeAdsList.add(nativeAd);
                     if (adRequestSize.decrementAndGet() == 0) {
                         boolean disposed = callback.isDisposed();

@@ -10,12 +10,14 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdValue;
 import com.google.android.gms.ads.LoadAdError;
-import com.google.android.gms.ads.OnPaidEventListener;
 import com.mct.app.helper.admob.AdsManager;
+import com.mct.app.helper.admob.AdsValue;
 import com.mct.app.helper.admob.Callback;
 import com.mct.app.helper.admob.utils.AdUnitTestIds;
 
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.reactivex.rxjava3.disposables.Disposable;
@@ -143,20 +145,15 @@ public abstract class BaseAds<Ads> {
     }
 
     /**
-     * @return on paid event listener
-     */
-    public OnPaidEventListener getOnPaidEventListener() {
-        return AdsManager.getInstance().getOnPaidEventListener(() -> TextUtils.isEmpty(customAlias)
-                ? alias
-                : customAlias
-        );
-    }
-
-    /**
      * @return ads unit id to load based on debug
      */
     public String getLoadAdsUnitId() {
         return AdsManager.getInstance().isDebug() ? AdUnitTestIds.getAdsUnitId(this) : getAdsUnitId();
+    }
+
+    protected final void onPaidEvent(AdValue adValue) {
+        AdsValue v = AdsValue.of(TextUtils.isEmpty(customAlias) ? alias : customAlias, adValue);
+        Optional.ofNullable(AdsManager.getInstance().getOnPaidEventListener()).ifPresent(l -> l.onPaidEvent(v));
     }
 
     protected void onClear() {

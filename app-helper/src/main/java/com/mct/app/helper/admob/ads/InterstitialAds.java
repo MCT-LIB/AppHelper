@@ -25,7 +25,7 @@ public class InterstitialAds extends BaseFullScreenAds<InterstitialAd> {
                 new InterstitialAdLoadCallback() {
                     @Override
                     public void onAdLoaded(@NonNull InterstitialAd interstitialAd) {
-                        interstitialAd.setOnPaidEventListener(getOnPaidEventListener());
+                        interstitialAd.setOnPaidEventListener(InterstitialAds.this::onPaidEvent);
                         callback.onAdsLoaded(interstitialAd);
                     }
 
