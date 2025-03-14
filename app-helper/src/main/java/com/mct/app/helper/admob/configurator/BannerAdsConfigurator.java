@@ -1,5 +1,7 @@
 package com.mct.app.helper.admob.configurator;
 
+import androidx.annotation.NonNull;
+
 import com.mct.app.helper.admob.AdsConfigurator;
 import com.mct.app.helper.admob.ads.BannerAds;
 
@@ -13,11 +15,18 @@ public class BannerAdsConfigurator extends BaseAdsConfigurator<BannerAdsConfigur
 
     public BannerAdsConfigurator collapsible(boolean collapsible) {
         this.collapsible = collapsible;
-        return this;
+        return self();
+    }
+
+    @NonNull
+    @Override
+    protected BannerAds onCreateAds() {
+        return new BannerAds(getAdsUnitId());
     }
 
     @Override
-    protected BannerAds makeAds(String adsUnitId, long adsInterval) {
-        return new BannerAds(adsUnitId, collapsible);
+    protected void onAdsCreated(@NonNull BannerAds ads) {
+        super.onAdsCreated(ads);
+        ads.setCollapsible(collapsible);
     }
 }

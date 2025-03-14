@@ -17,19 +17,18 @@ import java.util.UUID;
 
 public class BannerAds extends BaseViewAds<AdView> {
 
-    private final boolean collapsible;
+    private boolean collapsible;
 
     public BannerAds(String adsUnitId) {
-        this(adsUnitId, false);
-    }
-
-    public BannerAds(String adsUnitId, boolean collapsible) {
         super(adsUnitId);
-        this.collapsible = collapsible;
     }
 
     public boolean isCollapsible() {
         return collapsible;
+    }
+
+    public void setCollapsible(boolean collapsible) {
+        this.collapsible = collapsible;
     }
 
     @Override

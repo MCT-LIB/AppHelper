@@ -14,7 +14,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public abstract class BaseFullScreenAds<Ads> extends BaseAds<Ads> {
 
-    private long lastDismissTime;
+    private long lastDismissTime = 0;
+    private boolean autoLoadAfterDismiss = true;
     private OnAdsShowChangeListener onAdsShowChangeListener;
 
     public BaseFullScreenAds(String adsUnitId, long adsInterval) {
@@ -76,6 +77,14 @@ public abstract class BaseFullScreenAds<Ads> extends BaseAds<Ads> {
         this.lastDismissTime = lastDismissTime;
     }
 
+    public boolean isAutoLoadAfterDismiss() {
+        return autoLoadAfterDismiss;
+    }
+
+    public void setAutoLoadAfterDismiss(boolean autoLoadAfterDismiss) {
+        this.autoLoadAfterDismiss = autoLoadAfterDismiss;
+    }
+
     private void onAdShowedFullScreen() {
         if (onAdsShowChangeListener != null) {
             onAdsShowChangeListener.onShow(this);
@@ -122,13 +131,15 @@ public abstract class BaseFullScreenAds<Ads> extends BaseAds<Ads> {
             if (isDispose()) {
                 return;
             }
-            Log.d(TAG, "onAdDismissedFullScreenContent");
+            Log.d(TAG, "onAdDismissedFullScreenContent: " + ads.getClass().getSimpleName());
             ads.onAdDismissedFullScreen();
             ads.postDelayShowFlag();
             ads.setLastDismissTime(System.currentTimeMillis());
             ads.setAds(null);
             ads.setShowing(false);
-            ads.load(context, null, null);
+            if (ads.isAutoLoadAfterDismiss()) {
+                ads.load(context, null, null);
+            }
             invokeCallback(callback);
             dispose();
         }
@@ -138,7 +149,7 @@ public abstract class BaseFullScreenAds<Ads> extends BaseAds<Ads> {
             if (isDispose()) {
                 return;
             }
-            Log.d(TAG, "onAdFailedToShowFullScreenContent: " + adError);
+            Log.d(TAG, "onAdFailedToShowFullScreenContent: " + ads.getClass().getSimpleName() + " " + adError);
             ads.setLastDismissTime(0);
             ads.setAds(null);
             ads.setShowing(false);
@@ -151,7 +162,7 @@ public abstract class BaseFullScreenAds<Ads> extends BaseAds<Ads> {
             if (isDispose()) {
                 return;
             }
-            Log.d(TAG, "onAdShowedFullScreenContent");
+            Log.d(TAG, "onAdShowedFullScreenContent: " + ads.getClass().getSimpleName());
             ads.onAdShowedFullScreen();
         }
 

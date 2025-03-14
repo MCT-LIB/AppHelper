@@ -26,14 +26,17 @@ public class NativeAdsPool extends BaseAds<Object> {
     private static final int POOL_MAX_SIZE = 10;
     private static final int POOL_MAX_LOAD_SIZE = 5;
 
-    private final int poolSize;
+    private int poolSize;
     private final List<NativeAd> nativeAdsList = new ArrayList<>();
     private final Set<OnPoolRefreshedListener> onPoolRefreshedListeners = new HashSet<>();
 
     private int position = -1;
 
-    public NativeAdsPool(String adsUnitId, int poolSize) {
+    public NativeAdsPool(String adsUnitId) {
         super(adsUnitId, 0);
+    }
+
+    public void setPoolSize(int poolSize) {
         this.poolSize = Math.min(poolSize, POOL_MAX_SIZE);
     }
 

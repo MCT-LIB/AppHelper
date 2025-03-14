@@ -1,11 +1,14 @@
 package com.mct.app.helper.admob.configurator;
 
+import androidx.annotation.CallSuper;
+import androidx.annotation.NonNull;
+
 import com.mct.app.helper.admob.AdsConfigurator;
 import com.mct.app.helper.admob.ads.BaseAds;
 
 import java.util.Objects;
+import java.util.Optional;
 
-@SuppressWarnings("unchecked")
 public abstract class BaseAdsConfigurator<C extends BaseAdsConfigurator<C, Ads>, Ads extends BaseAds<?>> {
 
     private final AdsConfigurator configurator;
@@ -20,29 +23,46 @@ public abstract class BaseAdsConfigurator<C extends BaseAdsConfigurator<C, Ads>,
 
     public C alias(String alias) {
         this.alias = Objects.requireNonNull(alias);
-        return (C) this;
+        return self();
     }
 
     public C adsUnitId(String adsUnitId) {
         this.adsUnitId = Objects.requireNonNull(adsUnitId);
-        return (C) this;
+        return self();
     }
 
     public C adsInterval(long adsInterval) {
         this.adsInterval = adsInterval;
-        return (C) this;
+        return self();
     }
 
     public AdsConfigurator and() {
-        String id = alias != null ? alias : adsUnitId;
-        BaseAds<?> ads = makeAds(adsUnitId, adsInterval);
-        return configurator.putAds(id, ads);
+        Ads ads = onCreateAds();
+        onAdsCreated(ads);
+        return configurator.putAds(Optional.ofNullable(alias).orElse(adsUnitId), ads);
     }
 
     public void apply() {
         and().apply();
     }
 
-    protected abstract Ads makeAds(String adsUnitId, long adsInterval);
+    @NonNull
+    protected abstract Ads onCreateAds();
 
+    @CallSuper
+    protected void onAdsCreated(@NonNull Ads ads) {
+    }
+
+    protected final String getAdsUnitId() {
+        return adsUnitId;
+    }
+
+    protected final long getAdsInterval() {
+        return adsInterval;
+    }
+
+    protected final C self() {
+        //noinspection unchecked
+        return (C) this;
+    }
 }

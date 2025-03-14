@@ -19,23 +19,29 @@ public class NativeAdsConfigurator extends BaseAdsConfigurator<NativeAdsConfigur
 
     public NativeAdsConfigurator layout(@LayoutRes int layoutRes) {
         this.layout = layoutRes;
-        return this;
+        return self();
     }
 
     public NativeAdsConfigurator template(@NonNull NativeTemplate template) {
         this.layout = template.layoutRes;
-        return this;
+        return self();
     }
 
     public NativeAdsConfigurator style(NativeTemplateStyle templateStyle) {
         this.templateStyle = templateStyle;
-        return this;
+        return self();
+    }
+
+    @NonNull
+    @Override
+    protected NativeAds onCreateAds() {
+        return new NativeAds(getAdsUnitId());
     }
 
     @Override
-    protected NativeAds makeAds(String adsUnitId, long adsInterval) {
-        NativeAds ads = new NativeAds(adsUnitId, layout);
+    protected void onAdsCreated(@NonNull NativeAds ads) {
+        super.onAdsCreated(ads);
+        ads.setLayoutRes(layout);
         ads.setTemplateStyle(templateStyle);
-        return ads;
     }
 }

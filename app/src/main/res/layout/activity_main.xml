@@ -4,7 +4,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context=".MainActivity">
+    tools:context=".MainActivity"
+    tools:ignore="HardcodedText">
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -37,67 +38,89 @@
                     android:id="@+id/btn_show_banner"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
-                    android:text="S banner" />
+                    android:padding="4dp"
+                    android:text="S banner"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_show_banner_collapse"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
-                    android:text="S banner collapse" />
+                    android:padding="4dp"
+                    android:text="S banner collapse"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_hide_banner"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
-                    android:text="H banner" />
+                    android:padding="4dp"
+                    android:text="H banner"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_show_interstitial"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
-                    android:text="S interstitial" />
+                    android:padding="4dp"
+                    android:text="S interstitial"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_show_interstitial_native"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
-                    android:text="S interstitial native" />
+                    android:padding="4dp"
+                    android:text="S interstitial native"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_show_rewarded"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
-                    android:text="S rewarded" />
+                    android:padding="4dp"
+                    android:text="S rewarded"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_show_rewarded_interstitial"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
-                    android:text="S rewarded interstitial" />
+                    android:padding="4dp"
+                    android:text="S rewarded interstitial"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_show_paywall"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
-                    android:text="S paywall" />
+                    android:padding="4dp"
+                    android:text="S paywall"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_btn_show_native_fullscreen_1"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
-                    android:text="Native full 1" />
+                    android:padding="4dp"
+                    android:text="Native full 1"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_btn_show_native_fullscreen_2"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
-                    android:text="Native full 2" />
+                    android:padding="4dp"
+                    android:text="Native full 2"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_btn_show_native_fullscreen_3"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
-                    android:text="Native full 3" />
+                    android:padding="4dp"
+                    android:text="Native full 3"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
 
             </androidx.appcompat.widget.LinearLayoutCompat>
 
@@ -115,67 +138,89 @@
                     android:id="@+id/btn_show_native_extra_large"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
-                    android:text="Native extra large" />
+                    android:padding="4dp"
+                    android:text="Native extra large"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_show_native_large_1"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
-                    android:text="Native large 1" />
+                    android:padding="4dp"
+                    android:text="Native large 1"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_show_native_large_2"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
-                    android:text="Native large 2" />
+                    android:padding="4dp"
+                    android:text="Native large 2"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_show_native_medium_1"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
-                    android:text="Native medium 1" />
+                    android:padding="4dp"
+                    android:text="Native medium 1"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_show_native_medium_2"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
-                    android:text="Native medium 2" />
+                    android:padding="4dp"
+                    android:text="Native medium 2"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_show_native_small"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
-                    android:text="Native small" />
+                    android:padding="4dp"
+                    android:text="Native small"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_show_native_small_a4"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
-                    android:text="Native small a4" />
+                    android:padding="4dp"
+                    android:text="Native small a4"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_show_native_small_rect"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
-                    android:text="Native small rect" />
+                    android:padding="4dp"
+                    android:text="Native small rect"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_show_native_small_square"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
-                    android:text="Native small square" />
+                    android:padding="4dp"
+                    android:text="Native small square"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_hide_native"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
-                    android:text="H native" />
+                    android:padding="4dp"
+                    android:text="H native"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_test_native_recycler"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
-                    android:text="T native recycler" />
+                    android:padding="4dp"
+                    android:text="T native recycler"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
 
             </androidx.appcompat.widget.LinearLayoutCompat>
 

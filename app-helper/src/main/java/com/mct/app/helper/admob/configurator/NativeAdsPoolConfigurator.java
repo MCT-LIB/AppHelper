@@ -1,5 +1,7 @@
 package com.mct.app.helper.admob.configurator;
 
+import androidx.annotation.NonNull;
+
 import com.mct.app.helper.admob.AdsConfigurator;
 import com.mct.app.helper.admob.ads.NativeAdsPool;
 
@@ -13,11 +15,18 @@ public class NativeAdsPoolConfigurator extends BaseAdsConfigurator<NativeAdsPool
 
     public NativeAdsPoolConfigurator setPoolSize(int poolSize) {
         this.poolSize = poolSize;
-        return this;
+        return self();
+    }
+
+    @NonNull
+    @Override
+    protected NativeAdsPool onCreateAds() {
+        return new NativeAdsPool(getAdsUnitId());
     }
 
     @Override
-    protected NativeAdsPool makeAds(String adsUnitId, long adsInterval) {
-        return new NativeAdsPool(adsUnitId, poolSize);
+    protected void onAdsCreated(@NonNull NativeAdsPool ads) {
+        super.onAdsCreated(ads);
+        ads.setPoolSize(poolSize);
     }
 }

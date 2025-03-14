@@ -17,11 +17,14 @@ import java.util.Optional;
 
 public class NativeAds extends BaseViewAds<NativeTemplateView> {
 
-    private final int layoutRes;
+    private int layoutRes;
     private NativeTemplateStyle templateStyle;
 
-    public NativeAds(String adsUnitId, @LayoutRes int layoutRes) {
+    public NativeAds(String adsUnitId) {
         super(adsUnitId);
+    }
+
+    public void setLayoutRes(@LayoutRes int layoutRes) {
         this.layoutRes = layoutRes;
     }
 

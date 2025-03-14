@@ -74,7 +74,7 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
         int MEDIA_RATIO_SQUARE = NativeAdOptions.NATIVE_MEDIA_ASPECT_RATIO_SQUARE;
     }
 
-    private final int layoutRes;
+    private int layoutRes;
     private NativeTemplateStyle templateStyle;
 
     private int dismissButtonGravity = GRAVITY_TOP_END;
@@ -86,8 +86,11 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
 
     private FullScreenDialog fullScreenDialog;
 
-    public NativeFullScreenAds(String adsUnitId, long adsInterval, @LayoutRes int layoutRes) {
+    public NativeFullScreenAds(String adsUnitId, long adsInterval) {
         super(adsUnitId, adsInterval);
+    }
+
+    public void setLayoutRes(@LayoutRes int layoutRes) {
         this.layoutRes = layoutRes;
     }
 
