@@ -261,6 +261,9 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
             TextView progressText = loadingDismiss.findViewById(R.id.gnt_progress_text);
             ImageView dismissButton = loadingDismiss.findViewById(R.id.gnt_button_dismiss);
 
+            // Show layout
+            loadingDismiss.setVisibility(View.VISIBLE);
+
             // Set initial state
             animate(true, progressBar, progressText);
             animate(false, dismissButton);

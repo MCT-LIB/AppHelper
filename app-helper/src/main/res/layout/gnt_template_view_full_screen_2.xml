@@ -32,7 +32,9 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_alignTop="@id/media_view"
-                    android:layout_alignEnd="@id/media_view" />
+                    android:layout_alignEnd="@id/media_view"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
 
             </RelativeLayout>
 
