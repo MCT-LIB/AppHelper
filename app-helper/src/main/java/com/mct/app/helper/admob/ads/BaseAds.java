@@ -268,33 +268,29 @@ public abstract class BaseAds<Ads> {
 
         @Override
         public void onAdsFailedToLoad(@NonNull LoadAdError loadAdError) {
-            synchronized (dispose) {
-                if (isDisposed()) {
-                    return;
-                }
-                Log.d(TAG, "onAdFailedToLoad: " + ads.getClass().getSimpleName() + " " + loadAdError);
-                ads.setAds(null);
-                ads.setLoading(false);
-                invokeCallback(failure);
-                AdsManager.getInstance().onAdsFailedToLoad(ads, loadAdError);
-                dispose();
+            if (isDisposed()) {
+                return;
             }
+            Log.d(TAG, "onAdFailedToLoad: " + ads.getClass().getSimpleName() + " " + loadAdError);
+            ads.setAds(null);
+            ads.setLoading(false);
+            invokeCallback(failure);
+            AdsManager.getInstance().onAdsFailedToLoad(ads, loadAdError);
+            dispose();
         }
 
         @Override
         public void onAdsLoaded(@NonNull Ads adsModel) {
-            synchronized (dispose) {
-                if (isDisposed()) {
-                    return;
-                }
-                Log.d(TAG, "onAdLoaded: " + ads.getClass().getSimpleName());
-                ads.setAds(adsModel);
-                ads.setLoading(false);
-                ads.setAdsLoadedTime(System.currentTimeMillis());
-                invokeCallback(success);
-                AdsManager.getInstance().onAdsLoaded(ads);
-                dispose();
+            if (isDisposed()) {
+                return;
             }
+            Log.d(TAG, "onAdLoaded: " + ads.getClass().getSimpleName());
+            ads.setAds(adsModel);
+            ads.setLoading(false);
+            ads.setAdsLoadedTime(System.currentTimeMillis());
+            invokeCallback(success);
+            AdsManager.getInstance().onAdsLoaded(ads);
+            dispose();
         }
 
         @Override
@@ -304,15 +300,13 @@ public abstract class BaseAds<Ads> {
 
         @Override
         public void dispose() {
-            synchronized (dispose) {
-                if (dispose.getAndSet(true)) {
-                    return;
-                }
-                ads.clearAdLoadCallback();
-                ads = null;
-                success = null;
-                failure = null;
+            if (dispose.getAndSet(true)) {
+                return;
             }
+            ads.clearAdLoadCallback();
+            ads = null;
+            success = null;
+            failure = null;
         }
     }
 
