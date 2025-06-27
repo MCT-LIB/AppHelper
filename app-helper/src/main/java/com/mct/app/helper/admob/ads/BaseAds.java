@@ -237,7 +237,7 @@ public abstract class BaseAds<Ads> {
     }
 
     protected static boolean validateActivityToShow(Activity activity) {
-        return activity != null && !activity.isFinishing() && !activity.isDestroyed();
+        return activity != null /*&& !activity.isFinishing()*/ && !activity.isDestroyed();
     }
 
     protected static void invokeCallback(Callback callback) {
