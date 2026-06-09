@@ -24,11 +24,12 @@ public class AdsConfigurator {
     private static final int NATIVE_ADS_POOL_SIZE = 3;
 
     private final @NonNull AdsManager mAdsManager;
-    private final @NonNull Callback mCallback;
+    private final @NonNull Runnable mOnApplied;
     private final @NonNull Map<String, BaseAds<?>> mAds;
 
     private Boolean mPremium;
     private Boolean mDebug;
+    private Long mFullScreenAdsGapMs;
     private OnAdsLoadListener mOnAdsLoadListener;
     private OnPaidEventListeners mOnPaidEventListener;
 
@@ -43,9 +44,9 @@ public class AdsConfigurator {
         });
     }
 
-    AdsConfigurator(@NonNull AdsManager adsManager, @NonNull Callback callback) {
+    AdsConfigurator(@NonNull AdsManager adsManager, @NonNull Runnable onApplied) {
         this.mAdsManager = adsManager;
-        this.mCallback = callback;
+        this.mOnApplied = onApplied;
         this.mAds = new LinkedHashMap<>();
     }
 
@@ -68,6 +69,23 @@ public class AdsConfigurator {
      */
     public AdsConfigurator debug(boolean debug) {
         mDebug = debug;
+        return this;
+    }
+
+    /**
+     * Sets the minimum gap (millis) enforced between any two full-screen ads to
+     * comply with AdMob's "no back-to-back full-screen ads" policy.
+     * <br/>
+     * Each placement still honours its own {@code adsInterval}; this only governs
+     * global spacing across different placements. Pass {@code 0} to disable.
+     * <br/>
+     * Default: {@value AdsManager#DEFAULT_FULL_SCREEN_ADS_GAP_MS} ms
+     *
+     * @param gapMs the gap in millis
+     * @return This AdsConfigurator instance for method chaining
+     */
+    public AdsConfigurator fullScreenAdsGap(long gapMs) {
+        mFullScreenAdsGapMs = gapMs;
         return this;
     }
 
@@ -256,6 +274,9 @@ public class AdsConfigurator {
         if (mDebug != null) {
             mAdsManager.setDebug(mDebug);
         }
+        if (mFullScreenAdsGapMs != null) {
+            mAdsManager.setFullScreenAdsGapMs(mFullScreenAdsGapMs);
+        }
         if (mAutoCheckDeviceWhenHasInternet != null) {
             mAdsManager.setAutoCheckDeviceWhenHasInternet(mAutoCheckDeviceWhenHasInternet);
         }
@@ -279,7 +300,7 @@ public class AdsConfigurator {
         }
         mAds.forEach(mAdsManager::putAds);
         mAdsManager.updateObserver();
-        mCallback.callback();
+        mOnApplied.run();
     }
 
 }

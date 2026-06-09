@@ -7,6 +7,10 @@ import android.os.Looper;
 import androidx.annotation.NonNull;
 
 import com.mct.app.helper.admob.AdsManager;
+import com.mct.app.helper.admob.ads.BaseAds;
+import com.mct.app.helper.admob.listener.AdCallback;
+import com.mct.app.helper.admob.listener.LoadCallback;
+import com.mct.app.helper.admob.listener.LoadError;
 
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -92,27 +96,36 @@ public class SplashUtils {
         }
 
         private void loadAdsScenario1(Runnable nextScreen) {
-            AdsManager.getInstance().load(alias1, activity.getApplicationContext(),
-                    () -> {
-                        if (isDisposed) {
-                            return;
-                        }
-                        // remove schedule
-                        handler.removeCallbacks(nextScreen);
-
-                        // load success -> show
-                        AdsManager.getInstance().show(alias1, activity, nextScreen::run);
-                    }, () -> {
-                        if (isDisposed) {
-                            return;
-                        }
-                        // remove schedule
-                        handler.removeCallbacks(nextScreen);
-
-                        // load fail -> next screen
-                        nextScreen.run();
+            AdsManager.getInstance().load(alias1, activity.getApplicationContext(), new LoadCallback() {
+                @Override
+                public void onAdLoaded(BaseAds<?> ad) {
+                    if (isDisposed) {
+                        return;
                     }
-            );
+                    // remove schedule
+                    handler.removeCallbacks(nextScreen);
+
+                    // load success -> show, then next screen once the ad flow ends
+                    AdsManager.getInstance().showFullScreen(alias1, activity, new AdCallback() {
+                        @Override
+                        public void onComplete(boolean wasShown) {
+                            nextScreen.run();
+                        }
+                    });
+                }
+
+                @Override
+                public void onAdFailedToLoad(BaseAds<?> ad, LoadError error) {
+                    if (isDisposed) {
+                        return;
+                    }
+                    // remove schedule
+                    handler.removeCallbacks(nextScreen);
+
+                    // load fail -> next screen
+                    nextScreen.run();
+                }
+            });
         }
 
         private void loadAdsScenario2(Runnable nextScreen) {
@@ -139,7 +152,7 @@ public class SplashUtils {
                     handler.removeCallbacks(nextScreen);
 
                     // load success -> show
-                    AdsManager.getInstance().show(alias1, activity, nextScreen::run);
+                    showThenNext(alias1, nextScreen);
                     return;
                 }
 
@@ -151,7 +164,7 @@ public class SplashUtils {
                     handler.removeCallbacks(nextScreen);
 
                     // load success -> show
-                    AdsManager.getInstance().show(alias2, activity, nextScreen::run);
+                    showThenNext(alias2, nextScreen);
                     return;
                 }
 
@@ -167,19 +180,40 @@ public class SplashUtils {
                 }
             };
 
-            AdsManager.getInstance().load(alias1, activity.getApplicationContext(), () -> {
-                load1.set(true);
-                onUpdate.run();
-            }, () -> {
-                load1.set(false);
-                onUpdate.run();
+            AdsManager.getInstance().load(alias1, activity.getApplicationContext(), new LoadCallback() {
+                @Override
+                public void onAdLoaded(BaseAds<?> ad) {
+                    load1.set(true);
+                    onUpdate.run();
+                }
+
+                @Override
+                public void onAdFailedToLoad(BaseAds<?> ad, LoadError error) {
+                    load1.set(false);
+                    onUpdate.run();
+                }
             });
-            AdsManager.getInstance().load(alias2, activity.getApplicationContext(), () -> {
-                load2.set(true);
-                onUpdate.run();
-            }, () -> {
-                load2.set(false);
-                onUpdate.run();
+            AdsManager.getInstance().load(alias2, activity.getApplicationContext(), new LoadCallback() {
+                @Override
+                public void onAdLoaded(BaseAds<?> ad) {
+                    load2.set(true);
+                    onUpdate.run();
+                }
+
+                @Override
+                public void onAdFailedToLoad(BaseAds<?> ad, LoadError error) {
+                    load2.set(false);
+                    onUpdate.run();
+                }
+            });
+        }
+
+        private void showThenNext(String alias, Runnable nextScreen) {
+            AdsManager.getInstance().showFullScreen(alias, activity, new AdCallback() {
+                @Override
+                public void onComplete(boolean wasShown) {
+                    nextScreen.run();
+                }
             });
         }
 

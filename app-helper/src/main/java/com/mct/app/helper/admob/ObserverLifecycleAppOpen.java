@@ -110,7 +110,7 @@ class ObserverLifecycleAppOpen {
                 pendingShowAd.set(false);
                 return;
             }
-            AdsManager.getInstance().show(appOpenAdsAlias, currentActivity, null);
+            AdsManager.getInstance().showFullScreen(appOpenAdsAlias, currentActivity);
         }
 
         /* --- ActivityLifecycleCallback methods. --- */

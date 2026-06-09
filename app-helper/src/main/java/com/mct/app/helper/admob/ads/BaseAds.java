@@ -2,168 +2,349 @@ package com.mct.app.helper.admob.ads;
 
 import android.app.Activity;
 import android.content.Context;
-import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdValue;
 import com.google.android.gms.ads.LoadAdError;
+import com.mct.app.helper.admob.AdState;
 import com.mct.app.helper.admob.AdsManager;
+import com.mct.app.helper.admob.AdsShowPolicy;
 import com.mct.app.helper.admob.AdsValue;
-import com.mct.app.helper.admob.Callback;
+import com.mct.app.helper.admob.listener.AdCallback;
+import com.mct.app.helper.admob.listener.LoadCallback;
+import com.mct.app.helper.admob.listener.LoadError;
+import com.mct.app.helper.admob.listener.ShowError;
 import com.mct.app.helper.admob.utils.AdUnitTestIds;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import io.reactivex.rxjava3.disposables.Disposable;
 
 /**
- * @noinspection SameParameterValue, unused
+ * Base class for every ad type. Implemented as an explicit {@link AdState} state
+ * machine so trouble states cannot get stuck:
+ *
+ * <pre>
+ *   IDLE ──load──▶ LOADING ──success──▶ READY ──show──▶ SHOWING
+ * </pre>
+ *
+ * <ul>
+ *     <li>All eligibility (load / show / interval / expiry) is delegated to the
+ *     pure, unit-tested {@link AdsShowPolicy} — there is no {@code Handler}.</li>
+ *     <li>A {@code loadGeneration} token invalidates stale GMS load callbacks
+ *     (replaces the v1 {@code AtomicBoolean} dispose dance).</li>
+ *     <li>{@link #transitionToShowing} is the single producer of
+ *     {@link AdState#SHOWING}; it always rolls back on a synchronous throw, so a
+ *     failed show can never leave the ad stuck "showing".</li>
+ *     <li>{@link #onRelease(Object)} is the single, guaranteed resource-release
+ *     hook (fixes the v1 banner {@code AdView} leak).</li>
+ * </ul>
+ *
+ * Threading: instances are confined to the main thread (every GMS load/show
+ * callback, observer and RecyclerView binding already runs there).
+ * {@link #assertMainThread()} enforces this in debug builds.
+ *
+ * @noinspection unused
  */
 public abstract class BaseAds<Ads> {
 
     protected static final String TAG = "BaseAds";
 
+    /** Ads loaded longer ago than this are considered stale and reloadable. */
+    private static final long DEFAULT_OVERDUE_MS = 4 * 60 * 60 * 1000L;
+    /** Window for {@link #isDismissNearly()}. */
+    private static final long DISMISS_NEARLY_MS = 3000L;
+
     private final String adsUnitId;
     private final long adsInterval;
     private String alias;
     private String customAlias;
-    private Ads ads;
-    private long adsLoadedTime = 0;
-    private boolean isLoading = false;
-    private boolean isShowing = false;
-    private boolean isCanShow = true;
-    private AdsLoadCallbackImpl<Ads> adLoadCallback;
-    private final Handler handler = new Handler(Looper.getMainLooper());
-    private final Runnable delayShowFlagRunnable = () -> setCanShow(true);
+
+    // --- state machine ---
+    private AdState state = AdState.IDLE;
+    private Ads ad;
+    private long loadedAt;
+    private long lastDismissedAt;
+    private int loadGeneration;
+    private final List<LoadCallback> pendingLoadCallbacks = new ArrayList<>();
 
     public BaseAds(String adsUnitId, long adsInterval) {
         this.adsUnitId = adsUnitId;
         this.adsInterval = adsInterval;
     }
 
-    protected abstract void onLoadAds(@NonNull Context context, @NonNull AdsLoadCallback<Ads> callback);
-
-    public final void load(@NonNull Context context, Callback success, Callback failure) {
-        if (isLoading()) {
-            setAdLoadCallbacks(success, failure);
-            return;
-        }
-        if (isCanLoadAds()) {
-            Log.d(TAG, "onAdsLoad: " + getClass().getSimpleName());
-            setLoading(true);
-            onLoadAds(context, adLoadCallback = new AdsLoadCallbackImpl<>(this, success, failure));
-        } else {
-            invokeCallback(failure);
-        }
-    }
-
-    public final void clear() {
-        onClear();
-        clearAdLoadCallback();
-        setAds(null);
-        setAdsLoadedTime(0);
-        setLoading(false);
-        setShowing(false);
-        setCanShow(true);
-    }
-
-    public final void postDelayShowFlag() {
-        boolean allowAdsInterval = isAllowAdsInterval();
-        long adsInterval = getAdsInterval();
-        if (!allowAdsInterval || adsInterval <= 0) {
-            setCanShow(true);
-            return;
-        }
-        setCanShow(false);
-        handler.removeCallbacks(delayShowFlagRunnable);
-        handler.postDelayed(delayShowFlagRunnable, adsInterval);
-    }
-
-    public final boolean isAllowAdsInterval() {
-        return allowAdsInterval();
-    }
-
-    public final boolean isCanLoadAds() {
-        if (isLoading) {
-            return false;
-        }
-        if (isShowing) {
-            return false;
-        }
-        if (ads == null) {
-            return true;
-        } else {
-            return isAdsOverdue();
-        }
-    }
-
-    public final boolean isCanShowAds() {
-        if (isLoading) {
-            return false;
-        }
-        if (isShowing) {
-            return false;
-        }
-        if (!isCanShow) {
-            return false;
-        }
-        if (ads == null) {
-            return false;
-        } else {
-            return !isAdsOverdue();
-        }
-    }
-
-    private boolean isAdsOverdue() {
-        long dateDifference = System.currentTimeMillis() - adsLoadedTime;
-        long numMilliSecondsPerHour = 3600000;
-        return dateDifference > (numMilliSecondsPerHour * 4);
-    }
-
-    public AdRequest getAdRequest() {
-        return new AdRequest.Builder().build();
-    }
+    ///////////////////////////////////////////////////////////////////////////
+    // Subclass hooks
+    ///////////////////////////////////////////////////////////////////////////
 
     /**
-     * @return real ads unit id
+     * Issue the actual GMS load. On completion call {@link LoadSession#loaded}
+     * or {@link LoadSession#failed}. The session guards against stale callbacks.
      */
-    public String getAdsUnitId() {
-        return adsUnitId;
-    }
+    protected abstract void onLoad(@NonNull Context context, @NonNull LoadSession session);
 
     /**
-     * @return real ads interval
+     * Release native resources held by the ad. Called exactly once whenever the
+     * ad leaves the cache (load fail / clear / dismiss / fail-to-show / expire).
+     * The argument may be {@code null} (e.g. cleared mid-load); subclasses that
+     * hold extra resources (pools) must still clean up.
      */
-    public long getAdsInterval() {
-        return adsInterval;
+    protected abstract void onRelease(@Nullable Ads ad);
+
+    /** Overridable max age before a loaded ad is considered stale. */
+    protected long getOverdueMs() {
+        return DEFAULT_OVERDUE_MS;
     }
 
-    /**
-     * @return ads unit id to load based on debug
-     */
-    public String getLoadAdsUnitId() {
-        return AdsManager.getInstance().isDebug() ? AdUnitTestIds.getAdsUnitId(this) : getAdsUnitId();
-    }
-
-    protected final void onPaidEvent(AdValue adValue) {
-        AdsValue v = AdsValue.of(TextUtils.isEmpty(customAlias) ? alias : customAlias, adValue);
-        Optional.ofNullable(AdsManager.getInstance().getOnPaidEventListener()).ifPresent(l -> l.onPaidEvent(v));
-    }
-
-    protected void onClear() {
+    /** Whether this placement enforces a per-ad interval between impressions. */
+    protected boolean allowAdsInterval() {
+        return false;
     }
 
     protected void onAdClicked() {
     }
 
-    protected boolean allowAdsInterval() {
-        return false;
+    ///////////////////////////////////////////////////////////////////////////
+    // Load
+    ///////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Load an ad if eligible. If already ready, the callback's
+     * {@link LoadCallback#onAdLoaded} fires immediately; if a load is already in
+     * flight, the callback is queued onto it.
+     */
+    public final void load(@NonNull Context context, @Nullable LoadCallback callback) {
+        assertMainThread();
+        if (isReady()) {
+            if (callback != null) {
+                callback.onAdLoaded(this);
+            }
+            return;
+        }
+        if (state == AdState.LOADING) {
+            if (callback != null) {
+                pendingLoadCallbacks.add(callback);
+            }
+            return;
+        }
+        if (!AdsShowPolicy.canLoad(state, loadedAt, now(), isPremium(), getOverdueMs())) {
+            // not loadable (premium, or showing) -> report failure
+            if (callback != null) {
+                callback.onAdFailedToLoad(this, new LoadError(
+                        AdRequest.ERROR_CODE_INTERNAL_ERROR, "Ad not loadable in state " + state, "com.mct.app.helper"));
+            }
+            return;
+        }
+        if (state == AdState.READY) {
+            // expired -> release before reloading
+            releaseAd();
+        }
+        Log.d(TAG, "load: " + getClass().getSimpleName());
+        state = AdState.LOADING;
+        loadGeneration++;
+        pendingLoadCallbacks.clear();
+        if (callback != null) {
+            pendingLoadCallbacks.add(callback);
+        }
+        onLoad(context, new LoadSession(loadGeneration));
+    }
+
+    /**
+     * Token handed to {@link #onLoad}. Bound to a {@code loadGeneration}; once the
+     * ad is cleared or reloaded the old session becomes stale and its completions
+     * are ignored (loaded ads are released to avoid leaks).
+     */
+    protected final class LoadSession {
+
+        private final int generation;
+
+        private LoadSession(int generation) {
+            this.generation = generation;
+        }
+
+        public boolean isStale() {
+            return generation != loadGeneration || state != AdState.LOADING;
+        }
+
+        public void loaded(@NonNull Ads loadedAd) {
+            assertMainThread();
+            if (isStale()) {
+                onRelease(loadedAd);
+                return;
+            }
+            Log.d(TAG, "onAdLoaded: " + BaseAds.this.getClass().getSimpleName());
+            ad = loadedAd;
+            loadedAt = now();
+            state = AdState.READY;
+            for (LoadCallback c : drainLoadCallbacks()) {
+                c.onAdLoaded(BaseAds.this);
+            }
+            AdsManager.getInstance().onAdsLoaded(BaseAds.this);
+        }
+
+        public void failed(@NonNull LoadAdError error) {
+            assertMainThread();
+            if (isStale()) {
+                return;
+            }
+            Log.d(TAG, "onAdFailedToLoad: " + BaseAds.this.getClass().getSimpleName() + " " + error);
+            ad = null;
+            state = AdState.IDLE;
+            LoadError e = LoadError.of(error);
+            for (LoadCallback c : drainLoadCallbacks()) {
+                c.onAdFailedToLoad(BaseAds.this, e);
+            }
+            AdsManager.getInstance().onAdsFailedToLoad(BaseAds.this, e);
+        }
+    }
+
+    private List<LoadCallback> drainLoadCallbacks() {
+        List<LoadCallback> copy = new ArrayList<>(pendingLoadCallbacks);
+        pendingLoadCallbacks.clear();
+        return copy;
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Show transitions (used by full-screen subclasses)
+    ///////////////////////////////////////////////////////////////////////////
+
+    /**
+     * The single producer of {@link AdState#SHOWING}. Runs {@code showAction}
+     * (the subclass render) and, if it throws synchronously, rolls the state back
+     * to {@link AdState#IDLE}, releases the ad and reports failure via {@code cb}.
+     *
+     * @return true if the show action started without throwing
+     */
+    protected final boolean transitionToShowing(@NonNull Runnable showAction, @Nullable AdCallback cb) {
+        assertMainThread();
+        if (state != AdState.READY) {
+            return false;
+        }
+        state = AdState.SHOWING;
+        try {
+            showAction.run();
+            return true;
+        } catch (Throwable t) {
+            Log.e(TAG, "show failed: " + getClass().getSimpleName(), t);
+            releaseAd();
+            state = AdState.IDLE;
+            loadedAt = 0;
+            if (cb != null) {
+                cb.onFailedToShow(ShowError.of(t));
+                cb.onComplete(false);
+            }
+            return false;
+        }
+    }
+
+    /** Full-screen ad was closed by the user: consumed, marks dismiss time. */
+    protected final void transitionDismissed() {
+        assertMainThread();
+        releaseAd();
+        state = AdState.IDLE;
+        loadedAt = 0;
+        lastDismissedAt = now();
+    }
+
+    /** Full-screen ad failed to render: consumed, NOT counted as a dismiss. */
+    protected final void transitionFailedToShow() {
+        assertMainThread();
+        releaseAd();
+        state = AdState.IDLE;
+        loadedAt = 0;
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Clear / release
+    ///////////////////////////////////////////////////////////////////////////
+
+    /** Fully reset to {@link AdState#IDLE}, releasing all resources. */
+    public final void clear() {
+        assertMainThread();
+        loadGeneration++;            // invalidate any in-flight load
+        pendingLoadCallbacks.clear();
+        releaseAd();
+        state = AdState.IDLE;
+        loadedAt = 0;
+        lastDismissedAt = 0;
+    }
+
+    private void releaseAd() {
+        Ads released = ad;
+        ad = null;
+        onRelease(released);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // State queries
+    ///////////////////////////////////////////////////////////////////////////
+
+    public AdState getState() {
+        return state;
+    }
+
+    public boolean isLoading() {
+        return state == AdState.LOADING;
+    }
+
+    public boolean isShowing() {
+        return state == AdState.SHOWING;
+    }
+
+    public boolean isReady() {
+        return state == AdState.READY && !isExpired();
+    }
+
+    public boolean isExpired() {
+        return AdsShowPolicy.isExpired(loadedAt, now(), getOverdueMs());
+    }
+
+    public boolean isCanLoadAds() {
+        return AdsShowPolicy.canLoad(state, loadedAt, now(), isPremium(), getOverdueMs());
+    }
+
+    public boolean isCanShowAds() {
+        return AdsShowPolicy.canShow(state, loadedAt, lastDismissedAt, now(), isPremium(),
+                getIntervalForPolicy(), getOverdueMs());
+    }
+
+    public boolean isAllowAdsInterval() {
+        return allowAdsInterval();
+    }
+
+    public boolean isDismissNearly() {
+        return AdsShowPolicy.isDismissNearly(lastDismissedAt, now(), DISMISS_NEARLY_MS);
+    }
+
+    private long getIntervalForPolicy() {
+        return allowAdsInterval() ? adsInterval : 0;
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Accessors
+    ///////////////////////////////////////////////////////////////////////////
+
+    public AdRequest getAdRequest() {
+        return new AdRequest.Builder().build();
+    }
+
+    public String getAdsUnitId() {
+        return adsUnitId;
+    }
+
+    public long getAdsInterval() {
+        return adsInterval;
+    }
+
+    /** Real ads unit id, swapped for a Google test id in debug mode. */
+    public String getLoadAdsUnitId() {
+        return AdsManager.getInstance().isDebug() ? AdUnitTestIds.getAdsUnitId(this) : getAdsUnitId();
     }
 
     public String getAlias() {
@@ -175,23 +356,15 @@ public abstract class BaseAds<Ads> {
     }
 
     public Ads getAds() {
-        return ads;
+        return ad;
     }
 
     public long getAdsLoadedTime() {
-        return adsLoadedTime;
+        return loadedAt;
     }
 
-    public boolean isLoading() {
-        return isLoading;
-    }
-
-    public boolean isShowing() {
-        return isShowing;
-    }
-
-    public boolean isCanShow() {
-        return isCanShow;
+    public long getLastDismissedAt() {
+        return lastDismissedAt;
     }
 
     public void setAlias(String a) {
@@ -202,112 +375,33 @@ public abstract class BaseAds<Ads> {
         customAlias = a;
     }
 
-    protected void setAds(Ads a) {
-        ads = a;
+    protected final void onPaidEvent(AdValue adValue) {
+        AdsValue v = AdsValue.of(TextUtils.isEmpty(customAlias) ? alias : customAlias, adValue);
+        Optional.ofNullable(AdsManager.getInstance().getOnPaidEventListener()).ifPresent(l -> l.onPaidEvent(v));
     }
 
-    protected void setAdsLoadedTime(long time) {
-        adsLoadedTime = time;
+    ///////////////////////////////////////////////////////////////////////////
+    // Helpers
+    ///////////////////////////////////////////////////////////////////////////
+
+    private static boolean isPremium() {
+        return AdsManager.getInstance().isPremium();
     }
 
-    protected void setLoading(boolean loading) {
-        isLoading = loading;
-    }
-
-    protected void setShowing(boolean showing) {
-        isShowing = showing;
-    }
-
-    protected void setCanShow(boolean canShow) {
-        isCanShow = canShow;
-    }
-
-    protected void setAdLoadCallbacks(Callback success, Callback failure) {
-        if (adLoadCallback != null) {
-            adLoadCallback.success = success;
-            adLoadCallback.failure = failure;
-        }
-    }
-
-    protected void clearAdLoadCallback() {
-        if (adLoadCallback != null) {
-            adLoadCallback.dispose();
-            adLoadCallback = null;
-        }
+    private static long now() {
+        return System.currentTimeMillis();
     }
 
     protected static boolean validateActivityToShow(Activity activity) {
-        return activity != null /*&& !activity.isFinishing()*/ && !activity.isDestroyed();
+        return activity != null && !activity.isDestroyed();
     }
 
-    protected static void invokeCallback(Callback callback) {
-        if (callback != null) {
-            callback.callback();
-        }
-    }
-
-    protected interface AdsLoadCallback<Ads> extends Disposable {
-        void onAdsLoaded(@NonNull Ads ads);
-
-        void onAdsFailedToLoad(@NonNull LoadAdError loadAdError);
-    }
-
-    private static class AdsLoadCallbackImpl<Ads> implements AdsLoadCallback<Ads> {
-
-        private final AtomicBoolean dispose;
-        private BaseAds<Ads> ads;
-        private Callback success;
-        private Callback failure;
-
-        public AdsLoadCallbackImpl(BaseAds<Ads> ads, Callback success, Callback failure) {
-            this.dispose = new AtomicBoolean(false);
-            this.ads = ads;
-            this.success = success;
-            this.failure = failure;
-        }
-
-        @Override
-        public void onAdsFailedToLoad(@NonNull LoadAdError loadAdError) {
-            if (isDisposed()) {
-                return;
+    static void assertMainThread() {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            if (AdsManager.getInstance().isDebug()) {
+                throw new IllegalStateException("AdsManager must be used on the main thread");
             }
-            Log.d(TAG, "onAdFailedToLoad: " + ads.getClass().getSimpleName() + " " + loadAdError);
-            ads.setAds(null);
-            ads.setLoading(false);
-            invokeCallback(failure);
-            AdsManager.getInstance().onAdsFailedToLoad(ads, loadAdError);
-            dispose();
-        }
-
-        @Override
-        public void onAdsLoaded(@NonNull Ads adsModel) {
-            if (isDisposed()) {
-                return;
-            }
-            Log.d(TAG, "onAdLoaded: " + ads.getClass().getSimpleName());
-            ads.setAds(adsModel);
-            ads.setLoading(false);
-            ads.setAdsLoadedTime(System.currentTimeMillis());
-            invokeCallback(success);
-            AdsManager.getInstance().onAdsLoaded(ads);
-            dispose();
-        }
-
-        @Override
-        public boolean isDisposed() {
-            return dispose.get();
-        }
-
-        @Override
-        public void dispose() {
-            if (dispose.getAndSet(true)) {
-                return;
-            }
-            ads.clearAdLoadCallback();
-            ads = null;
-            success = null;
-            failure = null;
+            Log.w(TAG, "Ad state mutated off the main thread");
         }
     }
-
 }

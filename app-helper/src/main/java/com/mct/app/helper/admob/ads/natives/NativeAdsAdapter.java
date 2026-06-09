@@ -114,8 +114,8 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper implements Nati
 
             private void invalidateBoundAdsViewHolders() {
                 boundAdsViewHolders.stream()
-                        .filter(holder -> holder.getAdapterPosition() >= getItemCount())
-                        .forEach(holder -> notifyItemRemoved(holder.getAdapterPosition()));
+                        .filter(holder -> holder.getBindingAdapterPosition() >= getItemCount())
+                        .forEach(holder -> notifyItemRemoved(holder.getBindingAdapterPosition()));
             }
         };
     }
@@ -194,7 +194,7 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper implements Nati
 
     @Override
     public int getItemCount() {
-        if (!isAdsAvailable()) {
+        if (!isAdsAvailable() || adsItemInterval <= 0) {
             return super.getItemCount();
         }
         int realCount = super.getItemCount();
@@ -295,7 +295,7 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper implements Nati
                 if (layoutManager instanceof GridLayoutManager) {
                     GridLayoutManager g = (GridLayoutManager) layoutManager;
                     int spanCount = g.getSpanCount();
-                    hide = spanCount == g.getSpanSizeLookup().getSpanSize(getAdapterPosition());
+                    hide = spanCount == g.getSpanSizeLookup().getSpanSize(getBindingAdapterPosition());
                 } else {
                     hide = layoutManager instanceof LinearLayoutManager;
                 }
@@ -370,7 +370,7 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper implements Nati
         }
 
         public Builder setAdsItemConfig(int adsItemInterval, int adsItemOffset) {
-            if (adsItemInterval < 0) {
+            if (adsItemInterval <= 0) {
                 throw new IllegalArgumentException("adsItemInterval must be greater than 0");
             }
             adsItemOffset = MathUtils.clamp(adsItemOffset, 0, adsItemInterval);

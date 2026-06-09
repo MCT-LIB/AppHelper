@@ -122,7 +122,7 @@ class ObserverConnection {
                         ads instanceof NativeAdsPool)
                 .forEach(ads -> {
                     if (ads.isCanLoadAds()) {
-                        AdsManager.getInstance().load(ads, application, null, null);
+                        AdsManager.getInstance().load(ads, application, null);
                     }
                 });
     }
@@ -139,7 +139,7 @@ class ObserverConnection {
                 .filter(check)
                 .forEach(ads -> {
                     ads.clear();
-                    AdsManager.getInstance().load(ads, application, null, null);
+                    AdsManager.getInstance().load(ads, application, null);
                 });
     }
 

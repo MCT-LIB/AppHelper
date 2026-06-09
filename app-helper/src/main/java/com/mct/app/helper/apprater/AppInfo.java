@@ -6,6 +6,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.pm.PackageInfoCompat;
 
 class AppInfo {
 
@@ -37,7 +38,7 @@ class AppInfo {
             PackageInfo packageInfo = packageManager.getPackageInfo(context.getApplicationInfo().packageName, 0);
             resultInfo.applicationName = packageManager.getApplicationLabel(applicationInfo).toString();
             resultInfo.applicationVersionName = packageInfo.versionName;
-            resultInfo.applicationVersionCode = packageInfo.versionCode;
+            resultInfo.applicationVersionCode = (int) PackageInfoCompat.getLongVersionCode(packageInfo);
         } catch (final PackageManager.NameNotFoundException ignored) {
         }
         return resultInfo;

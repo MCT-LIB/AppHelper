@@ -5,76 +5,143 @@ import android.content.Context;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.google.android.gms.ads.AdError;
 import com.google.android.gms.ads.FullScreenContentCallback;
-import com.mct.app.helper.admob.Callback;
+import com.mct.app.helper.admob.AdsManager;
+import com.mct.app.helper.admob.listener.AdCallback;
+import com.mct.app.helper.admob.listener.LoadCallback;
+import com.mct.app.helper.admob.listener.LoadError;
+import com.mct.app.helper.admob.listener.ShowError;
+import com.mct.app.helper.admob.listener.ShowMode;
+import com.mct.app.helper.admob.listener.SkipReason;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
+/**
+ * Base for full-screen ads (app-open, interstitial, native-full-screen, rewarded).
+ * The reward event is delivered by passing a {@code RewardedAdCallback} through to
+ * {@link #onShowAds}; there is no separate {@code BaseRewardedAds} class.
+ */
 public abstract class BaseFullScreenAds<Ads> extends BaseAds<Ads> {
 
-    private long lastDismissTime = 0;
     private boolean autoLoadAfterDismiss = true;
+    private Context autoLoadContext;
     private OnAdsShowChangeListener onAdsShowChangeListener;
 
     public BaseFullScreenAds(String adsUnitId, long adsInterval) {
         super(adsUnitId, adsInterval);
     }
 
+    /**
+     * Render the ad. Must only render (never mutate ad state). Wire {@code contentCallback}
+     * to the GMS ad and call its show method. {@code callback} is the caller's
+     * {@link AdCallback} (possibly a {@code RewardedAdCallback}) — rewarded subclasses
+     * use it to deliver the earned reward.
+     */
     protected abstract void onShowAds(
             @NonNull Activity activity,
             @NonNull Ads ads,
-            @NonNull FullScreenContentCallback callback
+            @NonNull FullScreenContentCallback contentCallback,
+            @Nullable AdCallback callback
     );
 
-    public final void show(@NonNull String alias, @NonNull Activity activity, boolean waitLoadAndShow, Callback callback) {
-        if (isLoading()) {
-            if (waitLoadAndShow) {
-                setAdLoadCallbacks(
-                        () -> show(alias, activity, waitLoadAndShow, callback),
-                        () -> invokeCallback(callback)
-                );
-            } else {
-                invokeCallback(callback);
-            }
+    /**
+     * Show this full-screen ad. The manager has already cleared the global gate
+     * (premium / overlap / back-to-back gap). This handles per-placement state:
+     * ready → show; not ready → load-then-show (when {@link ShowMode#LOAD_IF_NEEDED})
+     * or skip with a precise reason.
+     */
+    public final void show(@NonNull String reportAlias,
+                           @NonNull Activity activity,
+                           @NonNull ShowMode mode,
+                           @Nullable AdCallback callback) {
+        assertMainThread();
+
+        if (isShowing()) {
+            skip(callback, SkipReason.OVERLAP);
             return;
         }
-        if (isCanLoadAds()) {
-            if (waitLoadAndShow) {
-                load(activity.getApplicationContext(),
-                        () -> show(alias, activity, waitLoadAndShow, callback),
-                        () -> invokeCallback(callback)
-                );
+        if (isLoading()) {
+            if (mode == ShowMode.LOAD_IF_NEEDED) {
+                loadThenShow(reportAlias, activity, callback, SkipReason.NOT_LOADED);
             } else {
-                load(activity.getApplicationContext(), null, null);
-                invokeCallback(callback);
+                skip(callback, SkipReason.LOADING);
             }
             return;
         }
         if (isCanShowAds() && validateActivityToShow(activity)) {
-            setShowing(true);
-            setCustomAlias(alias);
-            onShowAds(activity, getAds(), new FullScreenContentCallbackImpl(this, activity.getApplicationContext(), callback));
+            setCustomAlias(reportAlias);
+            autoLoadContext = activity.getApplicationContext();
+            final AdCallback cb = callback;
+            transitionToShowing(
+                    () -> onShowAds(activity, getAds(), new FullScreenContentCallbackImpl(this, cb), cb),
+                    cb);
+            return;
+        }
+        // not in a showable state
+        if (!validateActivityToShow(activity)) {
+            skip(callback, SkipReason.ACTIVITY_INVALID);
+            return;
+        }
+        if (mode == ShowMode.LOAD_IF_NEEDED && isCanLoadAds()) {
+            loadThenShow(reportAlias, activity, callback, SkipReason.NOT_LOADED);
+            return;
+        }
+        skip(callback, isReady() ? SkipReason.COOLDOWN : SkipReason.NOT_LOADED);
+    }
+
+    private void loadThenShow(@NonNull String reportAlias,
+                              @NonNull Activity activity,
+                              @Nullable AdCallback callback,
+                              @NonNull SkipReason failReason) {
+        load(activity.getApplicationContext(), new LoadCallback() {
+            @Override
+            public void onAdLoaded(BaseAds<?> ad) {
+                showAfterLoad(reportAlias, activity, callback);
+            }
+
+            @Override
+            public void onAdFailedToLoad(BaseAds<?> ad, LoadError error) {
+                skip(callback, failReason);
+            }
+        });
+    }
+
+    /**
+     * Show once the deferred load completes. Re-enters the manager so the GLOBAL
+     * gate (overlap / back-to-back gap) is re-evaluated at the actual show time —
+     * the request-time gate is stale by the time a load finishes seconds later.
+     */
+    private void showAfterLoad(@NonNull String reportAlias, @NonNull Activity activity, @Nullable AdCallback callback) {
+        String alias = getAlias();
+        if (alias != null) {
+            AdsManager.getInstance().showFullScreen(alias, reportAlias, activity, ShowMode.IF_READY, callback);
         } else {
-            invokeCallback(callback);
+            show(reportAlias, activity, ShowMode.IF_READY, callback);
+        }
+    }
+
+    private static void skip(@Nullable AdCallback cb, @NonNull SkipReason reason) {
+        if (cb != null) {
+            cb.onSkipped(reason);
+            cb.onComplete(false);
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Dismiss / show-change plumbing
+    ///////////////////////////////////////////////////////////////////////////
+
+    private void handleDismiss() {
+        onAdDismissedFullScreen();   // notify listener (e.g. restore banner visibility)
+        transitionDismissed();       // base: release + IDLE + record dismiss time
+        if (autoLoadAfterDismiss && autoLoadContext != null) {
+            load(autoLoadContext, null);
         }
     }
 
     public void setOnAdsShowChangeListener(OnAdsShowChangeListener listener) {
         this.onAdsShowChangeListener = listener;
-    }
-
-    public boolean isDismissNearly() {
-        return System.currentTimeMillis() - lastDismissTime < 3000;
-    }
-
-    public long getLastDismissTime() {
-        return lastDismissTime;
-    }
-
-    private void setLastDismissTime(long lastDismissTime) {
-        this.lastDismissTime = lastDismissTime;
     }
 
     public boolean isAutoLoadAfterDismiss() {
@@ -103,81 +170,82 @@ public abstract class BaseFullScreenAds<Ads> extends BaseAds<Ads> {
         void onDismiss(BaseFullScreenAds<?> fullScreenAds);
     }
 
+    /**
+     * Adapts GMS {@link FullScreenContentCallback} events onto the state machine
+     * and the caller's {@link AdCallback}. Guards against duplicate terminal events.
+     */
     protected static class FullScreenContentCallbackImpl extends FullScreenContentCallback {
 
-        private final AtomicBoolean dispose;
+        private boolean shown;
+        private boolean done;
         private BaseFullScreenAds<?> ads;
-        private Context context;
-        private Callback callback;
+        private AdCallback callback;
 
-        public FullScreenContentCallbackImpl(BaseFullScreenAds<?> ads, Context context, Callback callback) {
-            this.dispose = new AtomicBoolean(false);
+        public FullScreenContentCallbackImpl(BaseFullScreenAds<?> ads, AdCallback callback) {
             this.ads = ads;
-            this.context = context;
             this.callback = callback;
         }
 
         @Override
         public void onAdClicked() {
-            if (isDispose()) {
-                return;
+            if (ads != null) {
+                ads.onAdClicked();
             }
-            Log.d(TAG, "onAdClicked");
-            ads.onAdClicked();
-        }
-
-        @Override
-        public void onAdDismissedFullScreenContent() {
-            if (isDispose()) {
-                return;
-            }
-            Log.d(TAG, "onAdDismissedFullScreenContent: " + ads.getClass().getSimpleName());
-            ads.onAdDismissedFullScreen();
-            ads.postDelayShowFlag();
-            ads.setLastDismissTime(System.currentTimeMillis());
-            ads.setAds(null);
-            ads.setShowing(false);
-            if (ads.isAutoLoadAfterDismiss()) {
-                ads.load(context, null, null);
-            }
-            invokeCallback(callback);
-            dispose();
-        }
-
-        @Override
-        public void onAdFailedToShowFullScreenContent(@NonNull AdError adError) {
-            if (isDispose()) {
-                return;
-            }
-            Log.d(TAG, "onAdFailedToShowFullScreenContent: " + ads.getClass().getSimpleName() + " " + adError);
-            ads.setLastDismissTime(0);
-            ads.setAds(null);
-            ads.setShowing(false);
-            invokeCallback(callback);
-            dispose();
         }
 
         @Override
         public void onAdShowedFullScreenContent() {
-            if (isDispose()) {
-                return;
+            if (shown) {
+                return; // guard against a duplicate impression callback
             }
-            Log.d(TAG, "onAdShowedFullScreenContent: " + ads.getClass().getSimpleName());
-            ads.onAdShowedFullScreen();
+            shown = true;
+            Log.d(TAG, "onAdShowedFullScreenContent");
+            if (ads != null) {
+                ads.onAdShowedFullScreen();
+            }
+            if (callback != null) {
+                callback.onShown();
+            }
         }
 
-        private boolean isDispose() {
-            return dispose.get();
-        }
-
-        private void dispose() {
-            if (dispose.getAndSet(true)) {
+        @Override
+        public void onAdDismissedFullScreenContent() {
+            if (done) {
                 return;
             }
+            done = true;
+            Log.d(TAG, "onAdDismissedFullScreenContent");
+            BaseFullScreenAds<?> a = ads;
+            AdCallback cb = callback;
             ads = null;
-            context = null;
             callback = null;
+            if (a != null) {
+                a.handleDismiss();
+            }
+            if (cb != null) {
+                cb.onDismissed();
+                cb.onComplete(true);
+            }
+        }
+
+        @Override
+        public void onAdFailedToShowFullScreenContent(@NonNull AdError adError) {
+            if (done) {
+                return;
+            }
+            done = true;
+            Log.d(TAG, "onAdFailedToShowFullScreenContent: " + adError);
+            BaseFullScreenAds<?> a = ads;
+            AdCallback cb = callback;
+            ads = null;
+            callback = null;
+            if (a != null) {
+                a.transitionFailedToShow();
+            }
+            if (cb != null) {
+                cb.onFailedToShow(ShowError.of(adError));
+                cb.onComplete(false);
+            }
         }
     }
-
 }

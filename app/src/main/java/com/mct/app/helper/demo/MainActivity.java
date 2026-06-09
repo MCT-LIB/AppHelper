@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Point;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,6 +17,11 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.mct.app.helper.admob.AdsManager;
 import com.mct.app.helper.admob.ads.natives.NativeTemplate;
+import com.mct.app.helper.admob.listener.AdCallback;
+import com.mct.app.helper.admob.listener.RewardItem;
+import com.mct.app.helper.admob.listener.RewardedAdCallback;
+import com.mct.app.helper.admob.listener.ShowMode;
+import com.mct.app.helper.admob.listener.SkipReason;
 import com.mct.app.helper.admob.utils.BannerCollapseUtils;
 import com.mct.app.helper.demo.native_rcv.NativeRecyclerActivity;
 
@@ -56,8 +62,8 @@ public class MainActivity extends AppCompatActivity {
                 .nativeFullScreenAds(Constant.NATIVE_ID).template(NativeTemplate.FULL_SCREEN_3).alias(NATIVE_FULL_SCREEN_3).clickableDismissButtonCountdown(1000).and()
                 .apply());
 
-        AdsManager.getInstance().load(Constant.INTERSTITIAL_ID, getApplicationContext(), null, null);
-        AdsManager.getInstance().load(NATIVE_FULL_SCREEN_1, getApplicationContext(), null, null);
+        AdsManager.getInstance().load(Constant.INTERSTITIAL_ID, getApplicationContext());
+        AdsManager.getInstance().load(NATIVE_FULL_SCREEN_1, getApplicationContext());
 
         container = findViewById(R.id.frame_container);
         findViewById(R.id.btn_show_banner).setOnClickListener(this::clickButton);
@@ -93,12 +99,13 @@ public class MainActivity extends AppCompatActivity {
     private void clickButton(@NonNull View view) {
         if (view.getId() == R.id.btn_show_banner) {
             setContainerSmall(false, false);
-            AdsManager.getInstance().show(Constant.BANNER_ID, container);
+            AdsManager.getInstance().showView(Constant.BANNER_ID, container);
             return;
         }
         if (view.getId() == R.id.btn_show_banner_collapse) {
             setContainerSmall(false, false);
-            AdsManager.getInstance().forceShow(Constant.BANNER_COLLAPSE_ID, container, false);
+            // reload=true forces a fresh collapsible request each time
+            AdsManager.getInstance().showView(Constant.BANNER_COLLAPSE_ID, container, true);
             return;
         }
         if (view.getId() == R.id.btn_hide_banner) {
@@ -108,71 +115,108 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         if (view.getId() == R.id.btn_show_interstitial) {
-            AdsManager.getInstance().showSyncLoad(Constant.INTERSTITIAL_ID, this, null);
+            AdsManager.getInstance().showFullScreen(Constant.INTERSTITIAL_ID, this, ShowMode.LOAD_IF_NEEDED, AdLog.fs("interstitial"));
             return;
         }
         if (view.getId() == R.id.btn_show_interstitial_native) {
-            AdsManager.getInstance().showSyncLoad(Constant.INTERSTITIAL_ID, this, () -> {
-                if (AdsManager.getInstance().isDismissNearly(Constant.INTERSTITIAL_ID)) {
-                    AdsManager.getInstance().show(NATIVE_FULL_SCREEN_1, this, null);
+            AdsManager.getInstance().showFullScreen(Constant.INTERSTITIAL_ID, this, ShowMode.LOAD_IF_NEEDED, new AdCallback() {
+                @Override
+                public void onShown() {
+                    Log.i(AdLog.TAG, "chain-interstitial -> onShown");
+                }
+
+                @Override
+                public void onDismissed() {
+                    Log.i(AdLog.TAG, "chain-interstitial -> onDismissed; chaining native-FS");
+                    // interstitial was genuinely shown & closed -> try to chain the native full-screen
+                    AdsManager.getInstance().showFullScreen(NATIVE_FULL_SCREEN_1, MainActivity.this, AdLog.fs("chain-native"));
+                }
+
+                @Override
+                public void onSkipped(SkipReason reason) {
+                    Log.w(AdLog.TAG, "chain-interstitial -> onSkipped " + reason);
                 }
             });
             return;
         }
         if (view.getId() == R.id.btn_show_rewarded) {
-            AdsManager.getInstance().showSyncLoad(Constant.REWARDED_ID, this, null, () -> {
-                Toast.makeText(this, "Earned reward NORMAL", Toast.LENGTH_SHORT).show();
+            AdsManager.getInstance().showRewarded(Constant.REWARDED_ID, this, ShowMode.LOAD_IF_NEEDED, new RewardedAdCallback() {
+                @Override
+                public void onUserEarnedReward(RewardItem reward) {
+                    Log.i(AdLog.TAG, "rewarded -> onUserEarnedReward " + reward);
+                    Toast.makeText(MainActivity.this, "Earned reward NORMAL x" + reward.getAmount(), Toast.LENGTH_SHORT).show();
+                }
+
+                @Override
+                public void onSkipped(SkipReason reason) {
+                    Log.w(AdLog.TAG, "rewarded -> onSkipped " + reason);
+                }
+
+                @Override
+                public void onComplete(boolean wasShown) {
+                    Log.i(AdLog.TAG, "rewarded -> onComplete wasShown=" + wasShown);
+                }
             });
             return;
         }
         if (view.getId() == R.id.btn_show_rewarded_interstitial) {
-            AdsManager.getInstance().showSyncLoad(Constant.REWARDED_INTERSTITIAL_ID, this, null, () -> {
-                Toast.makeText(this, "Earned reward INTERSTITIAL", Toast.LENGTH_SHORT).show();
+            AdsManager.getInstance().showRewarded(Constant.REWARDED_INTERSTITIAL_ID, this, ShowMode.LOAD_IF_NEEDED, new RewardedAdCallback() {
+                @Override
+                public void onUserEarnedReward(RewardItem reward) {
+                    Log.i(AdLog.TAG, "rewarded-int -> onUserEarnedReward " + reward);
+                    Toast.makeText(MainActivity.this, "Earned reward INTERSTITIAL x" + reward.getAmount(), Toast.LENGTH_SHORT).show();
+                }
+
+                @Override
+                public void onSkipped(SkipReason reason) {
+                    Log.w(AdLog.TAG, "rewarded-int -> onSkipped " + reason);
+                }
             });
+            return;
         }
         if (view.getId() == R.id.btn_show_native_extra_large) {
             setContainerSmall(false, true);
-            AdsManager.getInstance().show(NATIVE_EXTRA_LARGE, container);
+            AdsManager.getInstance().showView(NATIVE_EXTRA_LARGE, container);
             return;
         }
         if (view.getId() == R.id.btn_show_native_large_1) {
             setContainerSmall(false, true);
-            AdsManager.getInstance().show(NATIVE_LARGE_1, container);
+            AdsManager.getInstance().showView(NATIVE_LARGE_1, container);
             return;
         }
         if (view.getId() == R.id.btn_show_native_large_2) {
             setContainerSmall(false, true);
-            AdsManager.getInstance().show(NATIVE_LARGE_2, container);
+            AdsManager.getInstance().showView(NATIVE_LARGE_2, container);
             return;
         }
         if (view.getId() == R.id.btn_show_native_medium_1) {
             setContainerSmall(false, true);
-            AdsManager.getInstance().show(NATIVE_MEDIUM_1, container);
+            AdsManager.getInstance().showView(NATIVE_MEDIUM_1, container);
             return;
         }
         if (view.getId() == R.id.btn_show_native_medium_2) {
             setContainerSmall(false, true);
-            AdsManager.getInstance().show(NATIVE_MEDIUM_2, container);
+            AdsManager.getInstance().showView(NATIVE_MEDIUM_2, container);
             return;
         }
         if (view.getId() == R.id.btn_show_native_small) {
             setContainerSmall(false, true);
-            AdsManager.getInstance().show(NATIVE_SMALL, container);
+            AdsManager.getInstance().showView(NATIVE_SMALL, container);
             return;
         }
         if (view.getId() == R.id.btn_show_native_small_a4) {
             setContainerSmall(true, true);
-            AdsManager.getInstance().show(SMALL_A4, container);
+            AdsManager.getInstance().showView(SMALL_A4, container);
             return;
         }
         if (view.getId() == R.id.btn_show_native_small_rect) {
             setContainerSmall(true, true);
-            AdsManager.getInstance().show(SMALL_RECT, container);
+            AdsManager.getInstance().showView(SMALL_RECT, container);
             return;
         }
         if (view.getId() == R.id.btn_show_native_small_square) {
             setContainerSmall(true, true);
-            AdsManager.getInstance().show(SMALL_SQUARE, container);
+            AdsManager.getInstance().showView(SMALL_SQUARE, container);
             return;
         }
         if (view.getId() == R.id.btn_hide_native) {
@@ -192,15 +236,15 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         if (view.getId() == R.id.btn_btn_show_native_fullscreen_1) {
-            AdsManager.getInstance().showSyncLoad(NATIVE_FULL_SCREEN_1, this, null);
+            AdsManager.getInstance().showFullScreen(NATIVE_FULL_SCREEN_1, this, ShowMode.LOAD_IF_NEEDED, AdLog.fs("native-fs-1"));
             return;
         }
         if (view.getId() == R.id.btn_btn_show_native_fullscreen_2) {
-            AdsManager.getInstance().showSyncLoad(NATIVE_FULL_SCREEN_2, this, null);
+            AdsManager.getInstance().showFullScreen(NATIVE_FULL_SCREEN_2, this, ShowMode.LOAD_IF_NEEDED, AdLog.fs("native-fs-2"));
             return;
         }
         if (view.getId() == R.id.btn_btn_show_native_fullscreen_3) {
-            AdsManager.getInstance().showSyncLoad(NATIVE_FULL_SCREEN_3, this, null);
+            AdsManager.getInstance().showFullScreen(NATIVE_FULL_SCREEN_3, this, ShowMode.LOAD_IF_NEEDED, AdLog.fs("native-fs-3"));
             return;
         }
         if (view.getId() == R.id.btn_test_native_recycler) {

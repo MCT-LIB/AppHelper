@@ -14,11 +14,13 @@ import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.Application;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.Color;
 import android.os.Build;
+import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -49,10 +51,10 @@ import com.google.android.gms.ads.nativead.NativeAdOptions;
 import com.mct.app.helper.R;
 import com.mct.app.helper.admob.ads.natives.NativeTemplateStyle;
 import com.mct.app.helper.admob.ads.natives.NativeTemplateView;
+import com.mct.app.helper.admob.listener.AdCallback;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
-import java.util.Optional;
 
 public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
 
@@ -85,6 +87,7 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
     private int mediaRatioOptions = MEDIA_RATIO_ANY;
 
     private FullScreenDialog fullScreenDialog;
+    private Application.ActivityLifecycleCallbacks activityGuard;
 
     public NativeFullScreenAds(String adsUnitId, long adsInterval) {
         super(adsUnitId, adsInterval);
@@ -130,7 +133,7 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
     }
 
     @Override
-    protected void onLoadAds(@NonNull Context context, @NonNull AdsLoadCallback<NativeAd> callback) {
+    protected void onLoad(@NonNull Context context, @NonNull LoadSession session) {
         new AdLoader.Builder(context, getLoadAdsUnitId())
                 .withNativeAdOptions(new NativeAdOptions.Builder()
                         .setVideoOptions(new VideoOptions.Builder().setStartMuted(startMuted).build())
@@ -144,19 +147,19 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
 
                     @Override
                     public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-                        callback.onAdsFailedToLoad(loadAdError);
+                        session.failed(loadAdError);
                     }
                 })
                 .forNativeAd(nativeAd -> {
                     nativeAd.setOnPaidEventListener(NativeFullScreenAds.this::onPaidEvent);
-                    callback.onAdsLoaded(nativeAd);
+                    session.loaded(nativeAd);
                 })
                 .build()
                 .loadAd(getAdRequest());
     }
 
     @Override
-    protected void onShowAds(@NonNull Activity activity, @NonNull NativeAd nativeAd, @NonNull FullScreenContentCallback callback) {
+    protected void onShowAds(@NonNull Activity activity, @NonNull NativeAd nativeAd, @NonNull FullScreenContentCallback callback, @Nullable AdCallback adCallback) {
         NativeTemplateView templateView = new NativeTemplateView(activity, layoutRes);
         templateView.setStyles(templateStyle);
         templateView.setNativeAd(nativeAd);
@@ -170,20 +173,90 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
             @Override
             public void onDismiss(DialogInterface dialog) {
                 super.onDismiss(dialog);
-                templateView.destroyNativeAd();
+                // the NativeAd is destroyed once, centrally, by onRelease() below
                 callback.onAdDismissedFullScreenContent();
                 fullScreenDialog = null;
+                unregisterActivityGuard(activity);
             }
         };
         fullScreenDialog.setCancelable(cancelable);
         fullScreenDialog.setCanceledOnTouchOutside(cancelable);
+        registerActivityGuard(activity);
         fullScreenDialog.show();
     }
 
+    /**
+     * Guards against the host activity being destroyed while the dialog is up
+     * (rotation, "don't keep activities", finish). A Dialog is NOT auto-dismissed
+     * on activity destroy, so without this its {@code onDismiss} would never fire
+     * and the ad would stay stuck in SHOWING — blocking every full-screen ad for
+     * the rest of the session. Dismissing here guarantees the dismiss callback
+     * runs and the state machine resets.
+     */
+    private void registerActivityGuard(@NonNull Activity host) {
+        unregisterActivityGuard(host);
+        Application app = host.getApplication();
+        if (app == null) {
+            return;
+        }
+        activityGuard = new Application.ActivityLifecycleCallbacks() {
+            @Override
+            public void onActivityDestroyed(@NonNull Activity a) {
+                if (a != host) {
+                    return;
+                }
+                FullScreenDialog dialog = fullScreenDialog;
+                if (dialog != null && dialog.isShowing()) {
+                    dialog.dismiss(); // -> onDismiss -> callback + unregister
+                } else {
+                    unregisterActivityGuard(host);
+                }
+            }
+
+            @Override
+            public void onActivityCreated(@NonNull Activity a, Bundle b) {
+            }
+
+            @Override
+            public void onActivityStarted(@NonNull Activity a) {
+            }
+
+            @Override
+            public void onActivityResumed(@NonNull Activity a) {
+            }
+
+            @Override
+            public void onActivityPaused(@NonNull Activity a) {
+            }
+
+            @Override
+            public void onActivityStopped(@NonNull Activity a) {
+            }
+
+            @Override
+            public void onActivitySaveInstanceState(@NonNull Activity a, @NonNull Bundle b) {
+            }
+        };
+        app.registerActivityLifecycleCallbacks(activityGuard);
+    }
+
+    private void unregisterActivityGuard(@NonNull Activity host) {
+        if (activityGuard != null && host.getApplication() != null) {
+            host.getApplication().unregisterActivityLifecycleCallbacks(activityGuard);
+        }
+        activityGuard = null;
+    }
+
     @Override
-    protected void onClear() {
-        super.onClear();
-        Optional.ofNullable(getAds()).ifPresent(NativeAd::destroy);
+    protected void onRelease(@Nullable NativeAd ad) {
+        if (ad != null) {
+            ad.destroy();
+        }
+        FullScreenDialog dialog = fullScreenDialog;
+        fullScreenDialog = null;
+        if (dialog != null && dialog.isShowing()) {
+            dialog.dismiss();
+        }
     }
 
     @Override
@@ -230,6 +303,8 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
             initDismissViewClickListener();
         }
 
+        // setStatusBarColor/setNavigationBarColor are only called on the API < 35 branch,
+        // where they remain the correct (deprecated-in-35) APIs.
         private void initWindow(Window window) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
                 View decorView = window.getDecorView();

@@ -4,11 +4,13 @@ import android.app.Activity;
 import android.content.Context;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.FullScreenContentCallback;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.appopen.AppOpenAd;
+import com.mct.app.helper.admob.listener.AdCallback;
 
 public class AppOpenAds extends BaseFullScreenAds<AppOpenAd> {
 
@@ -17,7 +19,7 @@ public class AppOpenAds extends BaseFullScreenAds<AppOpenAd> {
     }
 
     @Override
-    protected void onLoadAds(@NonNull Context context, @NonNull AdsLoadCallback<AppOpenAd> callback) {
+    protected void onLoad(@NonNull Context context, @NonNull LoadSession session) {
         AppOpenAd.load(
                 context,
                 getLoadAdsUnitId(),
@@ -26,20 +28,25 @@ public class AppOpenAds extends BaseFullScreenAds<AppOpenAd> {
                     @Override
                     public void onAdLoaded(@NonNull AppOpenAd openAd) {
                         openAd.setOnPaidEventListener(AppOpenAds.this::onPaidEvent);
-                        callback.onAdsLoaded(openAd);
+                        session.loaded(openAd);
                     }
 
                     @Override
                     public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-                        callback.onAdsFailedToLoad(loadAdError);
+                        session.failed(loadAdError);
                     }
                 });
     }
 
     @Override
-    protected void onShowAds(@NonNull Activity activity, @NonNull AppOpenAd appOpenAd, @NonNull FullScreenContentCallback callback) {
+    protected void onShowAds(@NonNull Activity activity, @NonNull AppOpenAd appOpenAd, @NonNull FullScreenContentCallback callback, @Nullable AdCallback adCallback) {
         appOpenAd.setFullScreenContentCallback(callback);
         appOpenAd.show(activity);
+    }
+
+    @Override
+    protected void onRelease(@Nullable AppOpenAd ad) {
+        // app open ads have no destroy() API; the reference is dropped by the base.
     }
 
     @Override

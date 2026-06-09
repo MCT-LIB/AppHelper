@@ -3,6 +3,7 @@ package com.mct.app.helper.admob.ads;
 import android.content.Context;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.google.android.gms.ads.AdError;
 import com.google.android.gms.ads.AdListener;
@@ -19,12 +20,15 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * A simple implementation of cache for preloaded native ads
+ * A simple cache of preloaded native ads for use with {@link com.mct.app.helper.admob.ads.natives.NativeAdsAdapter}.
  */
 public class NativeAdsPool extends BaseAds<Object> {
 
     private static final int POOL_MAX_SIZE = 10;
     private static final int POOL_MAX_LOAD_SIZE = 5;
+
+    /** Placeholder "ad" object so the base state machine has a non-null READY ad. */
+    private static final Object SENTINEL = new Object();
 
     private int poolSize;
     private final List<NativeAd> nativeAdsList = new ArrayList<>();
@@ -45,42 +49,37 @@ public class NativeAdsPool extends BaseAds<Object> {
     }
 
     public NativeAd get(int position) {
-        return nativeAdsList.isEmpty() ? null : nativeAdsList.get(position % nativeAdsList.size());
+        return nativeAdsList.isEmpty() ? null : nativeAdsList.get(Math.floorMod(position, nativeAdsList.size()));
     }
 
     public void addOnPoolRefreshedListener(OnPoolRefreshedListener listener) {
-        if (listener == null) {
-            return;
+        if (listener != null) {
+            onPoolRefreshedListeners.add(listener);
         }
-        onPoolRefreshedListeners.add(listener);
     }
 
     public void removeOnPoolRefreshedListener(OnPoolRefreshedListener listener) {
-        if (listener == null) {
-            return;
+        if (listener != null) {
+            onPoolRefreshedListeners.remove(listener);
         }
-        onPoolRefreshedListeners.remove(listener);
     }
 
     private void notifyPoolRefreshed() {
-        for (OnPoolRefreshedListener listener : onPoolRefreshedListeners) {
+        for (OnPoolRefreshedListener listener : new ArrayList<>(onPoolRefreshedListeners)) {
             listener.onPoolRefreshed();
         }
     }
 
     @Override
-    protected void onLoadAds(@NonNull Context context, @NonNull AdsLoadCallback<Object> callback) {
-        // Check if pool size is valid
+    protected void onLoad(@NonNull Context context, @NonNull LoadSession session) {
         if (poolSize <= 0) {
-            callback.onAdsFailedToLoad(new LoadAdError(88, "Pool size is 0", AdError.UNDEFINED_DOMAIN, null, null));
+            session.failed(new LoadAdError(88, "Pool size is 0", AdError.UNDEFINED_DOMAIN, null, null));
             return;
         }
-        // Check if pool is already full
         if (nativeAdsList.size() >= poolSize) {
-            callback.onAdsLoaded(new Object());
+            session.loaded(SENTINEL);
             return;
         }
-        // Load ads
         notifyPoolRefreshed();
         AtomicInteger adRequestSize = new AtomicInteger();
         AdLoader adLoader = new AdLoader.Builder(context, getLoadAdsUnitId())
@@ -95,26 +94,28 @@ public class NativeAdsPool extends BaseAds<Object> {
 
                     @Override
                     public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-                        boolean disposed = callback.isDisposed();
-                        callback.onAdsFailedToLoad(loadAdError);
-                        if (!disposed) {
+                        boolean stale = session.isStale();
+                        session.failed(loadAdError);
+                        if (!stale) {
                             notifyPoolRefreshed();
                         }
                     }
                 })
                 .forNativeAd(nativeAd -> {
+                    if (session.isStale()) {
+                        // pool was cleared mid-load: don't leak this late ad
+                        nativeAd.destroy();
+                        return;
+                    }
                     nativeAd.setOnPaidEventListener(NativeAdsPool.this::onPaidEvent);
                     nativeAdsList.add(nativeAd);
                     if (adRequestSize.decrementAndGet() == 0) {
-                        boolean disposed = callback.isDisposed();
-                        callback.onAdsLoaded(1);
-                        if (!disposed) {
-                            notifyPoolRefreshed();
-                        }
+                        session.loaded(SENTINEL);
+                        notifyPoolRefreshed();
                     }
                 }).build();
 
-        adRequestSize.set(Math.min(poolSize - nativeAdsList.size(), POOL_MAX_LOAD_SIZE)); // Number of ads to load
+        adRequestSize.set(Math.min(poolSize - nativeAdsList.size(), POOL_MAX_LOAD_SIZE));
 
         if (adRequestSize.get() == 1) {
             adLoader.loadAd(getAdRequest());
@@ -124,10 +125,10 @@ public class NativeAdsPool extends BaseAds<Object> {
     }
 
     @Override
-    protected void onClear() {
-        super.onClear();
+    protected void onRelease(@Nullable Object ad) {
         nativeAdsList.forEach(NativeAd::destroy);
         nativeAdsList.clear();
+        position = -1;
     }
 
     public interface OnPoolRefreshedListener {

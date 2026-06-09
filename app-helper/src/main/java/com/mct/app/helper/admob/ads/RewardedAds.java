@@ -11,16 +11,18 @@ import com.google.android.gms.ads.FullScreenContentCallback;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.rewarded.RewardedAd;
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback;
-import com.mct.app.helper.admob.Callback;
+import com.mct.app.helper.admob.listener.AdCallback;
+import com.mct.app.helper.admob.listener.RewardItem;
+import com.mct.app.helper.admob.listener.RewardedAdCallback;
 
-public class RewardedAds extends BaseRewardedAds<RewardedAd> {
+public class RewardedAds extends BaseFullScreenAds<RewardedAd> {
 
     public RewardedAds(String adsUnitId, long adsInterval) {
         super(adsUnitId, adsInterval);
     }
 
     @Override
-    protected void onLoadAds(@NonNull Context context, @NonNull AdsLoadCallback<RewardedAd> callback) {
+    protected void onLoad(@NonNull Context context, @NonNull LoadSession session) {
         RewardedAd.load(
                 context,
                 getLoadAdsUnitId(),
@@ -29,12 +31,12 @@ public class RewardedAds extends BaseRewardedAds<RewardedAd> {
                     @Override
                     public void onAdLoaded(@NonNull RewardedAd rewardedAd) {
                         rewardedAd.setOnPaidEventListener(RewardedAds.this::onPaidEvent);
-                        callback.onAdsLoaded(rewardedAd);
+                        session.loaded(rewardedAd);
                     }
 
                     @Override
                     public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-                        callback.onAdsFailedToLoad(loadAdError);
+                        session.failed(loadAdError);
                     }
                 });
     }
@@ -42,12 +44,18 @@ public class RewardedAds extends BaseRewardedAds<RewardedAd> {
     @Override
     protected void onShowAds(@NonNull Activity activity, @NonNull RewardedAd rewardedAd,
                              @NonNull FullScreenContentCallback callback,
-                             @Nullable Callback onUserEarnedReward) {
+                             @Nullable AdCallback adCallback) {
         rewardedAd.setFullScreenContentCallback(callback);
         rewardedAd.show(activity, rewardItem -> {
             Log.d(TAG, "onRewarded: " + rewardItem);
-            invokeCallback(onUserEarnedReward);
+            if (adCallback instanceof RewardedAdCallback) {
+                ((RewardedAdCallback) adCallback).onUserEarnedReward(RewardItem.of(rewardItem));
+            }
         });
     }
 
+    @Override
+    protected void onRelease(@Nullable RewardedAd ad) {
+        // rewarded ads have no destroy() API; the reference is dropped by the base.
+    }
 }

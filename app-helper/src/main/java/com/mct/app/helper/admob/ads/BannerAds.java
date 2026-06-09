@@ -32,7 +32,7 @@ public class BannerAds extends BaseViewAds<AdView> {
     }
 
     @Override
-    protected void onLoadAds(@NonNull Context context, @NonNull AdsLoadCallback<AdView> callback) {
+    protected void onLoad(@NonNull Context context, @NonNull LoadSession session) {
         AdView adView = new AdView(context);
         adView.setAdUnitId(getLoadAdsUnitId());
         adView.setAdSize(getAdSize(context));
@@ -46,14 +46,19 @@ public class BannerAds extends BaseViewAds<AdView> {
             @Override
             public void onAdLoaded() {
                 adView.setOnPaidEventListener(BannerAds.this::onPaidEvent);
-                callback.onAdsLoaded(adView);
+                session.loaded(adView);
             }
 
             @Override
             public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-                callback.onAdsFailedToLoad(loadAdError);
+                session.failed(loadAdError);
             }
         });
+    }
+
+    @Override
+    protected void onDestroyView(@NonNull AdView view) {
+        view.destroy();
     }
 
     @Override
@@ -75,6 +80,8 @@ public class BannerAds extends BaseViewAds<AdView> {
         float widthPixels = displayMetrics.widthPixels;
         float density = displayMetrics.density;
         int adWidth = (int) (widthPixels / density);
-        return AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, adWidth);
+        // ads SDK 25.0.0 deprecated getCurrentOrientationAnchoredAdaptiveBannerAdSize in favour
+        // of the large anchored adaptive banner (taller, can serve video demand).
+        return AdSize.getLargeAnchoredAdaptiveBannerAdSize(context, adWidth);
     }
 }

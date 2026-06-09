@@ -185,7 +185,7 @@ public class NativeRecyclerActivity extends AppCompatActivity {
             return;
         }
         if (view.getId() == R.id.btn_load) {
-            AdsManager.getInstance().load(NATIVE_POOL, getApplicationContext(), null, null);
+            AdsManager.getInstance().load(NATIVE_POOL, getApplicationContext());
             return;
         }
     }

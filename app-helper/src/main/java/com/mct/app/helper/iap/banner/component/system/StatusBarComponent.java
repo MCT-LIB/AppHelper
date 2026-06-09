@@ -49,6 +49,8 @@ public class StatusBarComponent extends SystemBarComponent<StatusBarComponent> {
      *
      * @param window The Window object to which the component's settings should be applied.
      */
+    // setStatusBarColor is deprecated on API 35+ (edge-to-edge) with no equivalent that
+    // colours the bar; it remains the only API for API < 35, so the call is intentional.
     @Override
     public void applyToWindow(@NonNull Window window) {
         // Background

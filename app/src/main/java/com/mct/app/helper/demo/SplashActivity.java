@@ -10,6 +10,7 @@ import com.google.android.material.color.MaterialColors;
 import com.mct.app.helper.admob.AdsManager;
 import com.mct.app.helper.admob.OnAdsLoadListener;
 import com.mct.app.helper.admob.ads.BaseAds;
+import com.mct.app.helper.admob.listener.LoadError;
 import com.mct.app.helper.admob.utils.SplashUtils;
 
 @SuppressLint("CustomSplashScreen")
@@ -26,8 +27,8 @@ public class SplashActivity extends AppCompatActivity {
                 .debug(BuildConfig.DEBUG)
                 .onAdsLoadListener(new OnAdsLoadListener() {
                     @Override
-                    public void onAdsFailedToLoad(BaseAds<?> ads, int code, String message, String domain) {
-                        Log.e("ddd", "onAdsFailedToLoad: " + ads.getClass().getSimpleName() + "-" + ads.getAlias() + " code: " + code + " message: " + message);
+                    public void onAdsFailedToLoad(BaseAds<?> ads, LoadError error) {
+                        Log.e("ddd", "onAdsFailedToLoad: " + ads.getClass().getSimpleName() + "-" + ads.getAlias() + " code: " + error.getCode() + " message: " + error.getMessage());
                     }
 
                     @Override

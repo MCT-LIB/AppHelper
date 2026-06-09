@@ -11,16 +11,18 @@ import com.google.android.gms.ads.FullScreenContentCallback;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.rewardedinterstitial.RewardedInterstitialAd;
 import com.google.android.gms.ads.rewardedinterstitial.RewardedInterstitialAdLoadCallback;
-import com.mct.app.helper.admob.Callback;
+import com.mct.app.helper.admob.listener.AdCallback;
+import com.mct.app.helper.admob.listener.RewardItem;
+import com.mct.app.helper.admob.listener.RewardedAdCallback;
 
-public class RewardedInterstitialAds extends BaseRewardedAds<RewardedInterstitialAd> {
+public class RewardedInterstitialAds extends BaseFullScreenAds<RewardedInterstitialAd> {
 
     public RewardedInterstitialAds(String adsUnitId, long adsInterval) {
         super(adsUnitId, adsInterval);
     }
 
     @Override
-    protected void onLoadAds(@NonNull Context context, @NonNull AdsLoadCallback<RewardedInterstitialAd> callback) {
+    protected void onLoad(@NonNull Context context, @NonNull LoadSession session) {
         RewardedInterstitialAd.load(
                 context,
                 getLoadAdsUnitId(),
@@ -29,12 +31,12 @@ public class RewardedInterstitialAds extends BaseRewardedAds<RewardedInterstitia
                     @Override
                     public void onAdLoaded(@NonNull RewardedInterstitialAd rewardedInterstitialAd) {
                         rewardedInterstitialAd.setOnPaidEventListener(RewardedInterstitialAds.this::onPaidEvent);
-                        callback.onAdsLoaded(rewardedInterstitialAd);
+                        session.loaded(rewardedInterstitialAd);
                     }
 
                     @Override
                     public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-                        callback.onAdsFailedToLoad(loadAdError);
+                        session.failed(loadAdError);
                     }
                 });
     }
@@ -42,11 +44,18 @@ public class RewardedInterstitialAds extends BaseRewardedAds<RewardedInterstitia
     @Override
     protected void onShowAds(@NonNull Activity activity, @NonNull RewardedInterstitialAd rewardedInterstitialAd,
                              @NonNull FullScreenContentCallback callback,
-                             @Nullable Callback onUserEarnedReward) {
+                             @Nullable AdCallback adCallback) {
         rewardedInterstitialAd.setFullScreenContentCallback(callback);
         rewardedInterstitialAd.show(activity, rewardItem -> {
             Log.d(TAG, "onRewarded: " + rewardItem);
-            invokeCallback(onUserEarnedReward);
+            if (adCallback instanceof RewardedAdCallback) {
+                ((RewardedAdCallback) adCallback).onUserEarnedReward(RewardItem.of(rewardItem));
+            }
         });
+    }
+
+    @Override
+    protected void onRelease(@Nullable RewardedInterstitialAd ad) {
+        // rewarded interstitial ads have no destroy() API; the reference is dropped by the base.
     }
 }

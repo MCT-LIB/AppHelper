@@ -81,11 +81,12 @@ class QueryHelper {
                 return;
             }
             QueryProductDetailsParams params = QueryProductDetailsParams.newBuilder().setProductList(products).build();
-            client.queryProductDetailsAsync(params, (billingResult, list) -> {
+            client.queryProductDetailsAsync(params, (billingResult, result) -> {
                 if (emitter.isDisposed()) {
                     return;
                 }
-                emitter.onSuccess(list);
+                // billing 9.0.0: callback now delivers QueryProductDetailsResult
+                emitter.onSuccess(result.getProductDetailsList());
             });
         });
     }

@@ -13,8 +13,6 @@ import com.google.android.gms.ads.nativead.NativeAdOptions;
 import com.mct.app.helper.admob.ads.natives.NativeTemplateStyle;
 import com.mct.app.helper.admob.ads.natives.NativeTemplateView;
 
-import java.util.Optional;
-
 public class NativeAds extends BaseViewAds<NativeTemplateView> {
 
     private int layoutRes;
@@ -40,7 +38,7 @@ public class NativeAds extends BaseViewAds<NativeTemplateView> {
     }
 
     @Override
-    protected void onLoadAds(@NonNull Context context, @NonNull AdsLoadCallback<NativeTemplateView> callback) {
+    protected void onLoad(@NonNull Context context, @NonNull LoadSession session) {
         new AdLoader.Builder(context, getLoadAdsUnitId())
                 .withNativeAdOptions(new NativeAdOptions.Builder()
                         .setVideoOptions(new VideoOptions.Builder().setStartMuted(true).build())
@@ -53,7 +51,7 @@ public class NativeAds extends BaseViewAds<NativeTemplateView> {
 
                     @Override
                     public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-                        callback.onAdsFailedToLoad(loadAdError);
+                        session.failed(loadAdError);
                     }
                 })
                 .forNativeAd(nativeAd -> {
@@ -61,15 +59,14 @@ public class NativeAds extends BaseViewAds<NativeTemplateView> {
                     NativeTemplateView templateView = new NativeTemplateView(context, layoutRes);
                     templateView.setStyles(templateStyle);
                     templateView.setNativeAd(nativeAd);
-                    callback.onAdsLoaded(templateView);
+                    session.loaded(templateView);
                 })
                 .build()
                 .loadAd(getAdRequest());
     }
 
     @Override
-    protected void onClear() {
-        super.onClear();
-        Optional.ofNullable(getAds()).ifPresent(NativeTemplateView::destroyNativeAd);
+    protected void onDestroyView(@NonNull NativeTemplateView view) {
+        view.destroyNativeAd();
     }
 }

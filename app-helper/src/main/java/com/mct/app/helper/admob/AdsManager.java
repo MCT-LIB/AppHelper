@@ -13,19 +13,23 @@ import androidx.core.util.Consumer;
 import androidx.core.util.Pair;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.MobileAds;
 import com.mct.app.helper.admob.ads.AppOpenAds;
 import com.mct.app.helper.admob.ads.BannerAds;
 import com.mct.app.helper.admob.ads.BaseAds;
 import com.mct.app.helper.admob.ads.BaseFullScreenAds;
-import com.mct.app.helper.admob.ads.BaseRewardedAds;
 import com.mct.app.helper.admob.ads.BaseViewAds;
 import com.mct.app.helper.admob.ads.InterstitialAds;
 import com.mct.app.helper.admob.ads.NativeAds;
 import com.mct.app.helper.admob.ads.RewardedAds;
 import com.mct.app.helper.admob.ads.RewardedInterstitialAds;
 import com.mct.app.helper.admob.ads.natives.NativeAdsAdapter;
+import com.mct.app.helper.admob.listener.AdCallback;
+import com.mct.app.helper.admob.listener.LoadCallback;
+import com.mct.app.helper.admob.listener.LoadError;
+import com.mct.app.helper.admob.listener.RewardedAdCallback;
+import com.mct.app.helper.admob.listener.ShowMode;
+import com.mct.app.helper.admob.listener.SkipReason;
 import com.mct.app.helper.admob.utils.DVC;
 
 import java.util.ArrayList;
@@ -35,11 +39,20 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 public final class AdsManager {
 
     private static final String TAG = "AdsManager";
+
+    /**
+     * Default minimum gap between ANY two full-screen ads, to comply with AdMob's
+     * "no back-to-back full-screen ads" policy without mutually locking different
+     * placements for the whole of each other's interval.
+     */
+    static final long DEFAULT_FULL_SCREEN_ADS_GAP_MS = 15 * 1000;
+
     private static AdsManager instance;
 
     // configs
@@ -47,6 +60,7 @@ public final class AdsManager {
     private final AtomicBoolean mIsInitialized = new AtomicBoolean(false);
     private final AtomicBoolean mIsPremium = new AtomicBoolean(false);
     private final AtomicBoolean mDebug = new AtomicBoolean(false);
+    private final AtomicLong mFullScreenAdsGapMs = new AtomicLong(DEFAULT_FULL_SCREEN_ADS_GAP_MS);
     private final AtomicReference<OnAdsLoadListener> mOnAdsLoadListener = new AtomicReference<>();
     private final AtomicReference<OnPaidEventListeners> mOnPaidEventListener = new AtomicReference<>();
     private final ObserverConnection mObserverConnection = new ObserverConnection();
@@ -103,19 +117,19 @@ public final class AdsManager {
      *
      * @param activity             activity
      * @param configuratorConsumer configurator
-     * @param callback             callback
+     * @param onReady              callback
      */
-    public void initAsync(@NonNull Activity activity, @NonNull Consumer<AdsConfigurator> configuratorConsumer, @NonNull Callback callback) {
+    public void initAsync(@NonNull Activity activity, @NonNull Consumer<AdsConfigurator> configuratorConsumer, @NonNull Runnable onReady) {
         if (mIsInitialized.getAndSet(true)) {
             // already initialized
-            callback.callback();
+            onReady.run();
             return;
         }
         mApplication = activity.getApplication();
         configuratorConsumer.accept(new AdsConfigurator(this, () -> {
             AtomicReference<Thread> initThreadAtomic = new AtomicReference<>(new Thread(() -> {
                 // Initialize the Google Mobile Ads SDK on a background thread.
-                MobileAds.initialize(mApplication, status -> activity.runOnUiThread(callback::callback));
+                MobileAds.initialize(mApplication, status -> activity.runOnUiThread(onReady));
             }));
             Runnable initialize = () -> Optional.ofNullable(initThreadAtomic.getAndSet(null)).ifPresent(Thread::start);
             GoogleMobileAdsConsentManager manager = GoogleMobileAdsConsentManager.getInstance(mApplication);
@@ -151,6 +165,7 @@ public final class AdsManager {
         mOnPaidEventListener.set(null);
         mDebug.set(false);
         mIsPremium.set(false);
+        mFullScreenAdsGapMs.set(DEFAULT_FULL_SCREEN_ADS_GAP_MS);
         mIsInitialized.set(false);
     }
 
@@ -215,6 +230,30 @@ public final class AdsManager {
      */
     public boolean isRealDevice() {
         return DVC.isRdv(isDebug());
+    }
+
+    /**
+     * Get the minimum gap (millis) enforced between any two full-screen ads.
+     *
+     * @return the global full-screen gap in millis
+     */
+    public long getFullScreenAdsGapMs() {
+        return mFullScreenAdsGapMs.get();
+    }
+
+    /**
+     * Set the minimum gap (millis) enforced between any two full-screen ads
+     * (app-open, interstitial, native-full-screen, rewarded). This prevents
+     * showing two full-screen ads back-to-back as required by AdMob policy.
+     * <br/>
+     * Each placement still honours its own {@code adsInterval} independently;
+     * this gap only governs the global spacing across different placements.
+     * Pass {@code 0} to disable (only the overlap guard remains).
+     *
+     * @param gapMs the gap in millis (negative values are clamped to 0)
+     */
+    public void setFullScreenAdsGapMs(long gapMs) {
+        mFullScreenAdsGapMs.set(Math.max(0, gapMs));
     }
 
     /**
@@ -332,13 +371,8 @@ public final class AdsManager {
         mNativeAdsAdapters.remove(adapter);
     }
 
-    public <Ads> void onAdsFailedToLoad(BaseAds<Ads> ads, LoadAdError loadAdError) {
-        Optional.ofNullable(getOnAdsLoadListener()).ifPresent(listener -> {
-            int code = loadAdError.getCode();
-            String message = loadAdError.getMessage();
-            String domain = loadAdError.getDomain();
-            listener.onAdsFailedToLoad(ads, code, message, domain);
-        });
+    public <Ads> void onAdsFailedToLoad(BaseAds<Ads> ads, LoadError error) {
+        Optional.ofNullable(getOnAdsLoadListener()).ifPresent(listener -> listener.onAdsFailedToLoad(ads, error));
     }
 
     public <Ads> void onAdsLoaded(BaseAds<Ads> ads) {
@@ -350,250 +384,185 @@ public final class AdsManager {
     ///////////////////////////////////////////////////////////////////////////
 
     /**
-     * Load ads
+     * Load an ad (no callback).
      */
-    public void load(String alias, Context context, Callback success, Callback failure) {
-        load(getAds(alias, BaseAds.class), context, success, failure);
+    public void load(String alias, Context context) {
+        load(alias, context, null);
     }
 
     /**
-     * Load ads
+     * Load an ad. The callback reports success / failure with an error.
      */
-    public void load(BaseAds<?> ads, Context context, Callback success, Callback failure) {
-        if (checkAdsCondition(ads, failure)) {
-            ads.load(context, success, failure);
+    public void load(String alias, Context context, @Nullable LoadCallback callback) {
+        load(getAds(alias, BaseAds.class), context, callback);
+    }
+
+    void load(@Nullable BaseAds<?> ads, Context context, @Nullable LoadCallback callback) {
+        if (ads == null) {
+            if (callback != null) {
+                callback.onAdFailedToLoad(null, new LoadError(-1, "No ad registered", "com.mct.app.helper"));
+            }
+            return;
         }
-    }
-
-    /**
-     * Show appOpen or interstitial ads
-     *
-     * @see AppOpenAds
-     * @see InterstitialAds
-     */
-    public void show(String alias, Activity activity, Callback callback) {
-        show(alias, alias, activity, callback);
-    }
-
-    /**
-     * Show appOpen or interstitial ads
-     *
-     * @see AppOpenAds
-     * @see InterstitialAds
-     */
-    public void show(String alias, String customAlias, Activity activity, Callback callback) {
-        BaseFullScreenAds<?> ads = getAds(alias, BaseFullScreenAds.class);
-        if (checkShowFullScreenAdsCondition(ads, callback)) {
-            assert ads != null;
-            ads.show(customAlias, activity, false, callback);
+        if (isPremium()) {
+            if (callback != null) {
+                callback.onAdFailedToLoad(ads, new LoadError(-1, "Premium user", "com.mct.app.helper"));
+            }
+            return;
         }
+        ads.load(context, callback);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Full-screen (app-open / interstitial / native-full-screen)
+    ///////////////////////////////////////////////////////////////////////////
+
+    /** Show a full-screen ad if one is cached. */
+    public void showFullScreen(String alias, Activity activity) {
+        showFullScreen(alias, alias, activity, ShowMode.IF_READY, null);
+    }
+
+    /** Show a full-screen ad if one is cached, reporting the outcome. */
+    public void showFullScreen(String alias, Activity activity, @Nullable AdCallback callback) {
+        showFullScreen(alias, alias, activity, ShowMode.IF_READY, callback);
+    }
+
+    /** Show a full-screen ad, optionally loading first ({@link ShowMode#LOAD_IF_NEEDED}). */
+    public void showFullScreen(String alias, Activity activity, @NonNull ShowMode mode, @Nullable AdCallback callback) {
+        showFullScreen(alias, alias, activity, mode, callback);
     }
 
     /**
-     * Show appOpen or interstitial ads, wait load if necessary and show
+     * Show a full-screen ad.
      *
+     * @param alias       ad alias to show
+     * @param reportAlias alias used for paid-event / revenue attribution
+     * @param mode        {@link ShowMode#IF_READY} or {@link ShowMode#LOAD_IF_NEEDED}
+     * @param callback    outcome callback (nullable)
      * @see AppOpenAds
      * @see InterstitialAds
      */
-    public void showSyncLoad(String alias, Activity activity, Callback callback) {
-        showSyncLoad(alias, alias, activity, callback);
+    public void showFullScreen(String alias, String reportAlias, Activity activity, @NonNull ShowMode mode, @Nullable AdCallback callback) {
+        showFullScreenInternal(getAds(alias, BaseFullScreenAds.class), reportAlias, activity, mode, callback);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Rewarded (rewarded / rewarded-interstitial)
+    ///////////////////////////////////////////////////////////////////////////
+
+    /** Show a rewarded ad if one is cached. */
+    public void showRewarded(String alias, Activity activity, @Nullable RewardedAdCallback callback) {
+        showRewarded(alias, alias, activity, ShowMode.IF_READY, callback);
+    }
+
+    /** Show a rewarded ad, optionally loading first. */
+    public void showRewarded(String alias, Activity activity, @NonNull ShowMode mode, @Nullable RewardedAdCallback callback) {
+        showRewarded(alias, alias, activity, mode, callback);
     }
 
     /**
-     * Show appOpen or interstitial ads, wait load if necessary and show
-     *
-     * @see AppOpenAds
-     * @see InterstitialAds
-     */
-    public void showSyncLoad(String alias, String customAlias, Activity activity, Callback callback) {
-        BaseFullScreenAds<?> ads = getAds(alias, BaseFullScreenAds.class);
-        if (checkShowFullScreenAdsCondition(ads, callback)) {
-            assert ads != null;
-            ads.show(customAlias, activity, true, callback);
-        }
-    }
-
-    /**
-     * Show rewarded ads
+     * Show a rewarded ad. The reward is delivered via
+     * {@link RewardedAdCallback#onUserEarnedReward}.
      *
      * @see RewardedAds
      * @see RewardedInterstitialAds
      */
-    public void show(String alias, Activity activity, Callback callback, Callback onUserEarnedReward) {
-        show(alias, alias, activity, callback, onUserEarnedReward);
+    public void showRewarded(String alias, String reportAlias, Activity activity, @NonNull ShowMode mode, @Nullable RewardedAdCallback callback) {
+        showFullScreenInternal(getAds(alias, BaseFullScreenAds.class), reportAlias, activity, mode, callback);
     }
 
-    /**
-     * Show rewarded ads
-     *
-     * @see RewardedAds
-     * @see RewardedInterstitialAds
-     */
-    public void show(String alias, String customAlias, Activity activity, Callback callback, Callback onUserEarnedReward) {
-        BaseRewardedAds<?> ads = getAds(alias, BaseRewardedAds.class);
-        if (checkShowFullScreenAdsCondition(ads, callback)) {
-            assert ads != null;
-            ads.show(customAlias, activity, false, callback, onUserEarnedReward);
-        }
-    }
+    ///////////////////////////////////////////////////////////////////////////
+    // View ads (banner / native)
+    ///////////////////////////////////////////////////////////////////////////
 
     /**
-     * Show rewarded ads, wait load if necessary and show
-     *
-     * @see RewardedAds
-     * @see RewardedInterstitialAds
-     */
-    public void showSyncLoad(String alias, Activity activity, Callback callback, Callback onUserEarnedReward) {
-        showSyncLoad(alias, alias, activity, callback, onUserEarnedReward);
-    }
-
-    /**
-     * Show rewarded ads, wait load if necessary and show
-     *
-     * @see RewardedAds
-     * @see RewardedInterstitialAds
-     */
-    public void showSyncLoad(String alias, String customAlias, Activity activity, Callback callback, Callback onUserEarnedReward) {
-        BaseRewardedAds<?> ads = getAds(alias, BaseRewardedAds.class);
-        if (checkShowFullScreenAdsCondition(ads, callback)) {
-            assert ads != null;
-            ads.show(customAlias, activity, true, callback, onUserEarnedReward);
-        }
-    }
-
-    /**
-     * Show view ads
+     * Show a view ad in {@code container}, loading first if necessary.
      *
      * @see BannerAds
      * @see NativeAds
      */
-    public void show(String alias, ViewGroup container) {
-        show(alias, alias, container);
+    public void showView(String alias, ViewGroup container) {
+        showView(alias, alias, container);
     }
 
-    /**
-     * Show view ads
-     *
-     * @see BannerAds
-     * @see NativeAds
-     */
-    public void show(String alias, String customAlias, ViewGroup container) {
+    /** Show a view ad with a separate revenue-attribution alias. */
+    public void showView(String alias, String reportAlias, ViewGroup container) {
+        if (isPremium()) {
+            return;
+        }
         BaseViewAds<?> ads = getAds(alias, BaseViewAds.class);
-        if (checkAdsCondition(ads, null)) {
-            assert ads != null;
-            ads.show(customAlias, container);
+        if (ads != null) {
+            ads.show(reportAlias, container);
         }
     }
 
     /**
-     * Force load and show view ads
+     * Show a view ad. When {@code reload} is true the current ad is cleared and a
+     * fresh one is loaded (e.g. for collapsible banners); otherwise a ready ad is
+     * reused.
      *
      * @see BannerAds
      * @see NativeAds
      */
-    public void forceShow(String alias, ViewGroup container, boolean multiContainer) {
-        forceShow(alias, alias, container, multiContainer);
-    }
-
-    /**
-     * Force load and show view ads
-     *
-     * @see BannerAds
-     * @see NativeAds
-     */
-    public void forceShow(String alias, String customAlias, ViewGroup container, boolean multiContainer) {
+    public void showView(String alias, ViewGroup container, boolean reload) {
+        if (isPremium()) {
+            return;
+        }
         BaseViewAds<?> ads = getAds(alias, BaseViewAds.class);
-        if (checkAdsCondition(ads, null)) {
-            assert ads != null;
-            ads.forceShow(customAlias, container, multiContainer);
+        if (ads != null) {
+            ads.forceShow(alias, container, reload);
         }
     }
 
     /**
-     * Hide view ads
+     * Hide a view ad.
      *
-     * @param alias alias of ads
      * @see BannerAds
      * @see NativeAds
      */
     public void hide(String alias) {
         BaseViewAds<?> ads = getAds(alias, BaseViewAds.class);
-        if (ads == null) {
-            return;
+        if (ads != null) {
+            ads.hide();
         }
-        ads.hide();
     }
 
-    /**
-     * @return true if manager can load ads
-     */
+    ///////////////////////////////////////////////////////////////////////////
+    // Status queries
+    ///////////////////////////////////////////////////////////////////////////
+
+    /** @return true if the ad can start a load now */
     public boolean isCanLoadAds(String alias) {
         BaseAds<?> ads = getAds(alias, BaseAds.class);
-        if (checkAdsCondition(ads, null)) {
-            assert ads != null;
-            return ads.isCanLoadAds();
-        }
-        return false;
+        return ads != null && !isPremium() && ads.isCanLoadAds();
     }
 
-    /**
-     * @return true if manager can show ads
-     */
+    /** @return true if the ad is cached and eligible to show now (ignoring the global gap) */
     public boolean isCanShowAds(String alias) {
         BaseAds<?> ads = getAds(alias, BaseAds.class);
-        if (checkAdsCondition(ads, null)) {
-            assert ads != null;
-            return ads.isCanShowAds();
-        }
-        return false;
+        return ads != null && !isPremium() && ads.isCanShowAds();
     }
 
-    /**
-     * @return true if ads is loading
-     */
+    /** @return true if the ad is currently loading */
     public boolean isLoading(String alias) {
         BaseAds<?> ads = getAds(alias, BaseAds.class);
-        if (checkAdsCondition(ads, null)) {
-            assert ads != null;
-            return ads.isLoading();
-        }
-        return false;
+        return ads != null && ads.isLoading();
     }
 
-    /**
-     * @return true if ads is showing
-     */
+    /** @return true if the ad is currently showing */
     public boolean isShowing(String alias) {
         BaseAds<?> ads = getAds(alias, BaseAds.class);
-        if (checkAdsCondition(ads, null)) {
-            assert ads != null;
-            return ads.isShowing();
-        }
-        return false;
+        return ads != null && ads.isShowing();
     }
 
     /**
-     * @return true if ads is can show
+     * @return true if a full-screen ad was dismissed within the last few seconds
+     * @deprecated prefer {@link AdCallback#onDismissed()} to know an ad was shown.
      */
-    public boolean isCanShow(String alias) {
-        BaseAds<?> ads = getAds(alias, BaseAds.class);
-        if (checkAdsCondition(ads, null)) {
-            assert ads != null;
-            return ads.isCanShow();
-        }
-        return false;
-    }
-
-    /**
-     * @return true if ads is dismiss nearly
-     */
+    @Deprecated
     public boolean isDismissNearly(String alias) {
         BaseAds<?> ads = getAds(alias, BaseAds.class);
-        if (checkAdsCondition(ads, null)) {
-            assert ads != null;
-            return ads instanceof BaseFullScreenAds && ((BaseFullScreenAds<?>) ads).isDismissNearly();
-        }
-        return false;
+        return ads != null && ads.isDismissNearly();
     }
 
     /**
@@ -649,10 +618,12 @@ public final class AdsManager {
 
                 @Override
                 public void onDismiss(BaseFullScreenAds<?> fullScreenAds) {
-                    if (ads.isAllowAdsInterval()) {
-                        // post delay show flag
-                        getAdsList().stream().filter(Objects::nonNull).forEach(BaseAds::postDelayShowFlag);
-                    }
+                    // NOTE: the dismissing ad already re-armed its own interval in
+                    // BaseFullScreenAds#onAdDismissedFullScreenContent. We deliberately
+                    // do NOT re-arm every other placement here: cross-cooldown made one
+                    // impression lock all other full-screen placements for the whole of
+                    // their interval, crushing the show rate. Global back-to-back spacing
+                    // is now enforced centrally by checkShowFullScreenAdsCondition().
                     if (viewAds != null) {
                         viewAds.forEach(view -> view.first.setVisibility(view.second));
                         viewAds.clear();
@@ -706,29 +677,54 @@ public final class AdsManager {
     // Helper methods
     ///////////////////////////////////////////////////////////////////////////
 
-    private static boolean checkShowFullScreenAdsCondition(BaseAds<?> ads, Callback callback) {
-        // check ads condition first
-        if (!checkAdsCondition(ads, callback)) {
-            return false;
+    /**
+     * Apply the global full-screen gate (registered / premium / overlap / global
+     * back-to-back gap), reporting the precise {@link SkipReason} on rejection,
+     * then delegate the per-placement show to the ad itself.
+     */
+    private void showFullScreenInternal(@Nullable BaseFullScreenAds<?> ads,
+                                        String reportAlias,
+                                        Activity activity,
+                                        @NonNull ShowMode mode,
+                                        @Nullable AdCallback callback) {
+        if (ads == null) {
+            skip(callback, SkipReason.NOT_REGISTERED);
+            return;
         }
-        // check has any full screen ads is show
-        if (getInstance().getAdsList().stream().anyMatch(a -> a instanceof BaseFullScreenAds && a.isShowing())) {
-            invokeCallback(callback);
-            return false;
+        if (isPremium()) {
+            skip(callback, SkipReason.PREMIUM);
+            return;
         }
-        return true;
+        boolean anyFullScreenShowing = false;
+        long lastFullScreenDismissTime = 0L;
+        for (BaseAds<?> a : getAdsList()) {
+            if (a instanceof BaseFullScreenAds) {
+                if (a.isShowing()) {
+                    anyFullScreenShowing = true;
+                }
+                long dismissTime = ((BaseFullScreenAds<?>) a).getLastDismissedAt();
+                if (dismissTime > lastFullScreenDismissTime) {
+                    lastFullScreenDismissTime = dismissTime;
+                }
+            }
+        }
+        if (anyFullScreenShowing) {
+            skip(callback, SkipReason.OVERLAP);
+            return;
+        }
+        if (AdsShowPolicy.isWithinGlobalGap(System.currentTimeMillis(), lastFullScreenDismissTime, getFullScreenAdsGapMs())) {
+            skip(callback, SkipReason.GLOBAL_GAP);
+            return;
+        }
+        // per-placement state (ready / cooldown / load-if-needed) handled by the ad
+        ads.show(reportAlias, activity, mode, callback);
     }
 
-    private static boolean checkAdsCondition(BaseAds<?> ads, Callback callback) {
-        if (ads == null) {
-            invokeCallback(callback);
-            return false;
+    private static void skip(@Nullable AdCallback callback, @NonNull SkipReason reason) {
+        if (callback != null) {
+            callback.onSkipped(reason);
+            callback.onComplete(false);
         }
-        if (getInstance().isPremium()) {
-            invokeCallback(callback);
-            return false;
-        }
-        return true;
     }
 
     @NonNull
@@ -754,11 +750,5 @@ public final class AdsManager {
             }
         }
         return viewAds;
-    }
-
-    private static void invokeCallback(Callback callback) {
-        if (callback != null) {
-            callback.callback();
-        }
     }
 }
