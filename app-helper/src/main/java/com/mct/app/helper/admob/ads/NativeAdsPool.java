@@ -18,6 +18,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * A simple cache of preloaded native ads for use with {@link com.mct.app.helper.admob.ads.natives.NativeAdsAdapter}.
@@ -81,7 +82,35 @@ public class NativeAdsPool extends BaseAds<Object> {
             return;
         }
         notifyPoolRefreshed();
-        AtomicInteger adRequestSize = new AtomicInteger();
+        // GMS contract for loadAds(request, n): forNativeAd fires once per filled slot and
+        // onAdFailedToLoad fires for failed fills, but the TOTAL number of callbacks for a
+        // partial fill is NOT guaranteed to be n. Counting callbacks down to zero can leave
+        // the session unresolved forever -> pool stuck in LOADING -> perpetual adapter
+        // spinners. The documented completion signal is adLoader.isLoading() checked inside
+        // BOTH callbacks, so the session is finalized exactly once, on the last callback:
+        // - at least one ad collected  -> loaded (partial fills are a success; the pool
+        //   tops itself up on the next load() via shouldTopUpWhenReady())
+        // - nothing collected         -> failed
+        AtomicInteger collected = new AtomicInteger();
+        AtomicReference<LoadAdError> lastError = new AtomicReference<>();
+        AtomicReference<AdLoader> loaderRef = new AtomicReference<>();
+        Runnable finalizeIfDone = () -> {
+            AdLoader loader = loaderRef.get();
+            if (loader == null || loader.isLoading()) {
+                return; // more callbacks coming
+            }
+            if (session.isStale()) {
+                return; // pool was cleared mid-load; late ads are destroyed in forNativeAd
+            }
+            if (collected.get() > 0) {
+                session.loaded(SENTINEL);
+            } else {
+                LoadAdError error = lastError.get();
+                session.failed(error != null ? error
+                        : new LoadAdError(89, "No native ads filled", AdError.UNDEFINED_DOMAIN, null, null));
+            }
+            notifyPoolRefreshed();
+        };
         AdLoader adLoader = new AdLoader.Builder(context, getLoadAdsUnitId())
                 .withNativeAdOptions(new NativeAdOptions.Builder()
                         .setVideoOptions(new VideoOptions.Builder().setStartMuted(true).build())
@@ -94,11 +123,8 @@ public class NativeAdsPool extends BaseAds<Object> {
 
                     @Override
                     public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-                        boolean stale = session.isStale();
-                        session.failed(loadAdError);
-                        if (!stale) {
-                            notifyPoolRefreshed();
-                        }
+                        lastError.set(loadAdError);
+                        finalizeIfDone.run();
                     }
                 })
                 .forNativeAd(nativeAd -> {
@@ -109,18 +135,17 @@ public class NativeAdsPool extends BaseAds<Object> {
                     }
                     nativeAd.setOnPaidEventListener(NativeAdsPool.this::onPaidEvent);
                     nativeAdsList.add(nativeAd);
-                    if (adRequestSize.decrementAndGet() == 0) {
-                        session.loaded(SENTINEL);
-                        notifyPoolRefreshed();
-                    }
+                    collected.incrementAndGet();
+                    finalizeIfDone.run();
                 }).build();
 
-        adRequestSize.set(Math.min(poolSize - nativeAdsList.size(), POOL_MAX_LOAD_SIZE));
+        loaderRef.set(adLoader);
 
-        if (adRequestSize.get() == 1) {
+        int requestSize = Math.min(poolSize - nativeAdsList.size(), POOL_MAX_LOAD_SIZE);
+        if (requestSize == 1) {
             adLoader.loadAd(getAdRequest());
         } else {
-            adLoader.loadAds(getAdRequest(), adRequestSize.get());
+            adLoader.loadAds(getAdRequest(), requestSize);
         }
     }
 
@@ -129,6 +154,18 @@ public class NativeAdsPool extends BaseAds<Object> {
         nativeAdsList.forEach(NativeAd::destroy);
         nativeAdsList.clear();
         position = -1;
+    }
+
+    /**
+     * The pool is READY as soon as its first batch lands, but a single GMS
+     * {@code loadAds} fills at most {@link #POOL_MAX_LOAD_SIZE} ads. While the pool
+     * still holds fewer than its configured {@link #poolSize}, allow {@code load()}
+     * to run again and append another batch instead of short-circuiting on
+     * {@code isReady()}.
+     */
+    @Override
+    protected boolean shouldTopUpWhenReady() {
+        return nativeAdsList.size() < poolSize;
     }
 
     public interface OnPoolRefreshedListener {

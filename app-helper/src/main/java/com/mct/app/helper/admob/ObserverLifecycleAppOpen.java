@@ -125,6 +125,11 @@ class ObserverLifecycleAppOpen {
             // SDK or another activity class implemented by a third party mediation partner. Updating the
             // currentActivity only when an ad is not showing will ensure it is not an ad activity, but the
             // one that shows the ad.
+            //
+            // Watchdog sweep first: if the app-open ad is STUCK in SHOWING (GMS dropped
+            // its callbacks), isShowing() would stay true forever and currentActivity
+            // would never update again - silently killing app-open for the session.
+            AdsManager.getInstance().releaseStaleShowingAds();
             BaseAds<?> ads = AdsManager.getInstance().getAds(appOpenAdsAlias, BaseAds.class);
             if (ads != null && !ads.isShowing()) {
                 currentActivity = activity;

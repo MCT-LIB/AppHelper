@@ -106,9 +106,18 @@ public final class AdsManager {
         }
         mApplication = activity.getApplication();
         configuratorConsumer.accept(new AdsConfigurator(this, () -> {
+            // Mirror initAsync: explicitly initialize the GMS SDK once consent allows it
+            // (on a background thread, per Google's guidance). Relying on the SDK's lazy
+            // init makes the first ad load slower and behaves differently from initAsync.
+            AtomicReference<Thread> initThreadAtomic = new AtomicReference<>(new Thread(() ->
+                    MobileAds.initialize(mApplication, status -> {
+                    })));
+            Runnable initialize = () -> Optional.ofNullable(initThreadAtomic.getAndSet(null)).ifPresent(Thread::start);
             GoogleMobileAdsConsentManager manager = GoogleMobileAdsConsentManager.getInstance(mApplication);
-            manager.gatherConsent(activity, e -> {
-            });
+            manager.gatherConsent(activity, e -> initialize.run());
+            if (manager.canRequestAds()) {
+                initialize.run();
+            }
         }));
     }
 
@@ -202,7 +211,12 @@ public final class AdsManager {
      */
     public void setPremium(boolean isPremium) {
         mIsPremium.set(isPremium);
-        //updateObserver();
+        // Keep observers in sync with the premium flag. Without this, an app that
+        // applied config while premium (observers released) and later calls
+        // setPremium(false) directly would never get the app-open foreground
+        // observer back - app-open ads silently stop for the session.
+        // init()/release() are idempotent, so calling this repeatedly is safe.
+        updateObserver();
     }
 
     /**
@@ -695,6 +709,13 @@ public final class AdsManager {
             skip(callback, SkipReason.PREMIUM);
             return;
         }
+        if ((ads instanceof RewardedAds || ads instanceof RewardedInterstitialAds)
+                && !(callback instanceof RewardedAdCallback)) {
+            Log.w(TAG, "showFullScreen called for rewarded alias '" + ads.getAlias()
+                    + "' without a RewardedAdCallback - onUserEarnedReward will NOT be delivered."
+                    + " Use showRewarded(...) instead.");
+        }
+        releaseStaleShowingAds();
         boolean anyFullScreenShowing = false;
         long lastFullScreenDismissTime = 0L;
         for (BaseAds<?> a : getAdsList()) {
@@ -718,6 +739,24 @@ public final class AdsManager {
         }
         // per-placement state (ready / cooldown / load-if-needed) handled by the ad
         ads.show(reportAlias, activity, mode, callback);
+    }
+
+    /**
+     * Stuck-SHOWING watchdog sweep. A full-screen ad whose terminal GMS callbacks
+     * were dropped (ad activity killed, SDK bug) stays {@code SHOWING} forever and
+     * blocks every other full-screen ad with {@link SkipReason#OVERLAP}. Force-release
+     * any ad that has been "showing" longer than its max show duration so the
+     * pipeline can recover. Late terminal events for the released show are ignored
+     * by the state guards in {@code transitionDismissed}/{@code transitionFailedToShow}.
+     */
+    void releaseStaleShowingAds() {
+        for (BaseAds<?> a : getAdsList()) {
+            if (a instanceof BaseFullScreenAds && a.isShowingStale()) {
+                Log.w(TAG, "Full-screen ad '" + a.getAlias() + "' stuck in SHOWING for over "
+                        + "its max show duration - force releasing (watchdog).");
+                a.clear();
+            }
+        }
     }
 
     private static void skip(@Nullable AdCallback callback, @NonNull SkipReason reason) {

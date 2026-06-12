@@ -36,7 +36,7 @@ public class BannerAds extends BaseViewAds<AdView> {
         AdView adView = new AdView(context);
         adView.setAdUnitId(getLoadAdsUnitId());
         adView.setAdSize(getAdSize(context));
-        adView.loadAd(getAdRequest());
+        // listener MUST be attached before loadAd() so no callback can ever be missed
         adView.setAdListener(new AdListener() {
             @Override
             public void onAdClicked() {
@@ -54,6 +54,7 @@ public class BannerAds extends BaseViewAds<AdView> {
                 session.failed(loadAdError);
             }
         });
+        adView.loadAd(getAdRequest());
     }
 
     @Override

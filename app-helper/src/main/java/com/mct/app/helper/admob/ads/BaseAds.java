@@ -60,6 +60,13 @@ public abstract class BaseAds<Ads> {
     private static final long DEFAULT_OVERDUE_MS = 4 * 60 * 60 * 1000L;
     /** Window for {@link #isDismissNearly()}. */
     private static final long DISMISS_NEARLY_MS = 3000L;
+    /**
+     * Watchdog: an ad claiming {@link AdState#SHOWING} for longer than this is
+     * considered stuck (GMS dropped its FullScreenContentCallback) and may be
+     * force-released by the manager so it stops blocking every other
+     * full-screen ad with {@code SkipReason.OVERLAP}.
+     */
+    private static final long DEFAULT_MAX_SHOW_DURATION_MS = 10 * 60 * 1000L;
 
     private final String adsUnitId;
     private final long adsInterval;
@@ -71,6 +78,7 @@ public abstract class BaseAds<Ads> {
     private Ads ad;
     private long loadedAt;
     private long lastDismissedAt;
+    private long showStartedAt;
     private int loadGeneration;
     private final List<LoadCallback> pendingLoadCallbacks = new ArrayList<>();
 
@@ -102,8 +110,32 @@ public abstract class BaseAds<Ads> {
         return DEFAULT_OVERDUE_MS;
     }
 
+    /**
+     * Overridable watchdog threshold: how long this ad may stay
+     * {@link AdState#SHOWING} before {@link #isShowingStale()} reports it stuck.
+     * Long enough that no legitimate impression (rewarded video + endcard, or an
+     * ad paused in background for a while) trips it; {@code <= 0} disables.
+     */
+    protected long getMaxShowDurationMs() {
+        return DEFAULT_MAX_SHOW_DURATION_MS;
+    }
+
     /** Whether this placement enforces a per-ad interval between impressions. */
     protected boolean allowAdsInterval() {
+        return false;
+    }
+
+    /**
+     * Whether a fresh load should still run while the ad is already
+     * {@link AdState#READY}, in order to TOP UP a partially-filled cache (e.g. a
+     * native-ad pool that holds fewer ads than its configured size). When this
+     * returns true, {@link #load(Context, LoadCallback)} issues another
+     * {@link #onLoad} <b>without releasing</b> the current cache, so the new ads
+     * are appended to it.
+     * <p>
+     * Default {@code false}: a single ad is simply ready or not.
+     */
+    protected boolean shouldTopUpWhenReady() {
         return false;
     }
 
@@ -121,7 +153,12 @@ public abstract class BaseAds<Ads> {
      */
     public final void load(@NonNull Context context, @Nullable LoadCallback callback) {
         assertMainThread();
-        if (isReady()) {
+        // A cache that is READY but only partially filled (e.g. a native-ad pool
+        // holding fewer ads than its configured size) wants another load to TOP it
+        // up. Without this, load() would short-circuit on isReady() forever and the
+        // pool would stay capped at its first batch until expiry.
+        boolean topUp = isReady() && !isPremium() && shouldTopUpWhenReady();
+        if (isReady() && !topUp) {
             if (callback != null) {
                 callback.onAdLoaded(this);
             }
@@ -133,7 +170,7 @@ public abstract class BaseAds<Ads> {
             }
             return;
         }
-        if (!AdsShowPolicy.canLoad(state, loadedAt, now(), isPremium(), getOverdueMs())) {
+        if (!topUp && !AdsShowPolicy.canLoad(state, loadedAt, now(), isPremium(), getOverdueMs())) {
             // not loadable (premium, or showing) -> report failure
             if (callback != null) {
                 callback.onAdFailedToLoad(this, new LoadError(
@@ -141,8 +178,9 @@ public abstract class BaseAds<Ads> {
             }
             return;
         }
-        if (state == AdState.READY) {
-            // expired -> release before reloading
+        if (!topUp && state == AdState.READY) {
+            // expired -> release before reloading. A top-up deliberately KEEPS the
+            // existing cache and appends to it, so it must not release here.
             releaseAd();
         }
         Log.d(TAG, "load: " + getClass().getSimpleName());
@@ -227,6 +265,7 @@ public abstract class BaseAds<Ads> {
             return false;
         }
         state = AdState.SHOWING;
+        showStartedAt = now();
         try {
             showAction.run();
             return true;
@@ -235,6 +274,7 @@ public abstract class BaseAds<Ads> {
             releaseAd();
             state = AdState.IDLE;
             loadedAt = 0;
+            showStartedAt = 0;
             if (cb != null) {
                 cb.onFailedToShow(ShowError.of(t));
                 cb.onComplete(false);
@@ -243,21 +283,58 @@ public abstract class BaseAds<Ads> {
         }
     }
 
-    /** Full-screen ad was closed by the user: consumed, marks dismiss time. */
-    protected final void transitionDismissed() {
+    /**
+     * Full-screen ad was closed by the user: consumed, marks dismiss time.
+     * <p>
+     * Guarded by state AND identity: the event is stale when the ad is no longer
+     * {@link AdState#SHOWING} (it was {@link #clear()}ed mid-show, or force-released
+     * by the stuck-SHOWING watchdog), or when {@code shownAd} is not the ad this
+     * instance currently holds (cleared mid-show, reloaded AND re-shown — the event
+     * belongs to the previous impression). A stale event must NOT release the
+     * cached/showing replacement. The dismiss time is still recorded because an
+     * impression really did just end on screen, so the global back-to-back gap
+     * stays armed.
+     *
+     * @param shownAd the GMS ad object the terminal event belongs to
+     *                ({@code null} skips the identity check)
+     */
+    protected final void transitionDismissed(@Nullable Object shownAd) {
         assertMainThread();
+        lastDismissedAt = now();
+        if (isStaleTerminalEvent(shownAd, "dismiss")) {
+            return;
+        }
         releaseAd();
         state = AdState.IDLE;
         loadedAt = 0;
-        lastDismissedAt = now();
+        showStartedAt = 0;
     }
 
-    /** Full-screen ad failed to render: consumed, NOT counted as a dismiss. */
-    protected final void transitionFailedToShow() {
+    /**
+     * Full-screen ad failed to render: consumed, NOT counted as a dismiss.
+     * State- and identity-guarded like {@link #transitionDismissed(Object)}.
+     */
+    protected final void transitionFailedToShow(@Nullable Object shownAd) {
         assertMainThread();
+        if (isStaleTerminalEvent(shownAd, "failed-to-show")) {
+            return;
+        }
         releaseAd();
         state = AdState.IDLE;
         loadedAt = 0;
+        showStartedAt = 0;
+    }
+
+    private boolean isStaleTerminalEvent(@Nullable Object shownAd, String event) {
+        if (state != AdState.SHOWING) {
+            Log.w(TAG, "stale " + event + " event ignored (state=" + state + "): " + getClass().getSimpleName());
+            return true;
+        }
+        if (shownAd != null && shownAd != ad) {
+            Log.w(TAG, "stale " + event + " event ignored (different impression): " + getClass().getSimpleName());
+            return true;
+        }
+        return false;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -268,11 +345,24 @@ public abstract class BaseAds<Ads> {
     public final void clear() {
         assertMainThread();
         loadGeneration++;            // invalidate any in-flight load
-        pendingLoadCallbacks.clear();
+        // Drain BEFORE notifying so the callbacks observe the final IDLE state
+        // (and a re-entrant load() from within a callback starts cleanly).
+        List<LoadCallback> dropped = drainLoadCallbacks();
         releaseAd();
         state = AdState.IDLE;
         loadedAt = 0;
         lastDismissedAt = 0;
+        showStartedAt = 0;
+        if (!dropped.isEmpty()) {
+            // A load was in flight (e.g. a show(LOAD_IF_NEEDED) waiting on it).
+            // Report cancellation instead of silently dropping it, otherwise the
+            // caller's AdCallback#onComplete would never fire.
+            LoadError e = new LoadError(AdRequest.ERROR_CODE_INTERNAL_ERROR,
+                    "Load cancelled by clear()", "com.mct.app.helper");
+            for (LoadCallback c : dropped) {
+                c.onAdFailedToLoad(this, e);
+            }
+        }
     }
 
     private void releaseAd() {
@@ -322,6 +412,18 @@ public abstract class BaseAds<Ads> {
         return AdsShowPolicy.isDismissNearly(lastDismissedAt, now(), DISMISS_NEARLY_MS);
     }
 
+    /**
+     * Watchdog predicate: true when this ad has claimed {@link AdState#SHOWING}
+     * for longer than {@link #getMaxShowDurationMs()}. That only happens when GMS
+     * dropped the terminal FullScreenContentCallback events (ad activity killed,
+     * SDK bug) — the ad is stuck and would otherwise block every full-screen ad
+     * with {@code SkipReason.OVERLAP} forever.
+     */
+    public boolean isShowingStale() {
+        return state == AdState.SHOWING
+                && AdsShowPolicy.isShowingStale(showStartedAt, now(), getMaxShowDurationMs());
+    }
+
     private long getIntervalForPolicy() {
         return allowAdsInterval() ? adsInterval : 0;
     }
@@ -365,6 +467,11 @@ public abstract class BaseAds<Ads> {
 
     public long getLastDismissedAt() {
         return lastDismissedAt;
+    }
+
+    /** Time the current/last show transition started (0 if never shown). */
+    public long getShowStartedAt() {
+        return showStartedAt;
     }
 
     public void setAlias(String a) {

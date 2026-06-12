@@ -61,6 +61,35 @@ public class AdsShowPolicyTest {
     }
 
     ///////////////////////////////////////////////////////////////////////////
+    // isShowingStale (stuck-SHOWING watchdog)
+    ///////////////////////////////////////////////////////////////////////////
+
+    private static final long MAX_SHOW = 10 * 60 * 1000L; // 10 min
+
+    @Test
+    public void showingStale_neverShown_isFalse() {
+        assertFalse(AdsShowPolicy.isShowingStale(0L, NOW, MAX_SHOW));
+    }
+
+    @Test
+    public void showingStale_withinMaxDuration_isFalse() {
+        assertFalse(AdsShowPolicy.isShowingStale(NOW - 1_000, NOW, MAX_SHOW));
+        // boundary is exclusive: exactly max duration is not yet stale
+        assertFalse(AdsShowPolicy.isShowingStale(NOW - MAX_SHOW, NOW, MAX_SHOW));
+    }
+
+    @Test
+    public void showingStale_beyondMaxDuration_isTrue() {
+        assertTrue(AdsShowPolicy.isShowingStale(NOW - MAX_SHOW - 1, NOW, MAX_SHOW));
+    }
+
+    @Test
+    public void showingStale_watchdogDisabled_isFalse() {
+        assertFalse(AdsShowPolicy.isShowingStale(NOW - MAX_SHOW * 10, NOW, 0L));
+        assertFalse(AdsShowPolicy.isShowingStale(NOW - MAX_SHOW * 10, NOW, -1L));
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
     // canShowFullScreenNow
     ///////////////////////////////////////////////////////////////////////////
 

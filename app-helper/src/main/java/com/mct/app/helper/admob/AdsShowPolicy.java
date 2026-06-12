@@ -55,6 +55,23 @@ public final class AdsShowPolicy {
     }
 
     /**
+     * Watchdog: whether an ad that claims to be SHOWING has been showing for
+     * longer than {@code maxShowDurationMs} and should be considered stuck (GMS
+     * dropped its terminal FullScreenContentCallback events — ad activity killed,
+     * SDK bug). A stuck SHOWING ad would otherwise block every full-screen
+     * placement with the OVERLAP guard for the rest of the session.
+     *
+     * @param showStartedAt     when the show transition started (0 if unknown)
+     * @param now               current time in millis
+     * @param maxShowDurationMs threshold (&le; 0 disables the watchdog)
+     */
+    public static boolean isShowingStale(long showStartedAt, long now, long maxShowDurationMs) {
+        return maxShowDurationMs > 0
+                && showStartedAt > 0
+                && now - showStartedAt > maxShowDurationMs;
+    }
+
+    /**
      * Whether a full-screen ad was dismissed recently enough that showing another
      * one now would count as "back-to-back".
      *

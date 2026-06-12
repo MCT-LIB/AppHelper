@@ -96,4 +96,36 @@ public class BaseViewAdsRobolectricTest {
         ad.completeLoad(activity);
         assertEquals(1, container.getChildCount());
     }
+
+    @Test
+    public void hide_whileLoading_cancelsPendingAttach() {
+        // Repro: showView() before the ad is ready queues an attach behind the
+        // load; the user then hides (or leaves the screen). When the load lands,
+        // the ad must NOT pop back into the container the caller already hid.
+        FakeViewAds ad = new FakeViewAds();
+        ad.show("alias", container);
+        assertEquals(AdState.LOADING, ad.getState());
+
+        ad.hide(); // before the load completes
+
+        ad.completeLoad(activity);
+        assertEquals("ad stays cached for the next show", AdState.READY, ad.getState());
+        assertEquals("hidden container must stay empty", 0, container.getChildCount());
+        assertFalse(ad.isShowing());
+    }
+
+    @Test
+    public void show_secondContainerWhileLoading_attachesToLatestOnly() {
+        // The LAST show() wins when the attach is deferred behind a load.
+        FakeViewAds ad = new FakeViewAds();
+        FrameLayout other = new FrameLayout(activity);
+
+        ad.show("alias", container);  // queued attach #1
+        ad.show("alias", other);      // queued attach #2 -> latest desired target
+
+        ad.completeLoad(activity);
+        assertEquals("stale target must stay empty", 0, container.getChildCount());
+        assertEquals("latest target gets the ad", 1, other.getChildCount());
+        assertTrue(ad.isShowing());
+    }
 }

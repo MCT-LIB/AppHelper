@@ -8,6 +8,7 @@ import static org.junit.Assert.assertTrue;
 
 import android.app.Activity;
 
+import com.google.android.gms.ads.FullScreenContentCallback;
 import com.mct.app.helper.admob.AdState;
 import com.mct.app.helper.admob.AdsManager;
 import com.mct.app.helper.admob.listener.AdCallback;
@@ -100,6 +101,42 @@ public class BaseAdsRobolectricTest {
         assertEquals(AdState.IDLE, ad.getState());
         assertNull(ad.getAds());
         assertTrue("late ad must be released to avoid a leak", ad.released.contains(late));
+    }
+
+    @Test
+    public void clearDuringLoad_notifiesQueuedLoadCallback() {
+        FakeFullScreenAds ad = new FakeFullScreenAds();
+        RecordingLoadCallback lc = new RecordingLoadCallback();
+
+        ad.load(activity, lc);
+        assertEquals(AdState.LOADING, ad.getState());
+
+        ad.clear();
+
+        // clear() must fail the in-flight callback, not silently drop it
+        assertEquals(1, lc.failed);
+        assertEquals(0, lc.loaded);
+        assertEquals(AdState.IDLE, ad.getState());
+    }
+
+    @Test
+    public void clearDuringLoadIfNeededShow_stillCompletesCallback() {
+        // Repro for the "show but never releases the flag" bug: a
+        // show(LOAD_IF_NEEDED) starts a load, then clear() (e.g. orientation
+        // auto-reload) cancels it mid-flight. onComplete MUST still fire so the
+        // caller (e.g. a splash awaiting completion) is never left hanging.
+        FakeFullScreenAds ad = new FakeFullScreenAds();
+        ad.setAutoLoadAfterDismiss(false);
+        RecordingAdCallback cb = new RecordingAdCallback();
+
+        ad.show("alias", activity, ShowMode.LOAD_IF_NEEDED, cb);
+        assertEquals(AdState.LOADING, ad.getState());
+
+        ad.clear();
+
+        assertTrue("interrupted show must still complete", cb.completeCalled);
+        assertFalse(cb.completeWasShown);
+        assertEquals(SkipReason.NOT_LOADED, cb.skipReason);
     }
 
     @Test
@@ -211,6 +248,101 @@ public class BaseAdsRobolectricTest {
         ad.driveShown();
         ad.driveDismissed();
         assertEquals("auto-load should kick off a new load after dismiss", AdState.LOADING, ad.getState());
+    }
+
+    @Test
+    public void staleDismiss_afterClearAndReload_mustNotReleaseReplacementAd() {
+        // Repro: clear() while the ad is ON SCREEN (manual clearAds, or the
+        // orientation auto-reload), then a replacement loads. When the user finally
+        // closes the on-screen ad, its dismiss event is STALE - it must not destroy
+        // the freshly loaded replacement or reset its state.
+        FakeFullScreenAds ad = readyAd();
+        ad.setAutoLoadAfterDismiss(false);
+        ad.show("alias", activity, ShowMode.IF_READY, new RecordingAdCallback());
+        ad.driveShown();
+        assertEquals(AdState.SHOWING, ad.getState());
+
+        ad.clear();                       // mid-show clear
+        ad.load(activity, null);
+        Object replacement = ad.completeLoad();
+        assertEquals(AdState.READY, ad.getState());
+
+        ad.driveDismissed();              // stale terminal event from the OLD show
+
+        assertEquals("replacement ad must survive a stale dismiss", AdState.READY, ad.getState());
+        assertEquals(replacement, ad.getAds());
+        assertFalse("replacement must not be released", ad.released.contains(replacement));
+        assertTrue("an impression still ended on screen -> global gap stays armed",
+                ad.getLastDismissedAt() > 0);
+    }
+
+    @Test
+    public void staleDismiss_afterClearReloadAndReshow_mustNotKillTheNewShow() {
+        // Hardest variant: clear() mid-show, reload AND re-show, so the state is
+        // SHOWING again when the OLD impression's dismiss event finally arrives.
+        // The state guard alone cannot tell the two impressions apart - the
+        // identity guard (shownAd) must.
+        FakeFullScreenAds ad = readyAd();
+        ad.setAutoLoadAfterDismiss(false);
+        ad.show("alias", activity, ShowMode.IF_READY, new RecordingAdCallback());
+        FullScreenContentCallback oldImpl = ad.lastContentCallback; // impression #1
+
+        ad.clear();                       // mid-show clear
+        ad.load(activity, null);
+        Object replacement = ad.completeLoad();
+        ad.show("alias", activity, ShowMode.IF_READY, new RecordingAdCallback()); // impression #2
+        assertEquals(AdState.SHOWING, ad.getState());
+
+        oldImpl.onAdDismissedFullScreenContent(); // stale terminal event of #1
+
+        assertEquals("the new impression must keep SHOWING", AdState.SHOWING, ad.getState());
+        assertEquals(replacement, ad.getAds());
+        assertFalse("replacement must not be released", ad.released.contains(replacement));
+
+        // and the new impression still terminates normally
+        ad.driveDismissed();
+        assertEquals(AdState.IDLE, ad.getState());
+    }
+
+    @Test
+    public void staleFailedToShow_afterClearAndReload_mustNotReleaseReplacementAd() {
+        FakeFullScreenAds ad = readyAd();
+        ad.setAutoLoadAfterDismiss(false);
+        ad.show("alias", activity, ShowMode.IF_READY, new RecordingAdCallback());
+
+        ad.clear();
+        ad.load(activity, null);
+        Object replacement = ad.completeLoad();
+
+        ad.driveFailedToShow();           // stale terminal event from the OLD show
+
+        assertEquals(AdState.READY, ad.getState());
+        assertEquals(replacement, ad.getAds());
+        assertFalse(ad.released.contains(replacement));
+    }
+
+    @Test
+    public void watchdog_showingPastMaxDuration_reportsStale() {
+        FakeFullScreenAds ad = readyAd();
+        ad.setAutoLoadAfterDismiss(false);
+        ad.show("alias", activity, ShowMode.IF_READY, null);
+        assertEquals(AdState.SHOWING, ad.getState());
+        assertFalse("fresh show is not stale", ad.isShowingStale());
+
+        ad.maxShowDurationOverride = 1L;  // 1ms threshold
+        awaitMillis(5);
+        assertTrue("SHOWING past max duration must be reported stale", ad.isShowingStale());
+
+        ad.clear();                       // what the manager watchdog does
+        assertEquals(AdState.IDLE, ad.getState());
+        assertFalse(ad.isShowing());
+    }
+
+    private static void awaitMillis(long ms) {
+        long until = System.currentTimeMillis() + ms;
+        while (System.currentTimeMillis() < until) {
+            Thread.yield();
+        }
     }
 
     private FakeFullScreenAds readyAd() {

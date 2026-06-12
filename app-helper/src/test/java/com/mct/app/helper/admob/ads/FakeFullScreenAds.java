@@ -28,6 +28,8 @@ public class FakeFullScreenAds extends BaseFullScreenAds<Object> {
     public FullScreenContentCallback lastContentCallback;
     public AdCallback lastShowCallback;
     public boolean throwOnShow;
+    /** When non-null, overrides the stuck-SHOWING watchdog threshold. */
+    public Long maxShowDurationOverride;
     public final List<Object> released = new ArrayList<>();
 
     private final boolean allowInterval;
@@ -65,6 +67,11 @@ public class FakeFullScreenAds extends BaseFullScreenAds<Object> {
     @Override
     protected boolean allowAdsInterval() {
         return allowInterval;
+    }
+
+    @Override
+    protected long getMaxShowDurationMs() {
+        return maxShowDurationOverride != null ? maxShowDurationOverride : super.getMaxShowDurationMs();
     }
 
     // --- test drivers ---

@@ -35,6 +35,7 @@ import androidx.annotation.IntDef;
 import androidx.annotation.LayoutRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
@@ -88,6 +89,7 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
 
     private FullScreenDialog fullScreenDialog;
     private Application.ActivityLifecycleCallbacks activityGuard;
+    private Application activityGuardApp;
 
     public NativeFullScreenAds(String adsUnitId, long adsInterval) {
         super(adsUnitId, adsInterval);
@@ -176,12 +178,20 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
                 // the NativeAd is destroyed once, centrally, by onRelease() below
                 callback.onAdDismissedFullScreenContent();
                 fullScreenDialog = null;
-                unregisterActivityGuard(activity);
+                unregisterActivityGuard();
             }
         };
         fullScreenDialog.setCancelable(cancelable);
         fullScreenDialog.setCanceledOnTouchOutside(cancelable);
-        registerActivityGuard(activity);
+        // The activity guard is the ONLY thing that tears the dialog down (and so
+        // releases the SHOWING state) if the host activity is destroyed. If we
+        // can't register it, refuse to show — a "blind" dialog could get stuck in
+        // SHOWING forever and block every later full-screen ad. Throwing here is
+        // caught by transitionToShowing(), which rolls back and reports failure.
+        if (!registerActivityGuard(activity)) {
+            fullScreenDialog = null;
+            throw new IllegalStateException("Cannot register activity guard for native full-screen ad");
+        }
         fullScreenDialog.show();
     }
 
@@ -193,12 +203,14 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
      * the rest of the session. Dismissing here guarantees the dismiss callback
      * runs and the state machine resets.
      */
-    private void registerActivityGuard(@NonNull Activity host) {
-        unregisterActivityGuard(host);
+    @VisibleForTesting
+    boolean registerActivityGuard(@NonNull Activity host) {
+        unregisterActivityGuard();
         Application app = host.getApplication();
         if (app == null) {
-            return;
+            return false;
         }
+        activityGuardApp = app;
         activityGuard = new Application.ActivityLifecycleCallbacks() {
             @Override
             public void onActivityDestroyed(@NonNull Activity a) {
@@ -209,7 +221,7 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
                 if (dialog != null && dialog.isShowing()) {
                     dialog.dismiss(); // -> onDismiss -> callback + unregister
                 } else {
-                    unregisterActivityGuard(host);
+                    unregisterActivityGuard();
                 }
             }
 
@@ -238,13 +250,16 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
             }
         };
         app.registerActivityLifecycleCallbacks(activityGuard);
+        return true;
     }
 
-    private void unregisterActivityGuard(@NonNull Activity host) {
-        if (activityGuard != null && host.getApplication() != null) {
-            host.getApplication().unregisterActivityLifecycleCallbacks(activityGuard);
+    @VisibleForTesting
+    void unregisterActivityGuard() {
+        if (activityGuard != null && activityGuardApp != null) {
+            activityGuardApp.unregisterActivityLifecycleCallbacks(activityGuard);
         }
         activityGuard = null;
+        activityGuardApp = null;
     }
 
     @Override
@@ -257,6 +272,10 @@ public class NativeFullScreenAds extends BaseFullScreenAds<NativeAd> {
         if (dialog != null && dialog.isShowing()) {
             dialog.dismiss();
         }
+        // Covers the case where show() threw after the guard was registered (the
+        // rollback path never reaches the dialog's onDismiss): without this the
+        // ActivityLifecycleCallbacks would leak until the activity is destroyed.
+        unregisterActivityGuard();
     }
 
     @Override

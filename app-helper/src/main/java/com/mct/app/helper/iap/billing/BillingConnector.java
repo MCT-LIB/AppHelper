@@ -63,10 +63,35 @@ public class BillingConnector {
 
     private final String base64Key;
 
+    /**
+     * No-op fallback so callbacks fired before {@link #setBillingEventListener}
+     * (or after it is cleared) never NPE. Every {@code billingEventListener.onX(..)}
+     * call in this class assumes a non-null listener; defaulting to this guarantees it.
+     */
+    private static final BillingEventListener NO_OP_LISTENER = new BillingEventListener() {
+        public void onProductsFetched(@NonNull List<ProductInfo> productDetails) {
+        }
+
+        public void onPurchasedProductsFetched(@NonNull List<PurchaseInfo> purchases) {
+        }
+
+        public void onProductsPurchased(@NonNull List<PurchaseInfo> purchases) {
+        }
+
+        public void onPurchaseAcknowledged(@NonNull PurchaseInfo purchase) {
+        }
+
+        public void onPurchaseConsumed(@NonNull PurchaseInfo purchase) {
+        }
+
+        public void onBillingError(@NonNull BillingConnector billingConnector, @NonNull BillingResponse response) {
+        }
+    };
+
     private Handler handler;
     private CompositeDisposable disposable;
     private BillingClient billingClient;
-    private BillingEventListener billingEventListener;
+    private BillingEventListener billingEventListener = NO_OP_LISTENER;
 
     private List<String> consumableIds;
     private List<String> nonConsumableIds;
@@ -166,7 +191,8 @@ public class BillingConnector {
      * To attach an event listener to establish a bridge with the caller
      */
     public final void setBillingEventListener(BillingEventListener billingEventListener) {
-        this.billingEventListener = billingEventListener;
+        // fall back to the no-op so a null (or a later reset) can never NPE a callback
+        this.billingEventListener = billingEventListener != null ? billingEventListener : NO_OP_LISTENER;
     }
 
     /**
@@ -319,6 +345,9 @@ public class BillingConnector {
                     switch (billingResult.getResponseCode()) {
                         case OK:
                             isConnected = true;
+                            // reset the exponential backoff so a future disconnect
+                            // retries promptly instead of inheriting the maxed-out delay
+                            reconnectMilliseconds = RECONNECT_TIMER_START_MILLISECONDS;
                             Log("Billing service: connected");
                             //start querying
                             queryProductDetails(allProductList);
@@ -476,7 +505,17 @@ public class BillingConnector {
             findUiHandler().post(() -> billingEventListener.onProductsPurchased(signatureValidPurchases));
         }
 
-        purchasedProductsList.addAll(signatureValidPurchases);
+        // Merge instead of blindly appending: the same owned purchase is reported
+        // again on every reconnect / re-fetch (and the purchase listener can overlap
+        // with the fetch). Keyed by purchaseToken + product so a refreshed purchase
+        // replaces its previous snapshot instead of stacking duplicates that would
+        // grow the list unbounded and double-fire downstream consumers.
+        for (PurchaseInfo purchaseInfo : signatureValidPurchases) {
+            purchasedProductsList.removeIf(existing ->
+                    Objects.equals(existing.getPurchaseToken(), purchaseInfo.getPurchaseToken())
+                            && Objects.equals(existing.getProduct(), purchaseInfo.getProduct()));
+            purchasedProductsList.add(purchaseInfo);
+        }
 
         for (PurchaseInfo purchaseInfo : signatureValidPurchases) {
             if (shouldAutoConsume) {

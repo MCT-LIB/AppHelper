@@ -232,7 +232,9 @@ public class NativeAdsAdapter extends RecyclerViewAdapterWrapper implements Nati
 
     @SuppressLint("NotifyDataSetChanged")
     public void updateNativeAdsHolders() {
-        if (!isAdsAvailable()) {
+        // recyclerView is null when the adapter is detached; this method is public
+        // and the pool can also refresh in the attach/detach window - don't NPE.
+        if (!isAdsAvailable() || recyclerView == null) {
             return;
         }
         if (boundAdsViewHolders.isEmpty()) {

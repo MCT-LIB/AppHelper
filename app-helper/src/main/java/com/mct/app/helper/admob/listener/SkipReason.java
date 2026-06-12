@@ -30,6 +30,6 @@ public enum SkipReason {
     /** Another full-screen ad is currently on screen. */
     OVERLAP,
 
-    /** The activity is null, finishing or destroyed. */
+    /** The activity is null or destroyed (a finishing activity is still allowed to show). */
     ACTIVITY_INVALID
 }

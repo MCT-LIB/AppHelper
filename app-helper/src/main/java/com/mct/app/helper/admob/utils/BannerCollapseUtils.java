@@ -21,9 +21,13 @@ public class BannerCollapseUtils {
 
     public static void dismissBannerCollapsePopups() {
         MotionEvent event = MotionEvent.obtain(0, 0, MotionEvent.ACTION_OUTSIDE, 0, 0, 0);
-        event.recycle();
-        for (View view : getCollapsePopupWindowViews()) {
-            view.onTouchEvent(event);
+        try {
+            for (View view : getCollapsePopupWindowViews()) {
+                view.onTouchEvent(event);
+            }
+        } finally {
+            // recycle only AFTER dispatching - touching a recycled event is undefined behaviour
+            event.recycle();
         }
     }
 

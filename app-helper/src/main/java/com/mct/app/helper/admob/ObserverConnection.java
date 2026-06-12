@@ -137,6 +137,11 @@ class ObserverConnection {
         }
         AdsManager.getInstance().getAdsList().stream()
                 .filter(check)
+                // Never clear an ad that is currently ON SCREEN: clearing mid-show
+                // resets the state machine to IDLE while the GMS ad is still visible,
+                // which both reopens the overlap gate and makes the eventual dismiss
+                // event stale (it would be ignored by the state guard).
+                .filter(ads -> !ads.isShowing())
                 .forEach(ads -> {
                     ads.clear();
                     AdsManager.getInstance().load(ads, application, null);

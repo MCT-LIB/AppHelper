@@ -131,6 +131,53 @@ public class AdsManagerRobolectricTest {
     }
 
     @Test
+    public void watchdog_stuckShowingAd_isForceReleased_andStopsBlockingOthers() {
+        // Repro for the worst "flag never released" failure: GMS drops the terminal
+        // FullScreenContentCallback events, so A claims SHOWING forever and every
+        // other full-screen ad skips with OVERLAP for the rest of the session.
+        // The watchdog sweep in the show gate must force-release A and let B show.
+        manager.setFullScreenAdsGapMs(0); // isolate the watchdog from the gap guard
+
+        FakeFullScreenAds a = new FakeFullScreenAds();
+        FakeFullScreenAds b = new FakeFullScreenAds();
+        a.setAutoLoadAfterDismiss(false);
+        manager.putAds("A", a);
+        manager.putAds("B", b);
+
+        a.load(activity, null);
+        a.completeLoad();
+        manager.showFullScreen("A", activity, null);
+        assertEquals(AdState.SHOWING, a.getState());
+        // ...and GMS never fires dismissed/failedToShow for A.
+
+        b.load(activity, null);
+        b.completeLoad();
+
+        // sanity: before the threshold elapses, B is correctly blocked by OVERLAP
+        RecordingAdCallback blocked = new RecordingAdCallback();
+        manager.showFullScreen("B", activity, blocked);
+        assertEquals(SkipReason.OVERLAP, blocked.skipReason);
+
+        // past the max show duration the stuck ad must be swept away
+        a.maxShowDurationOverride = 1L;
+        awaitMillis(5);
+
+        RecordingAdCallback cb = new RecordingAdCallback();
+        manager.showFullScreen("B", activity, cb);
+
+        assertNull("stuck A must no longer block B", cb.skipReason);
+        assertEquals(AdState.SHOWING, b.getState());
+        assertEquals("stuck ad force-released by watchdog", AdState.IDLE, a.getState());
+    }
+
+    private static void awaitMillis(long ms) {
+        long until = System.currentTimeMillis() + ms;
+        while (System.currentTimeMillis() < until) {
+            Thread.yield();
+        }
+    }
+
+    @Test
     public void loadIfNeeded_deferredShow_reChecksGlobalGate() {
         // H3 regression: a show that has to load first must re-pass the global gate
         // when the load finishes, not just at request time.

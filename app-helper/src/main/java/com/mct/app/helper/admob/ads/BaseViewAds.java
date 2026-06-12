@@ -8,6 +8,9 @@ import androidx.annotation.Nullable;
 
 import com.mct.app.helper.admob.ads.BaseAds;
 import com.mct.app.helper.admob.listener.LoadCallback;
+import com.mct.app.helper.admob.listener.LoadError;
+
+import java.lang.ref.WeakReference;
 
 /**
  * Base for view ads (banner, native). A view ad stays {@link com.mct.app.helper.admob.AdState#READY}
@@ -16,6 +19,13 @@ import com.mct.app.helper.admob.listener.LoadCallback;
  * or moved between containers without reloading.
  */
 public abstract class BaseViewAds<AdsView extends View> extends BaseAds<AdsView> {
+
+    /**
+     * The container the caller currently wants the ad attached to, used to honour
+     * the LAST show()/hide() call when the attach is deferred behind a load.
+     * Weak so a pending attach never keeps a destroyed activity's view tree alive.
+     */
+    private WeakReference<ViewGroup> desiredContainer;
 
     public BaseViewAds(String adsUnitId) {
         super(adsUnitId, 0);
@@ -43,13 +53,28 @@ public abstract class BaseViewAds<AdsView extends View> extends BaseAds<AdsView>
         assertMainThread();
         setCustomAlias(alias);
         if (isReady()) {
+            desiredContainer = null;
             attach(container);
             return;
         }
+        // Defer the attach behind the load, but resolve the target at COMPLETION
+        // time, not request time: a hide() (or a newer show()) while the load is in
+        // flight must win, otherwise the ad pops back into a container the caller
+        // already hid - possibly one belonging to a destroyed activity.
+        desiredContainer = new WeakReference<>(container);
         load(container.getContext(), new LoadCallback() {
             @Override
             public void onAdLoaded(BaseAds<?> ad) {
-                attach(container);
+                ViewGroup target = desiredContainer != null ? desiredContainer.get() : null;
+                desiredContainer = null;
+                if (target != null) {
+                    attach(target);
+                }
+            }
+
+            @Override
+            public void onAdFailedToLoad(BaseAds<?> ad, LoadError error) {
+                desiredContainer = null;
             }
         });
     }
@@ -70,6 +95,7 @@ public abstract class BaseViewAds<AdsView extends View> extends BaseAds<AdsView>
     /** Detach the ad from its container (the ad object is kept and can be re-shown). */
     public final void hide() {
         assertMainThread();
+        desiredContainer = null; // cancel any attach pending behind an in-flight load
         removeInParent(getAds());
     }
 

@@ -73,8 +73,11 @@ public abstract class BaseFullScreenAds<Ads> extends BaseAds<Ads> {
             setCustomAlias(reportAlias);
             autoLoadContext = activity.getApplicationContext();
             final AdCallback cb = callback;
+            // capture the exact ad object this impression uses, so its terminal
+            // events can never be mis-attributed to a later reload/re-show
+            final Ads shownAd = getAds();
             transitionToShowing(
-                    () -> onShowAds(activity, getAds(), new FullScreenContentCallbackImpl(this, cb), cb),
+                    () -> onShowAds(activity, shownAd, new FullScreenContentCallbackImpl(this, shownAd, cb), cb),
                     cb);
             return;
         }
@@ -132,9 +135,9 @@ public abstract class BaseFullScreenAds<Ads> extends BaseAds<Ads> {
     // Dismiss / show-change plumbing
     ///////////////////////////////////////////////////////////////////////////
 
-    private void handleDismiss() {
-        onAdDismissedFullScreen();   // notify listener (e.g. restore banner visibility)
-        transitionDismissed();       // base: release + IDLE + record dismiss time
+    private void handleDismiss(@Nullable Object shownAd) {
+        onAdDismissedFullScreen();      // notify listener (e.g. restore banner visibility)
+        transitionDismissed(shownAd);   // base: release + IDLE + record dismiss time (identity-guarded)
         if (autoLoadAfterDismiss && autoLoadContext != null) {
             load(autoLoadContext, null);
         }
@@ -179,10 +182,17 @@ public abstract class BaseFullScreenAds<Ads> extends BaseAds<Ads> {
         private boolean shown;
         private boolean done;
         private BaseFullScreenAds<?> ads;
+        private Object shownAd;
         private AdCallback callback;
 
         public FullScreenContentCallbackImpl(BaseFullScreenAds<?> ads, AdCallback callback) {
+            this(ads, null, callback);
+        }
+
+        /** @param shownAd the GMS ad object of THIS impression (identity guard for terminal events) */
+        public FullScreenContentCallbackImpl(BaseFullScreenAds<?> ads, Object shownAd, AdCallback callback) {
             this.ads = ads;
+            this.shownAd = shownAd;
             this.callback = callback;
         }
 
@@ -216,11 +226,13 @@ public abstract class BaseFullScreenAds<Ads> extends BaseAds<Ads> {
             done = true;
             Log.d(TAG, "onAdDismissedFullScreenContent");
             BaseFullScreenAds<?> a = ads;
+            Object shown = shownAd;
             AdCallback cb = callback;
             ads = null;
+            shownAd = null;
             callback = null;
             if (a != null) {
-                a.handleDismiss();
+                a.handleDismiss(shown);
             }
             if (cb != null) {
                 cb.onDismissed();
@@ -236,11 +248,13 @@ public abstract class BaseFullScreenAds<Ads> extends BaseAds<Ads> {
             done = true;
             Log.d(TAG, "onAdFailedToShowFullScreenContent: " + adError);
             BaseFullScreenAds<?> a = ads;
+            Object shown = shownAd;
             AdCallback cb = callback;
             ads = null;
+            shownAd = null;
             callback = null;
             if (a != null) {
-                a.transitionFailedToShow();
+                a.transitionFailedToShow(shown);
             }
             if (cb != null) {
                 cb.onFailedToShow(ShowError.of(adError));
