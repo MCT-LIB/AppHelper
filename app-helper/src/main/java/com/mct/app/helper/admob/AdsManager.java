@@ -541,6 +541,45 @@ public final class AdsManager {
         }
     }
 
+    /**
+     * Hide a view ad only if it is still attached to {@code container}.
+     *
+     * @see BannerAds
+     * @see NativeAds
+     */
+    public void hide(String alias, ViewGroup container) {
+        BaseViewAds<?> ads = getAds(alias, BaseViewAds.class);
+        if (ads != null) {
+            ads.hide(container);
+        }
+    }
+
+    /**
+     * Pause a cached view ad.
+     *
+     * @see BannerAds
+     * @see NativeAds
+     */
+    public void pauseView(String alias) {
+        BaseViewAds<?> ads = getAds(alias, BaseViewAds.class);
+        if (ads != null) {
+            ads.pause();
+        }
+    }
+
+    /**
+     * Resume a cached view ad.
+     *
+     * @see BannerAds
+     * @see NativeAds
+     */
+    public void resumeView(String alias) {
+        BaseViewAds<?> ads = getAds(alias, BaseViewAds.class);
+        if (ads != null) {
+            ads.resume();
+        }
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     // Status queries
     ///////////////////////////////////////////////////////////////////////////

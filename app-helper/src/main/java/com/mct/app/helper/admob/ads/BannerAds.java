@@ -17,7 +17,13 @@ import java.util.UUID;
 
 public class BannerAds extends BaseViewAds<AdView> {
 
+    public enum AdaptiveSize {
+        COMPACT,
+        LARGE
+    }
+
     private boolean collapsible;
+    private AdaptiveSize adaptiveSize = AdaptiveSize.COMPACT;
 
     public BannerAds(String adsUnitId) {
         super(adsUnitId);
@@ -29,6 +35,14 @@ public class BannerAds extends BaseViewAds<AdView> {
 
     public void setCollapsible(boolean collapsible) {
         this.collapsible = collapsible;
+    }
+
+    public AdaptiveSize getAdaptiveSize() {
+        return adaptiveSize;
+    }
+
+    public void setAdaptiveSize(@NonNull AdaptiveSize adaptiveSize) {
+        this.adaptiveSize = adaptiveSize;
     }
 
     @Override
@@ -63,6 +77,16 @@ public class BannerAds extends BaseViewAds<AdView> {
     }
 
     @Override
+    protected void onPauseView(@NonNull AdView view) {
+        view.pause();
+    }
+
+    @Override
+    protected void onResumeView(@NonNull AdView view) {
+        view.resume();
+    }
+
+    @Override
     public AdRequest getAdRequest() {
         if (collapsible) {
             Bundle extras = new Bundle();
@@ -76,13 +100,15 @@ public class BannerAds extends BaseViewAds<AdView> {
     }
 
     @NonNull
+    @SuppressWarnings("deprecation")
     private AdSize getAdSize(@NonNull Context context) {
         DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
         float widthPixels = displayMetrics.widthPixels;
         float density = displayMetrics.density;
         int adWidth = (int) (widthPixels / density);
-        // ads SDK 25.0.0 deprecated getCurrentOrientationAnchoredAdaptiveBannerAdSize in favour
-        // of the large anchored adaptive banner (taller, can serve video demand).
-        return AdSize.getLargeAnchoredAdaptiveBannerAdSize(context, adWidth);
+        if (adaptiveSize == AdaptiveSize.LARGE) {
+            return AdSize.getLargeAnchoredAdaptiveBannerAdSize(context, adWidth);
+        }
+        return AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, adWidth);
     }
 }

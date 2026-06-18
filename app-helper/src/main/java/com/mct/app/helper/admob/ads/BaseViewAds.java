@@ -34,6 +34,14 @@ public abstract class BaseViewAds<AdsView extends View> extends BaseAds<AdsView>
     /** Destroy native resources of the view ad (e.g. {@code AdView.destroy()}). */
     protected abstract void onDestroyView(@NonNull AdsView view);
 
+    /** Pause native resources held by the view ad. Default is a no-op. */
+    protected void onPauseView(@NonNull AdsView view) {
+    }
+
+    /** Resume native resources held by the view ad. Default is a no-op. */
+    protected void onResumeView(@NonNull AdsView view) {
+    }
+
     @Override
     protected final void onRelease(@Nullable AdsView view) {
         if (view != null) {
@@ -97,6 +105,40 @@ public abstract class BaseViewAds<AdsView extends View> extends BaseAds<AdsView>
         assertMainThread();
         desiredContainer = null; // cancel any attach pending behind an in-flight load
         removeInParent(getAds());
+    }
+
+    /**
+     * Detach the ad only if it is still attached to {@code container}.
+     * <p>
+     * This is useful for navigation flows where a child screen may re-parent the
+     * same cached banner before the previous Fragment's {@code onDestroyView}
+     * runs. A plain {@link #hide()} would remove the banner from the new screen.
+     */
+    public final void hide(@NonNull ViewGroup container) {
+        assertMainThread();
+        desiredContainer = null;
+        AdsView view = getAds();
+        if (view != null && view.getParent() == container) {
+            container.removeView(view);
+        }
+    }
+
+    /** Pause the cached view ad if one exists. */
+    public final void pause() {
+        assertMainThread();
+        AdsView view = getAds();
+        if (view != null) {
+            onPauseView(view);
+        }
+    }
+
+    /** Resume the cached view ad if one exists. */
+    public final void resume() {
+        assertMainThread();
+        AdsView view = getAds();
+        if (view != null) {
+            onResumeView(view);
+        }
     }
 
     private void attach(@NonNull ViewGroup container) {
