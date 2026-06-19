@@ -748,8 +748,9 @@ public final class AdsManager {
             skip(callback, SkipReason.PREMIUM);
             return;
         }
-        if ((ads instanceof RewardedAds || ads instanceof RewardedInterstitialAds)
-                && !(callback instanceof RewardedAdCallback)) {
+        boolean isRewarded = ads instanceof RewardedAds || ads instanceof RewardedInterstitialAds;
+        boolean isRewardedRequest = isRewarded && callback instanceof RewardedAdCallback;
+        if (isRewarded && !isRewardedRequest) {
             Log.w(TAG, "showFullScreen called for rewarded alias '" + ads.getAlias()
                     + "' without a RewardedAdCallback - onUserEarnedReward will NOT be delivered."
                     + " Use showRewarded(...) instead.");
@@ -772,7 +773,12 @@ public final class AdsManager {
             skip(callback, SkipReason.OVERLAP);
             return;
         }
-        if (AdsShowPolicy.isWithinGlobalGap(System.currentTimeMillis(), lastFullScreenDismissTime, getFullScreenAdsGapMs())) {
+        // Rewarded ads are shown after an explicit user opt-in. Do not reject
+        // that request just because another full-screen ad recently dismissed;
+        // overlap, premium, activity validity, load state, and failures still
+        // apply below.
+        if (!isRewardedRequest
+                && AdsShowPolicy.isWithinGlobalGap(System.currentTimeMillis(), lastFullScreenDismissTime, getFullScreenAdsGapMs())) {
             skip(callback, SkipReason.GLOBAL_GAP);
             return;
         }
