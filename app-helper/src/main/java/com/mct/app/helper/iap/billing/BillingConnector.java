@@ -50,6 +50,7 @@ import com.mct.app.helper.iap.billing.models.PurchasesResult;
 import com.mct.app.helper.iap.billing.models.RefreshResult;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -122,6 +123,9 @@ public class BillingConnector {
     private volatile PurchasesRefreshListener purchasesRefreshListener;
     private final AcknowledgeTracker acknowledgeTracker = new AcknowledgeTracker();
     private final PurchasesRefresher refresher = new PurchasesRefresher(new RefresherBackend(), new UiScheduler());
+    @Nullable
+    private volatile ConsumeListener consumeListener;
+    private final PurchaseConsumer consumer = new PurchaseConsumer(new ConsumerBackend(), new UiScheduler());
     @Nullable
     private volatile String lastLaunchedProductId;
 
@@ -566,18 +570,16 @@ public class BillingConnector {
         if (checkProductBeforeInteraction(purchaseInfo.getProduct())) {
             if (purchaseInfo.getSkuProductType() == SkuProductType.CONSUMABLE) {
                 if (purchaseInfo.getPurchase().getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
-                    ConsumeParams consumeParams = ConsumeParams.newBuilder()
-                            .setPurchaseToken(purchaseInfo.getPurchase().getPurchaseToken()).build();
-
-                    billingClient.consumeAsync(consumeParams, (billingResult, purchaseToken) -> {
-                        if (billingResult.getResponseCode() == OK) {
+                    // through the shared consumer: an app consume() of the same token at the same
+                    // time joins this call instead of racing it into ITEM_NOT_OWNED
+                    consumer.consume(purchaseInfo.getPurchase().getPurchaseToken(), false, result -> {
+                        if (result.isSuccess()) {
                             purchasedProductsList.remove(purchaseInfo);
-                            findUiHandler().post(() -> billingEventListener.onPurchaseConsumed(purchaseInfo));
+                            billingEventListener.onPurchaseConsumed(purchaseInfo);
                         } else {
-                            Log("Handling consumables: error during consumption attempt: " + billingResult.getDebugMessage());
-
-                            findUiHandler().post(() -> billingEventListener.onBillingError(BillingConnector.this,
-                                    new BillingResponse(ErrorType.CONSUME_ERROR, billingResult)));
+                            Log("Handling consumables: error during consumption attempt: " + result.getDebugMessage());
+                            billingEventListener.onBillingError(BillingConnector.this,
+                                    new BillingResponse(ErrorType.CONSUME_ERROR, result.getDebugMessage(), result.getResponseCode()));
                         }
                     });
                 } else if (purchaseInfo.getPurchase().getPurchaseState() == Purchase.PurchaseState.PENDING) {
@@ -790,7 +792,8 @@ public class BillingConnector {
      * acknowledges PURCHASED subscriptions and registered non-consumables that are not yet
      * acknowledged, and reports what happened to each purchase. Pending purchases are reported as
      * {@link com.mct.app.helper.iap.billing.enums.AcknowledgeOutcome#PENDING} and never
-     * acknowledged. Consumables are never consumed here. A FAILED acknowledge is retried on the next
+     * acknowledged. Consumables are not consumed here unless they were passed to
+     * {@link #consumeWithRetry} and a consume failed. A FAILED acknowledge is retried on the next
      * refresh (Play allows 3 days).
      * <p>
      * If Play fails the result says so ({@link RefreshResult#isSuccess()} false); it never reports
@@ -817,12 +820,79 @@ public class BillingConnector {
         this.purchasesRefreshListener = listener;
     }
 
+    /**
+     * Consumes one purchase so the product (a credit pack, coins...) can be bought again. Play
+     * refunds a consumable that is not consumed within 3 days. Grant the content <b>before</b>
+     * consuming: once consumed, the purchase no longer appears in any query.
+     * <p>
+     * {@code listener} is called exactly once, on the main thread. Concurrent calls for the same
+     * token (including the legacy {@link #consumePurchase}/{@link #autoConsume()} path) share one Play
+     * call and its result; a token already consumed in this session answers OK without calling Play.
+     * ITEM_NOT_OWNED means there is nothing left to consume. A failure is not retried; use
+     * {@link #consumeWithRetry} for that.
+     */
+    public final void consume(@NonNull String purchaseToken, @Nullable ConsumeListener listener) {
+        consumer.consume(purchaseToken, false, listener);
+    }
+
+    /**
+     * Like {@link #consume(String, ConsumeListener)}, but checks the purchase first: a subscription,
+     * or a purchase that is not PURCHASED (PENDING), is answered with DEVELOPER_ERROR without
+     * calling Play.
+     */
+    public final void consume(@NonNull OwnedPurchase purchase, @Nullable ConsumeListener listener) {
+        consumer.consume(purchase, false, listener);
+    }
+
+    /**
+     * Consumes each token like {@link #consume(String, ConsumeListener)} ({@code listener} gets one
+     * result per token) and keeps every token that failed. After each refresh that is delivered
+     * (manual, on connection, after a purchase update) the kept tokens that the refresh shows
+     * PURCHASED are consumed again, and the result goes to the listener set with
+     * {@link #setConsumeListener}. A token that a fully successful refresh no longer lists is
+     * dropped and reported as ITEM_NOT_OWNED. The kept tokens live in memory only; to survive a
+     * restart, persist your own list of granted-but-unconsumed tokens and pass it again after
+     * {@link #connect()}.
+     */
+    public final void consumeWithRetry(@NonNull Collection<String> purchaseTokens, @Nullable ConsumeListener listener) {
+        for (String token : new ArrayList<>(purchaseTokens)) {
+            consumer.consume(token, true, listener);
+        }
+    }
+
+    /**
+     * Like {@link #consumeWithRetry(Collection, ConsumeListener)} for owned purchases. A PENDING
+     * purchase is answered with DEVELOPER_ERROR and kept: it is consumed when a refresh shows it
+     * PURCHASED. A subscription is refused and not kept.
+     */
+    public final void consumePurchasesWithRetry(@NonNull Collection<OwnedPurchase> purchases, @Nullable ConsumeListener listener) {
+        for (OwnedPurchase p : new ArrayList<>(purchases)) {
+            consumer.consume(p, true, listener);
+        }
+    }
+
+    /** Receives the results of the retries made for {@link #consumeWithRetry}. Pass null to stop. */
+    public final void setConsumeListener(@Nullable ConsumeListener listener) {
+        this.consumeListener = listener;
+    }
+
     private void onItemAlreadyOwned(@Nullable String productId) {
         // the user already owns it (bought on another device, or Play has not told us yet):
         // re-query so the app can restore the entitlement instead of ignoring the error
         if (purchasesRefreshListener != null) {
             refresher.request(RefreshReason.ITEM_ALREADY_OWNED, productId, null);
         }
+    }
+
+    /** Raw Play consume; result delivered on the main thread. */
+    private void playConsume(@NonNull String token, @NonNull AcknowledgeTracker.AckResult result) {
+        if (billingClient == null || !billingClient.isReady()) {
+            findUiHandler().post(() -> result.onResult(SERVICE_DISCONNECTED, "Billing client is not ready"));
+            return;
+        }
+        ConsumeParams params = ConsumeParams.newBuilder().setPurchaseToken(token).build();
+        billingClient.consumeAsync(params, (billingResult, purchaseToken) -> findUiHandler().post(() ->
+                result.onResult(billingResult.getResponseCode(), billingResult.getDebugMessage())));
     }
 
     /** Raw Play acknowledge; result delivered on the main thread. */
@@ -914,12 +984,31 @@ public class BillingConnector {
         @Override
         public void onDelivered(@NonNull PurchasesResult result) {
             updatePurchasedProductsCache(result);
+            consumer.onRefreshDelivered(result);
         }
 
         @Nullable
         @Override
         public PurchasesRefreshListener globalListener() {
             return purchasesRefreshListener;
+        }
+
+        @Override
+        public void log(@NonNull String message) {
+            Log(message);
+        }
+    }
+
+    private final class ConsumerBackend implements PurchaseConsumer.Backend {
+        @Override
+        public void consume(@NonNull String purchaseToken, @NonNull AcknowledgeTracker.AckResult result) {
+            playConsume(purchaseToken, result);
+        }
+
+        @Nullable
+        @Override
+        public ConsumeListener globalListener() {
+            return consumeListener;
         }
 
         @Override
@@ -1045,6 +1134,7 @@ public class BillingConnector {
         // spinner) and ignore anything that still arrives from it
         refresher.release();
         acknowledgeTracker.clearInFlight();
+        consumer.release();
         if (billingClient != null && billingClient.isReady()) {
             Log("BillingConnector instance release: ending connection...");
             billingClient.endConnection();

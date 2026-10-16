@@ -13,7 +13,8 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Makes acknowledging idempotent per purchase token. The legacy auto-acknowledge path and the
+ * Makes a per-token Play call (acknowledge, and consume through {@link PurchaseConsumer})
+ * idempotent per purchase token. The legacy auto-acknowledge path and the
  * refresh can both try to acknowledge the same purchase at the same time; with this tracker the
  * second caller joins the call already in flight and both get its result, and a token acknowledged
  * earlier in the session answers OK without calling Play again.
@@ -32,6 +33,7 @@ final class AcknowledgeTracker {
 
     private final Map<String, List<AckResult>> inFlight = new HashMap<>();
     private final Set<String> acknowledged = new HashSet<>();
+    private int generation;
 
     void acknowledge(@NonNull String token, @NonNull AckCall call, @NonNull AckResult callback) {
         if (acknowledged.contains(token)) {
@@ -46,7 +48,11 @@ final class AcknowledgeTracker {
         waiting = new ArrayList<>();
         waiting.add(callback);
         inFlight.put(token, waiting);
+        int gen = generation;
         call.acknowledge(token, (code, message) -> {
+            if (gen != generation) {
+                return; // released: its waiters were already dropped or failed
+            }
             List<AckResult> callbacks = inFlight.remove(token);
             if (code == OK) {
                 acknowledged.add(token);
@@ -63,8 +69,25 @@ final class AcknowledgeTracker {
         return inFlight.containsKey(token);
     }
 
+    boolean isDone(@NonNull String token) {
+        return acknowledged.contains(token);
+    }
+
     /** Drops in-flight waiters (their Play callbacks were cancelled by release). */
     void clearInFlight() {
+        generation++;
         inFlight.clear();
+    }
+
+    /** Answers every in-flight waiter with {@code code}; late Play answers are then ignored. */
+    void failInFlight(int code, @Nullable String message) {
+        generation++;
+        List<List<AckResult>> all = new ArrayList<>(inFlight.values());
+        inFlight.clear();
+        for (List<AckResult> callbacks : all) {
+            for (AckResult r : callbacks) {
+                r.onResult(code, message);
+            }
+        }
     }
 }
