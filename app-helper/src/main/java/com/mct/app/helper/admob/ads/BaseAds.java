@@ -467,7 +467,15 @@ public abstract class BaseAds<Ads> {
     // Clear / release
     ///////////////////////////////////////////////////////////////////////////
 
-    /** Fully reset to {@link AdState#IDLE}, releasing all resources. */
+    /**
+     * Drop the loaded ad: release it and any in-flight load, back to
+     * {@link AdState#IDLE}. The load state ({@code loadedAt}, {@code showStartedAt})
+     * is reset, but the frequency timing is <b>kept</b>: {@link #getLastDismissedAt()}
+     * still reports the last real dismiss, so the per-placement interval and the
+     * manager's global back-to-back gap keep holding after a drop and a reload.
+     * Clearing is a cache operation (renderer loss, reconnect reload, watchdog,
+     * banner teardown); it must never make the next full-screen ad eligible early.
+     */
     public final void clear() {
         assertMainThread();
         loadGeneration++;            // invalidate any in-flight load
@@ -477,7 +485,7 @@ public abstract class BaseAds<Ads> {
         releaseAd();
         state = AdState.IDLE;
         loadedAt = 0;
-        lastDismissedAt = 0;
+        // lastDismissedAt is deliberately NOT reset: it is frequency timing, not load state.
         showStartedAt = 0;
         if (!dropped.isEmpty()) {
             // A load was in flight (e.g. a show(LOAD_IF_NEEDED) waiting on it).

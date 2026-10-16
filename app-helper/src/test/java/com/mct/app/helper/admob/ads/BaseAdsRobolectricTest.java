@@ -242,6 +242,45 @@ public class BaseAdsRobolectricTest {
     }
 
     @Test
+    public void clear_afterDismiss_keepsOwnIntervalAcrossReload() {
+        // I2: dropping the loaded ad (renderer loss, reconnect reload) must not
+        // forget when the last impression ended.
+        FakeFullScreenAds ad = new FakeFullScreenAds(45_000, true);
+        ad.setAutoLoadAfterDismiss(false);
+        ad.load(activity, null);
+        ad.completeLoad();
+        ad.show("alias", activity, ShowMode.IF_READY, null);
+        ad.driveShown();
+        ad.driveDismissed();
+        long dismissedAt = ad.getLastDismissedAt();
+        assertTrue(dismissedAt > 0);
+
+        ad.load(activity, null);
+        ad.completeLoad();
+        ad.clear();                       // drop the loaded replacement
+
+        assertEquals(AdState.IDLE, ad.getState());
+        assertNull(ad.getAds());
+        assertEquals("load state reset", 0, ad.getAdsLoadedTime());
+        assertEquals("frequency timing kept", dismissedAt, ad.getLastDismissedAt());
+
+        ad.load(activity, null);
+        ad.completeLoad();
+        RecordingAdCallback cb = new RecordingAdCallback();
+        ad.show("alias", activity, ShowMode.IF_READY, cb);
+        assertEquals(SkipReason.COOLDOWN, cb.skipReason);
+        assertEquals(AdState.READY, ad.getState());
+    }
+
+    @Test
+    public void clear_neverShown_leavesNoTiming() {
+        FakeFullScreenAds ad = readyAd();
+        ad.clear();
+        assertEquals(0, ad.getLastDismissedAt());
+        assertFalse(ad.isDismissNearly());
+    }
+
+    @Test
     public void dismiss_withAutoLoad_reloadsImmediately() {
         FakeFullScreenAds ad = readyAd(); // autoLoadAfterDismiss defaults to true
         ad.show("alias", activity, ShowMode.IF_READY, new RecordingAdCallback());

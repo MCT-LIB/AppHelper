@@ -106,6 +106,72 @@ public class AdsManagerRobolectricTest {
     }
 
     @Test
+    public void globalGap_holdsAfterEveryAdIsClearedAndReloaded() {
+        // I2: clearing every loaded ad (v3 renderer-loss fix) used to zero the
+        // dismiss time, so the next full-screen ad could show right after another.
+        manager.setFullScreenAdsGapMs(60_000);
+
+        FakeFullScreenAds a = new FakeFullScreenAds();
+        FakeFullScreenAds b = new FakeFullScreenAds();
+        a.setAutoLoadAfterDismiss(false);
+        b.setAutoLoadAfterDismiss(false);
+        manager.putAds("A", a);
+        manager.putAds("B", b);
+
+        a.load(activity, null);
+        a.completeLoad();
+        manager.showFullScreen("A", activity, null);
+        a.driveShown();
+        a.driveDismissed();
+
+        a.load(activity, null);
+        a.completeLoad();
+        b.load(activity, null);
+        b.completeLoad();
+        manager.clearAds("A");
+        manager.clearAds("B");
+
+        a.load(activity, null);
+        a.completeLoad();
+        b.load(activity, null);
+        b.completeLoad();
+
+        RecordingAdCallback cbB = new RecordingAdCallback();
+        manager.showFullScreen("B", activity, cbB);
+        assertEquals(SkipReason.GLOBAL_GAP, cbB.skipReason);
+        RecordingAdCallback cbA = new RecordingAdCallback();
+        manager.showFullScreen("A", activity, cbA);
+        assertEquals(SkipReason.GLOBAL_GAP, cbA.skipReason);
+        assertEquals(AdState.READY, a.getState());
+        assertEquals(AdState.READY, b.getState());
+    }
+
+    @Test
+    public void perPlacementInterval_holdsAfterClearAndReload() {
+        manager.setFullScreenAdsGapMs(0); // isolate the per-placement interval
+
+        FakeFullScreenAds a = new FakeFullScreenAds(45_000, true);
+        a.setAutoLoadAfterDismiss(false);
+        manager.putAds("A", a);
+
+        a.load(activity, null);
+        a.completeLoad();
+        manager.showFullScreen("A", activity, null);
+        a.driveShown();
+        a.driveDismissed();
+
+        a.load(activity, null);
+        a.completeLoad();
+        manager.clearAds("A");
+        a.load(activity, null);
+        a.completeLoad();
+
+        RecordingAdCallback cb = new RecordingAdCallback();
+        manager.showFullScreen("A", activity, cb);
+        assertEquals(SkipReason.COOLDOWN, cb.skipReason);
+    }
+
+    @Test
     public void show_differentPlacementNotBlockedWhenGapDisabled() {
         manager.setFullScreenAdsGapMs(0); // disable global gap
 
