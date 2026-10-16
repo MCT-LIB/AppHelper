@@ -20,6 +20,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -35,7 +36,6 @@ import com.android.billingclient.api.PendingPurchasesParams;
 import com.android.billingclient.api.ProductDetails;
 import com.android.billingclient.api.Purchase;
 import com.android.billingclient.api.QueryProductDetailsParams;
-import com.mct.app.helper.iap.billing.enums.AcknowledgeOutcome;
 import com.mct.app.helper.iap.billing.enums.ErrorType;
 import com.mct.app.helper.iap.billing.enums.PurchasedResult;
 import com.mct.app.helper.iap.billing.enums.RefreshReason;
@@ -46,17 +46,14 @@ import com.mct.app.helper.iap.billing.models.OwnedPurchase;
 import com.mct.app.helper.iap.billing.models.ProductInfo;
 import com.mct.app.helper.iap.billing.models.PurchaseInfo;
 import com.mct.app.helper.iap.billing.models.PurchaseOptions;
-import com.mct.app.helper.iap.billing.models.PurchaseOutcome;
 import com.mct.app.helper.iap.billing.models.PurchasesResult;
 import com.mct.app.helper.iap.billing.models.RefreshResult;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -122,12 +119,9 @@ public class BillingConnector {
 
     // refresh state (main thread only)
     @Nullable
-    private PurchasesRefreshListener purchasesRefreshListener;
-    private final List<PurchasesRefreshListener> pendingRefreshCallbacks = new ArrayList<>();
-    private boolean refreshInFlight = false;
-    private boolean followUpRefresh = false;
-    private RefreshReason followUpReason;
-    private String followUpTrigger;
+    private volatile PurchasesRefreshListener purchasesRefreshListener;
+    private final AcknowledgeTracker acknowledgeTracker = new AcknowledgeTracker();
+    private final PurchasesRefresher refresher = new PurchasesRefresher(new RefresherBackend(), new UiScheduler());
     @Nullable
     private volatile String lastLaunchedProductId;
 
@@ -151,6 +145,9 @@ public class BillingConnector {
                 .setListener((billingResult, purchases) -> {
                     switch (billingResult.getResponseCode()) {
                         case OK:
+                            // count it before anything else so an in-flight refresh whose query
+                            // predates this purchase is re-queried instead of delivered stale
+                            refresher.onPurchaseUpdated(purchasesRefreshListener != null);
                             if (purchases != null) {
                                 processPurchases(purchases, false);
                             }
@@ -377,7 +374,7 @@ public class BillingConnector {
                             // opt-in: apps that registered a refresh listener get an
                             // authoritative purchases result on every (re)connection
                             if (purchasesRefreshListener != null) {
-                                startRefresh(RefreshReason.CONNECTED, null, null);
+                                refresher.request(RefreshReason.CONNECTED, null, null);
                             }
                             break;
                         case BILLING_UNAVAILABLE:
@@ -606,19 +603,18 @@ public class BillingConnector {
                 case SUBSCRIPTION:
                     if (purchaseInfo.getPurchase().getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
                         if (!purchaseInfo.getPurchase().isAcknowledged()) {
-                            AcknowledgePurchaseParams acknowledgePurchaseParams = AcknowledgePurchaseParams.newBuilder()
-                                    .setPurchaseToken(purchaseInfo.getPurchase().getPurchaseToken()).build();
-
-                            billingClient.acknowledgePurchase(acknowledgePurchaseParams, billingResult -> {
-                                if (billingResult.getResponseCode() == OK) {
-                                    findUiHandler().post(() -> billingEventListener.onPurchaseAcknowledged(purchaseInfo));
+                            String token = purchaseInfo.getPurchase().getPurchaseToken();
+                            // through the shared tracker: a refresh acknowledging the same token at
+                            // the same time joins this call instead of racing it
+                            findUiHandler().post(() -> acknowledgeTracker.acknowledge(token, this::playAcknowledge, (code, message) -> {
+                                if (code == OK) {
+                                    billingEventListener.onPurchaseAcknowledged(purchaseInfo);
                                 } else {
-                                    Log("Handling acknowledges: error during acknowledgment attempt: " + billingResult.getDebugMessage());
-
-                                    findUiHandler().post(() -> billingEventListener.onBillingError(BillingConnector.this,
-                                            new BillingResponse(ErrorType.ACKNOWLEDGE_ERROR, billingResult)));
+                                    Log("Handling acknowledges: error during acknowledgment attempt: " + message);
+                                    billingEventListener.onBillingError(BillingConnector.this,
+                                            new BillingResponse(ErrorType.ACKNOWLEDGE_ERROR, message, code));
                                 }
-                            });
+                            }));
                         }
                     } else if (purchaseInfo.getPurchase().getPurchaseState() == Purchase.PurchaseState.PENDING) {
                         Log("Handling acknowledges: purchase can not be acknowledged because the state is PENDING. " +
@@ -793,21 +789,28 @@ public class BillingConnector {
      * Re-queries subscriptions and in-app purchases (app start, onResume, a Restore button),
      * acknowledges PURCHASED subscriptions and registered non-consumables that are not yet
      * acknowledged, and reports what happened to each purchase. Pending purchases are reported as
-     * {@link AcknowledgeOutcome#PENDING} and never acknowledged. Consumables are never consumed here.
+     * {@link com.mct.app.helper.iap.billing.enums.AcknowledgeOutcome#PENDING} and never
+     * acknowledged. Consumables are never consumed here. A FAILED acknowledge is retried on the next
+     * refresh (Play allows 3 days).
      * <p>
      * If Play fails the result says so ({@link RefreshResult#isSuccess()} false); it never reports
      * "no purchases" for a failed query. Calls made while a refresh is running share its result.
-     * The result goes to {@code listener} (if not null) and to the listener registered with
-     * {@link #setPurchasesRefreshListener}, on the main thread.
+     * If a purchase update arrives while a refresh runs, the query is re-issued so a result that
+     * predates the purchase is never delivered. A refresh that does not finish within 30 s is
+     * delivered as SERVICE_TIMEOUT; {@link #release()} delivers SERVICE_DISCONNECTED to pending
+     * callbacks. The result goes to {@code listener} (if not null) and to the listener registered
+     * with {@link #setPurchasesRefreshListener}, on the main thread.
      */
     public final void refreshPurchases(@Nullable PurchasesRefreshListener listener) {
-        startRefresh(RefreshReason.MANUAL, null, listener);
+        refresher.request(RefreshReason.MANUAL, null, listener);
     }
 
     /**
      * Registers a listener that receives every refresh result: manual ones, the automatic refresh
-     * after each successful (re)connection, and the refresh started when Play answers
-     * ITEM_ALREADY_OWNED to a purchase. Registering it opts in to those automatic refreshes.
+     * after each successful (re)connection, the refresh after every OK purchase update
+     * (acknowledges new subscriptions, reports PENDING becoming PURCHASED), and the refresh started
+     * when Play answers ITEM_ALREADY_OWNED to a purchase. Registering it opts in to those automatic
+     * refreshes.
      * Pass null to stop them.
      */
     public final void setPurchasesRefreshListener(@Nullable PurchasesRefreshListener listener) {
@@ -818,69 +821,15 @@ public class BillingConnector {
         // the user already owns it (bought on another device, or Play has not told us yet):
         // re-query so the app can restore the entitlement instead of ignoring the error
         if (purchasesRefreshListener != null) {
-            startRefresh(RefreshReason.ITEM_ALREADY_OWNED, productId, null);
+            refresher.request(RefreshReason.ITEM_ALREADY_OWNED, productId, null);
         }
     }
 
-    private void startRefresh(@NonNull RefreshReason reason, @Nullable String trigger, @Nullable PurchasesRefreshListener callback) {
-        findUiHandler().post(() -> {
-            if (callback != null) {
-                pendingRefreshCallbacks.add(callback);
-            }
-            if (refreshInFlight) {
-                if (reason != RefreshReason.MANUAL) {
-                    // automatic triggers need a fresh query: run another one after this
-                    followUpRefresh = true;
-                    followUpReason = reason;
-                    followUpTrigger = trigger;
-                }
-                return;
-            }
-            runRefresh(reason, trigger);
-        });
-    }
-
-    private void runRefresh(@NonNull RefreshReason reason, @Nullable String trigger) {
-        refreshInFlight = true;
-        if (reason != RefreshReason.CONNECTED && isConnected && billingClient.isReady()
-                && fetchedProductInfoList.isEmpty() && !allProductList.isEmpty()) {
-            // product details failed or came back empty earlier: retry them too
-            queryProductDetails(allProductList);
-        }
-        queryPurchases(result -> acknowledgeAll(result, outcomes ->
-                finishRefresh(new RefreshResult(result, outcomes, reason, trigger))));
-    }
-
-    private void acknowledgeAll(@NonNull PurchasesResult result, @NonNull Consumer<List<PurchaseOutcome>> done) {
-        List<OwnedPurchase> purchases = result.getPurchases();
-        PurchaseOutcome[] outcomes = new PurchaseOutcome[purchases.size()];
-        AtomicInteger remaining = new AtomicInteger(1); // released after the loop
-        Runnable finishOne = () -> {
-            if (remaining.decrementAndGet() == 0) {
-                done.accept(Arrays.asList(outcomes));
-            }
-        };
-        for (int i = 0; i < purchases.size(); i++) {
-            OwnedPurchase p = purchases.get(i);
-            AcknowledgeOutcome decision = PurchasesMapper.acknowledgeDecision(p, isAcknowledgeable(p));
-            if (decision != null) {
-                outcomes[i] = new PurchaseOutcome(p, decision, OK, null);
-                continue;
-            }
-            final int index = i;
-            remaining.incrementAndGet();
-            AcknowledgePurchaseParams params = AcknowledgePurchaseParams.newBuilder()
-                    .setPurchaseToken(p.getPurchaseToken()).build();
-            billingClient.acknowledgePurchase(params, billingResult -> findUiHandler().post(() -> {
-                boolean ok = billingResult.getResponseCode() == OK;
-                Log("Refresh acknowledge " + p.getProducts() + ": " + billingResult.getResponseCode());
-                outcomes[index] = new PurchaseOutcome(p,
-                        ok ? AcknowledgeOutcome.ACKNOWLEDGED : AcknowledgeOutcome.FAILED,
-                        billingResult.getResponseCode(), billingResult.getDebugMessage());
-                finishOne.run();
-            }));
-        }
-        finishOne.run();
+    /** Raw Play acknowledge; result delivered on the main thread. */
+    private void playAcknowledge(@NonNull String token, @NonNull AcknowledgeTracker.AckResult result) {
+        AcknowledgePurchaseParams params = AcknowledgePurchaseParams.newBuilder().setPurchaseToken(token).build();
+        billingClient.acknowledgePurchase(params, billingResult -> findUiHandler().post(() ->
+                result.onResult(billingResult.getResponseCode(), billingResult.getDebugMessage())));
     }
 
     private boolean isAcknowledgeable(@NonNull OwnedPurchase p) {
@@ -898,38 +847,20 @@ public class BillingConnector {
         return false;
     }
 
-    private void finishRefresh(@NonNull RefreshResult result) {
-        refreshInFlight = false;
-        updatePurchasedProductsCache(result.getPurchases());
-        Log("Refresh finished: " + result);
-
-        List<PurchasesRefreshListener> callbacks = new ArrayList<>(pendingRefreshCallbacks);
-        pendingRefreshCallbacks.clear();
-        for (PurchasesRefreshListener cb : callbacks) {
-            cb.onPurchasesRefreshed(result);
-        }
-        PurchasesRefreshListener global = purchasesRefreshListener;
-        if (global != null && !callbacks.contains(global)) {
-            global.onPurchasesRefreshed(result);
-        }
-
-        if (followUpRefresh) {
-            followUpRefresh = false;
-            runRefresh(followUpReason, followUpTrigger);
-        }
-    }
-
     /**
      * Keeps the legacy {@link #isPurchased(ProductInfo)} cache in line with an authoritative query:
      * for each product type whose query succeeded, the cached entries are replaced (so expired or
-     * refunded purchases disappear). Types whose query failed are left untouched.
+     * refunded purchases disappear). Types whose query failed are left untouched. Nothing changes
+     * while product details are missing, because cache entries are built from them; the cache is
+     * then still "not fetched yet" rather than a false "not purchased".
      */
     private void updatePurchasedProductsCache(@NonNull PurchasesResult result) {
-        boolean subsOk = result.isSubscriptionsQueryOk();
-        boolean inAppOk = result.isInAppQueryOk();
-        if (!subsOk && !inAppOk) {
+        boolean detailsLoaded = !fetchedProductInfoList.isEmpty();
+        if (!PurchasesRefresher.canUpdateLegacyCache(detailsLoaded, result)) {
             return;
         }
+        boolean subsOk = result.isSubscriptionsQueryOk();
+        boolean inAppOk = result.isInAppQueryOk();
         purchasedProductsList.removeIf(info -> info.getSkuProductType() == SkuProductType.SUBSCRIPTION ? subsOk : inAppOk);
         for (OwnedPurchase owned : result.getPurchases()) {
             if (owned.isSubscription() ? !subsOk : !inAppOk) {
@@ -945,8 +876,75 @@ public class BillingConnector {
                                 new PurchaseInfo(generateProductInfo(info.getProductDetails()), raw)));
             }
         }
-        if (subsOk && inAppOk) {
+        if (PurchasesRefresher.canMarkLegacyCacheFetched(detailsLoaded, result)) {
             fetchedPurchasedProducts = true;
+        }
+    }
+
+    private final class RefresherBackend implements PurchasesRefresher.Backend {
+        @Override
+        public void beforeQuery(@NonNull RefreshReason reason) {
+            if (reason != RefreshReason.CONNECTED && isConnected && billingClient.isReady()
+                    && fetchedProductInfoList.isEmpty() && !allProductList.isEmpty()) {
+                // product details failed or came back empty earlier: retry them too
+                queryProductDetails(allProductList);
+            }
+        }
+
+        @Override
+        public void queryPurchases(@NonNull Consumer<PurchasesResult> callback) {
+            BillingConnector.this.queryPurchases(callback::accept);
+        }
+
+        @Override
+        public void acknowledge(@NonNull String purchaseToken, @NonNull AcknowledgeTracker.AckResult callback) {
+            acknowledgeTracker.acknowledge(purchaseToken, BillingConnector.this::playAcknowledge, callback);
+        }
+
+        @Override
+        public boolean isAcknowledgeable(@NonNull OwnedPurchase purchase) {
+            return BillingConnector.this.isAcknowledgeable(purchase);
+        }
+
+        @Override
+        public boolean isSignatureVerificationEnabled() {
+            return BillingConnector.this.isSignatureVerificationEnabled();
+        }
+
+        @Override
+        public void onDelivered(@NonNull PurchasesResult result) {
+            updatePurchasedProductsCache(result);
+        }
+
+        @Nullable
+        @Override
+        public PurchasesRefreshListener globalListener() {
+            return purchasesRefreshListener;
+        }
+
+        @Override
+        public void log(@NonNull String message) {
+            Log(message);
+        }
+    }
+
+    private final class UiScheduler implements PurchasesRefresher.Scheduler {
+        @Override
+        public void post(@NonNull Runnable r) {
+            findUiHandler().post(r);
+        }
+
+        @NonNull
+        @Override
+        public PurchasesRefresher.Cancellable postDelayed(@NonNull Runnable r, long delayMs) {
+            Handler h = findUiHandler();
+            h.postDelayed(r, delayMs);
+            return () -> h.removeCallbacks(r);
+        }
+
+        @Override
+        public long now() {
+            return SystemClock.uptimeMillis();
         }
     }
 
@@ -1043,10 +1041,10 @@ public class BillingConnector {
             handler.removeCallbacksAndMessages(null);
             handler = null;
         }
-        // an in-flight refresh was disposed above: forget it so a reconnect can refresh again
-        refreshInFlight = false;
-        followUpRefresh = false;
-        pendingRefreshCallbacks.clear();
+        // the in-flight refresh was disposed above: fail its callbacks (no endless Restore
+        // spinner) and ignore anything that still arrives from it
+        refresher.release();
+        acknowledgeTracker.clearInFlight();
         if (billingClient != null && billingClient.isReady()) {
             Log("BillingConnector instance release: ending connection...");
             billingClient.endConnection();

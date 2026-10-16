@@ -54,6 +54,18 @@ public class PurchasesResultTest {
     }
 
     @Test
+    public void rejectedSubscriptionMakesStateUnknown() {
+        // wrong licence key: the real subscription fails verification
+        PurchasesResult r = new PurchasesResult(OK, null, OK, null,
+                Collections.emptyList(),
+                Collections.singletonList(sub("annual", PurchaseState.PURCHASED, false)), true);
+        assertTrue(r.isSuccess());
+        assertTrue(r.hasRejectedPurchases());
+        assertTrue(r.hasRejectedSubscriptions());
+        assertNull("must not read as 'not subscribed' and revoke", r.isSubscribed());
+    }
+
+    @Test
     public void refreshResultLooksUpOutcomeByToken() {
         OwnedPurchase annual = sub("annual", PurchaseState.PURCHASED, false);
         PurchasesResult pr = new PurchasesResult(OK, null, OK, null,

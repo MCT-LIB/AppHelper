@@ -5,6 +5,12 @@ import com.android.billingclient.api.BillingFlowParams;
 /**
  * How Play replaces an existing subscription when the user switches plan
  * (mirrors {@code BillingFlowParams.SubscriptionUpdateParams.ReplacementMode}).
+ * <p>
+ * Migration note: {@code SubscriptionUpdateParams.setSubscriptionReplacementMode} is deprecated in
+ * billing 9.0.0 in favour of {@code ProductDetailsParams.SubscriptionProductReplacementParams}.
+ * The new API numbers its modes differently (CHARGE_FULL_PRICE=4, DEFERRED=5, and a new
+ * KEEP_EXISTING=6, versus 5 and 6 here). When migrating, re-point each constant at the new
+ * {@code SubscriptionProductReplacementParams.ReplacementMode} symbol; never copy the numbers.
  */
 public enum ReplacementMode {
     /** New plan starts now; remaining time of the old plan is credited (prorated). Upgrade default. */

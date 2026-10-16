@@ -124,12 +124,40 @@ public final class PurchasesResult {
     }
 
     /**
-     * {@code TRUE}/{@code FALSE} when the subscriptions query succeeded; {@code null} when Play
-     * failed and the answer is unknown (keep the cached entitlement, do not revoke).
+     * The revocation-safe answer:
+     * <ul>
+     * <li>{@code TRUE}: an accepted subscription is active.</li>
+     * <li>{@code FALSE}: the subscriptions query succeeded, nothing active, and signature
+     * verification rejected no subscription. Only this value may revoke an entitlement.</li>
+     * <li>{@code null}: unknown. Play failed, or verification rejected a subscription (wrong
+     * licence key, or a forged purchase). Keep the cached entitlement, do not revoke.</li>
+     * </ul>
      */
     @Nullable
     public Boolean isSubscribed() {
-        return isSubscriptionsQueryOk() ? hasActiveSubscription() : null;
+        if (!isSubscriptionsQueryOk()) {
+            return null;
+        }
+        if (hasActiveSubscription()) {
+            return Boolean.TRUE;
+        }
+        return hasRejectedSubscriptions() ? null : Boolean.FALSE;
+    }
+
+    /**
+     * True if signature verification rejected at least one purchase. With a wrong licence key every
+     * real purchase lands here, so treat the state as unknown rather than "owns nothing".
+     */
+    public boolean hasRejectedPurchases() {
+        return !rejected.isEmpty();
+    }
+
+    /** True if signature verification rejected at least one subscription. */
+    public boolean hasRejectedSubscriptions() {
+        for (OwnedPurchase p : rejected) {
+            if (p.isSubscription()) return true;
+        }
+        return false;
     }
 
     /** First accepted purchase containing {@code productId}, or null. */
