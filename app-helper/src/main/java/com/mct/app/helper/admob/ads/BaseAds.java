@@ -15,6 +15,7 @@ import com.google.android.gms.ads.LoadAdError;
 import com.mct.app.helper.admob.AdState;
 import com.mct.app.helper.admob.AdsManager;
 import com.mct.app.helper.admob.AdsShowPolicy;
+import com.mct.app.helper.admob.ConsentGate;
 import com.mct.app.helper.admob.AdsValue;
 import com.mct.app.helper.admob.listener.AdCallback;
 import com.mct.app.helper.admob.listener.LoadCallback;
@@ -178,6 +179,17 @@ public abstract class BaseAds<Ads> {
             }
             return;
         }
+        ConsentGate gate = ConsentGate.get();
+        if (!gate.allowsLoad()) {
+            if (gate.shouldPark()) {
+                // UMP is still gathering consent: replay this load once it resolves
+                Log.d(TAG, "load parked until consent resolves: " + getClass().getSimpleName());
+                gate.park(() -> load(context, callback), () -> failConsent(callback));
+            } else {
+                failConsent(callback);
+            }
+            return;
+        }
         if (!topUp && state == AdState.READY) {
             // expired -> release before reloading. A top-up deliberately KEEPS the
             // existing cache and appends to it, so it must not release here.
@@ -191,6 +203,13 @@ public abstract class BaseAds<Ads> {
             pendingLoadCallbacks.add(callback);
         }
         onLoad(context, new LoadSession(loadGeneration));
+    }
+
+    private void failConsent(@Nullable LoadCallback callback) {
+        if (callback != null) {
+            callback.onAdFailedToLoad(this, new LoadError(
+                    LoadError.CODE_CONSENT_NOT_OBTAINED, "Ad request not allowed by consent", "com.mct.app.helper"));
+        }
     }
 
     /**

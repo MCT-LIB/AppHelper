@@ -1,5 +1,7 @@
 package com.mct.app.helper.iap.billing;
 
+import static com.android.billingclient.api.BillingClient.BillingResponseCode.ERROR;
+import static com.android.billingclient.api.BillingClient.BillingResponseCode.FEATURE_NOT_SUPPORTED;
 import static com.android.billingclient.api.BillingClient.BillingResponseCode.OK;
 import static com.android.billingclient.api.BillingClient.BillingResponseCode.SERVICE_DISCONNECTED;
 import static com.android.billingclient.api.BillingClient.FeatureType.SUBSCRIPTIONS;
@@ -64,6 +66,62 @@ class QueryHelper {
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(getConsumer(listener));
+    }
+
+    /**
+     * Queries both product types and keeps each BillingResult, so a Play failure is never turned
+     * into an empty "owns nothing" list. Delivered on the main thread.
+     */
+    @NonNull
+    static Disposable queryPurchasesWithResult(BillingClient client,
+                                               Consumer<PurchasesMapper.TypedQuery[]> listener) {
+        return Single.zip(
+                        queryPurchasesTyped(client, SUBS),
+                        queryPurchasesTyped(client, INAPP),
+                        (subs, inApp) -> new PurchasesMapper.TypedQuery[]{subs, inApp})
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe((result, throwable) -> {
+                    if (listener == null) {
+                        return;
+                    }
+                    if (result == null) {
+                        String msg = throwable == null ? "unknown error" : String.valueOf(throwable.getMessage());
+                        PurchasesMapper.TypedQuery failed = new PurchasesMapper.TypedQuery(ERROR, msg, null);
+                        result = new PurchasesMapper.TypedQuery[]{failed, failed};
+                    }
+                    listener.accept(result);
+                });
+    }
+
+    @NonNull
+    private static Single<PurchasesMapper.TypedQuery> queryPurchasesTyped(BillingClient client, @BillingClient.ProductType String productType) {
+        return Single.create(emitter -> {
+            if (emitter.isDisposed()) {
+                return;
+            }
+            if (!client.isReady()) {
+                emitter.onSuccess(new PurchasesMapper.TypedQuery(SERVICE_DISCONNECTED, "Billing client is not ready", null));
+                return;
+            }
+            if (Objects.equals(productType, SUBS)) {
+                int support = client.isFeatureSupported(SUBSCRIPTIONS).getResponseCode();
+                if (support != OK) {
+                    emitter.onSuccess(new PurchasesMapper.TypedQuery(
+                            support == SERVICE_DISCONNECTED ? SERVICE_DISCONNECTED : FEATURE_NOT_SUPPORTED,
+                            "Subscriptions not supported", null));
+                    return;
+                }
+            }
+            QueryPurchasesParams params = QueryPurchasesParams.newBuilder().setProductType(productType).build();
+            client.queryPurchasesAsync(params, (billingResult, purchases) -> {
+                if (emitter.isDisposed()) {
+                    return;
+                }
+                emitter.onSuccess(new PurchasesMapper.TypedQuery(
+                        billingResult.getResponseCode(), billingResult.getDebugMessage(), purchases));
+            });
+        });
     }
 
     @NonNull

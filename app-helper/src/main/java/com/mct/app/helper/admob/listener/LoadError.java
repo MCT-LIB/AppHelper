@@ -10,6 +10,12 @@ import com.google.android.gms.ads.LoadAdError;
  */
 public final class LoadError {
 
+    /**
+     * Library-side code: the ad was not requested because UMP consent does not allow ad requests
+     * (still unresolved, or resolved without permission). Not an AdMob error code.
+     */
+    public static final int CODE_CONSENT_NOT_OBTAINED = -100;
+
     private final int code;
     private final String message;
     private final String domain;

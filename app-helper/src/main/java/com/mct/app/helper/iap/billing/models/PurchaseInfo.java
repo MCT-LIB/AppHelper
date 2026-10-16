@@ -108,6 +108,16 @@ public class PurchaseInfo {
         return purchaseState;
     }
 
+    /** Payment completed: the only state that may grant an entitlement. */
+    public boolean isPurchased() {
+        return purchaseState == Purchase.PurchaseState.PURCHASED;
+    }
+
+    /** Payment not completed yet (slow / cash methods): must not grant anything. */
+    public boolean isPending() {
+        return purchaseState == Purchase.PurchaseState.PENDING;
+    }
+
     public long getPurchaseTime() {
         return purchaseTime;
     }

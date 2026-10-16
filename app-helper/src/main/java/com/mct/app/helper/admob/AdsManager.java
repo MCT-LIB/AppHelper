@@ -69,6 +69,7 @@ public final class AdsManager {
     // ads holder
     private final Map<String, BaseAds<?>> mAds = new LinkedHashMap<>();
     private final List<NativeAdsAdapter> mNativeAdsAdapters = new ArrayList<>();
+    private volatile String lastConsentError;
 
     public static AdsManager getInstance() {
         if (instance == null) {
@@ -114,7 +115,12 @@ public final class AdsManager {
                     })));
             Runnable initialize = () -> Optional.ofNullable(initThreadAtomic.getAndSet(null)).ifPresent(Thread::start);
             GoogleMobileAdsConsentManager manager = GoogleMobileAdsConsentManager.getInstance(mApplication);
-            manager.gatherConsent(activity, e -> initialize.run());
+            ConsentGate.get().begin(manager::canRequestAds);
+            manager.gatherConsent(activity, e -> {
+                lastConsentError = e == null ? null : e.getMessage();
+                ConsentGate.get().complete();
+                initialize.run();
+            });
             if (manager.canRequestAds()) {
                 initialize.run();
             }
@@ -142,7 +148,12 @@ public final class AdsManager {
             }));
             Runnable initialize = () -> Optional.ofNullable(initThreadAtomic.getAndSet(null)).ifPresent(Thread::start);
             GoogleMobileAdsConsentManager manager = GoogleMobileAdsConsentManager.getInstance(mApplication);
-            manager.gatherConsent(activity, e -> initialize.run());
+            ConsentGate.get().begin(manager::canRequestAds);
+            manager.gatherConsent(activity, e -> {
+                lastConsentError = e == null ? null : e.getMessage();
+                ConsentGate.get().complete();
+                initialize.run();
+            });
             if (manager.canRequestAds()) {
                 initialize.run();
             }
@@ -175,6 +186,8 @@ public final class AdsManager {
         mDebug.set(false);
         mIsPremium.set(false);
         mFullScreenAdsGapMs.set(DEFAULT_FULL_SCREEN_ADS_GAP_MS);
+        ConsentGate.get().reset();
+        lastConsentError = null;
         mIsInitialized.set(false);
     }
 
@@ -189,6 +202,106 @@ public final class AdsManager {
             mObserverConnection.init(mApplication);
             mObserverLifecycle.init(mApplication);
         }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Consent (UMP)
+    ///////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Whether UMP currently allows ad requests. Reads the consent stored by UMP, so it is meaningful
+     * even before {@link #init} on a returning user. Returns {@code false} if no context is known yet.
+     *
+     * @param context any context (used only to reach UMP's ConsentInformation)
+     */
+    public boolean canRequestAds(@NonNull Context context) {
+        return GoogleMobileAdsConsentManager.getInstance(context.getApplicationContext()).canRequestAds();
+    }
+
+    /**
+     * Same as {@link #canRequestAds(Context)}, using the application captured by {@link #init}.
+     * Returns {@code false} before init.
+     */
+    public boolean canRequestAds() {
+        Application app = mApplication;
+        return app != null && canRequestAds(app);
+    }
+
+    /**
+     * Whether the app must offer an entry point to the UMP privacy-options form
+     * (PrivacyOptionsRequirementStatus == REQUIRED). Show a "Privacy options" row only when true.
+     * Only reliable after consent has resolved (see {@link #runWhenConsentResolved}).
+     */
+    public boolean isPrivacyOptionsRequired(@NonNull Context context) {
+        return GoogleMobileAdsConsentManager.getInstance(context.getApplicationContext()).isPrivacyOptionsRequired();
+    }
+
+    /**
+     * Shows the UMP privacy-options form so the user can change their consent choice.
+     *
+     * @param activity the current activity
+     * @param callback called when the form is dismissed; {@code errorMessage} is null on success
+     */
+    public void showPrivacyOptionsForm(@NonNull Activity activity, @Nullable OnPrivacyOptionsFormDismissListener callback) {
+        GoogleMobileAdsConsentManager.getInstance(activity.getApplicationContext())
+                .showPrivacyOptionsForm(activity, formError -> {
+                    if (callback != null) {
+                        callback.onDismissed(formError == null ? null : formError.getMessage());
+                    }
+                });
+    }
+
+    /**
+     * True once the UMP flow started by {@link #init}/{@link #initAsync} has finished (consent form
+     * dismissed, not required, or failed). After that, {@link #canRequestAds()} is final for this
+     * launch until the user changes it in the privacy-options form.
+     */
+    public boolean isConsentResolved() {
+        return ConsentGate.get().isResolved();
+    }
+
+    /**
+     * Error message from the last consent gathering, or {@code null} if it succeeded / has not run.
+     * A non-null value usually means no network: {@link #canRequestAds()} then reflects the
+     * consent stored from a previous launch.
+     */
+    @Nullable
+    public String getLastConsentError() {
+        return lastConsentError;
+    }
+
+    /**
+     * Runs {@code action} on the main thread once consent has resolved (immediately if it already
+     * has). Use it to delay the splash / first ad show until the consent form is gone. If
+     * {@link #init} is never called, {@code action} never runs.
+     */
+    public void runWhenConsentResolved(@NonNull Runnable action) {
+        ConsentGate.get().runWhenResolved(action);
+    }
+
+    /**
+     * When {@code true} (default) every ad load waits for the UMP consent flow started by
+     * {@link #init}/{@link #initAsync} and is only sent if {@link #canRequestAds()} is true; loads
+     * issued while consent is still being gathered are replayed once it resolves, and loads issued
+     * after a "no" fail with {@link com.mct.app.helper.admob.listener.LoadError#CODE_CONSENT_NOT_OBTAINED}.
+     * Turn it off only if the app runs its own consent platform.
+     */
+    public void setConsentRequiredBeforeLoad(boolean required) {
+        ConsentGate.get().setEnabled(required);
+    }
+
+    public boolean isConsentRequiredBeforeLoad() {
+        return ConsentGate.get().isEnabled();
+    }
+
+    /**
+     * Callback for {@link #showPrivacyOptionsForm}.
+     */
+    public interface OnPrivacyOptionsFormDismissListener {
+        /**
+         * @param errorMessage null if the form was shown and dismissed normally
+         */
+        void onDismissed(@Nullable String errorMessage);
     }
 
     ///////////////////////////////////////////////////////////////////////////
