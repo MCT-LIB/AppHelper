@@ -25,6 +25,8 @@ import java.util.List;
 public class FakeFullScreenAds extends BaseFullScreenAds<Object> {
 
     public LoadSession lastSession;
+    /** Context handed to the last onLoad (consent-gate tests). */
+    public Context lastLoadContext;
     public FullScreenContentCallback lastContentCallback;
     public AdCallback lastShowCallback;
     public boolean throwOnShow;
@@ -45,6 +47,7 @@ public class FakeFullScreenAds extends BaseFullScreenAds<Object> {
 
     @Override
     protected void onLoad(@NonNull Context context, @NonNull LoadSession session) {
+        lastLoadContext = context;
         lastSession = session;
     }
 

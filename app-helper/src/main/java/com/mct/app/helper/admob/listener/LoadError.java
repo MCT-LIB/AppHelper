@@ -11,10 +11,19 @@ import com.google.android.gms.ads.LoadAdError;
 public final class LoadError {
 
     /**
-     * Library-side code: the ad was not requested because UMP consent does not allow ad requests
-     * (still unresolved, or resolved without permission). Not an AdMob error code.
+     * Library-side code (not AdMob): the ad was not requested because UMP's {@code canRequestAds()}
+     * is false after consent was decided, i.e. consent information is not available for this user
+     * yet. It does NOT mean "user refused": a user who declines personalised ads still gets
+     * non-personalised ads ({@code canRequestAds()} is true). Also used for loads failed by
+     * {@code AdsManager.clear()} while waiting for consent.
      */
     public static final int CODE_CONSENT_NOT_OBTAINED = -100;
+
+    /**
+     * Library-side code: a load parked while consent was pending could not be replayed because the
+     * Activity it was requested from is gone. Load again from a live screen.
+     */
+    public static final int CODE_CONTEXT_GONE = -101;
 
     private final int code;
     private final String message;

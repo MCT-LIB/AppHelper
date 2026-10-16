@@ -70,6 +70,8 @@ class ObserverConnection {
             connectivityManager.registerDefaultNetworkCallback(networkCallback = new ConnectivityManager.NetworkCallback() {
                 @Override
                 public void onAvailable(@NonNull Network network) {
+                    // a consent-info update that failed offline is retried now
+                    handler.post(() -> AdsManager.getInstance().onConnectivityAvailable());
                     String unitId = autoCheckDeviceWhenHasInternet.get();
                     if (unitId != null) {
                         String finalUnitId = AdsManager.getInstance().isDebug() ? AdUnitTestIds.NATIVE_ID : unitId;

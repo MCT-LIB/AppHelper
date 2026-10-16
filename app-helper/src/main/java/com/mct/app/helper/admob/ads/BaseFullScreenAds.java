@@ -25,6 +25,12 @@ import com.mct.app.helper.admob.listener.SkipReason;
 public abstract class BaseFullScreenAds<Ads> extends BaseAds<Ads> {
 
     private boolean autoLoadAfterDismiss = true;
+
+    /** Full-screen loads only need an AdRequest, so a consent-parked load keeps the application context. */
+    @Override
+    protected boolean needsUiContextToLoad() {
+        return false;
+    }
     private Context autoLoadContext;
     private OnAdsShowChangeListener onAdsShowChangeListener;
 

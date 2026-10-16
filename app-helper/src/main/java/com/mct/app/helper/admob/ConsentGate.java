@@ -1,60 +1,96 @@
 package com.mct.app.helper.admob;
 
+import android.os.SystemClock;
+
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.VisibleForTesting;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.LongSupplier;
 
 /**
- * Holds ad requests back until the UMP consent flow has finished.
+ * Holds ad requests back until UMP allows them.
  * <p>
  * The gate is only active once {@link AdsManager#init}/{@link AdsManager#initAsync} has started
  * gathering consent. Before that (and when the app turned it off with
  * {@link AdsManager#setConsentRequiredBeforeLoad(boolean)}) every load is allowed, which keeps the
  * old behaviour for code paths that never call init (tests, custom consent platforms).
  * <p>
- * While gathering is in progress and UMP does not yet allow requests, loads are parked and replayed
- * once consent resolves. After it resolves, a load is allowed only if UMP's
- * {@code canRequestAds()} is true; otherwise it fails straight away.
+ * States:
+ * <ul>
+ * <li><b>Undecided</b>: UMP does not allow requests and has not produced a usable answer yet
+ * (still gathering, or the consent-info update failed, e.g. offline first launch). Loads are
+ * parked. After a failed update the gate asks for a retry when connectivity returns or when a new
+ * load is parked (throttled), so an offline start does not block ads for the whole process.</li>
+ * <li><b>Decided</b>: UMP answered without error (or allows requests). Parked loads replay if
+ * {@code canRequestAds()} is true, otherwise they fail with
+ * {@link com.mct.app.helper.admob.listener.LoadError#CODE_CONSENT_NOT_OBTAINED}.</li>
+ * </ul>
+ * Note: UMP's {@code canRequestAds()} is also true when the user declined personalised ads
+ * (non-personalised ads are still allowed), so a decided "no" is rare in practice.
  * <p>
- * Main-thread only, like the rest of the ad stack.
+ * Main-thread only; {@link AdsManager} posts its public calls onto the main thread.
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public final class ConsentGate {
+
+    static final long RETRY_THROTTLE_MS = 30_000L;
+    static final long RETRY_STUCK_MS = 120_000L;
 
     /** Source of truth for "may we request ads", normally UMP's ConsentInformation. */
     public interface ConsentSource {
         boolean canRequestAds();
     }
 
-    /** A parked load: {@code onAllowed} replays it, {@code onDenied} fails its callbacks. */
-    private static final class Parked {
-        final Runnable onAllowed;
-        final Runnable onDenied;
-
-        Parked(Runnable onAllowed, Runnable onDenied) {
-            this.onAllowed = onAllowed;
-            this.onDenied = onDenied;
-        }
+    /** Re-runs the UMP consent-info update; returns false if it could not start (no activity). */
+    public interface RetryHandler {
+        boolean retryConsent();
     }
 
-    private static final ConsentGate INSTANCE = new ConsentGate();
+    /** A load held by the gate. */
+    public interface ParkedLoad {
+        /** Consent now allows requests: send the load. */
+        void replay();
+
+        /** Consent was decided without permission, or the gate was reset: fail the load. */
+        void deny();
+    }
+
+    /** Notified when {@code canRequestAds()} changes as seen by the gate. */
+    public interface ChangeListener {
+        void onCanRequestAdsChanged(boolean canRequestAds);
+    }
+
+    private static final ConsentGate INSTANCE = new ConsentGate(SystemClock::uptimeMillis);
 
     public static ConsentGate get() {
         return INSTANCE;
     }
 
-    private boolean enabled = true;
-    private boolean gatheringStarted = false;
-    private boolean resolved = false;
+    private final LongSupplier clock;
+    private volatile boolean enabled = true;
+    private volatile boolean gatheringStarted = false;
+    private volatile boolean flowFinished = false;
+    private boolean decided = false;
+    private boolean retryInProgress = false;
+    private long lastRetryAt = Long.MIN_VALUE / 2;
+    @Nullable
     private ConsentSource source;
-    private final List<Parked> parked = new ArrayList<>();
-    private final List<Runnable> resolvedWaiters = new ArrayList<>();
+    @Nullable
+    private RetryHandler retryHandler;
+    @Nullable
+    private ChangeListener changeListener;
+    @Nullable
+    private Boolean lastCanRequest;
+    private final List<ParkedLoad> parked = new ArrayList<>();
+    private final List<Runnable> finishedWaiters = new ArrayList<>();
 
     @VisibleForTesting
-    ConsentGate() {
+    ConsentGate(@NonNull LongSupplier clock) {
+        this.clock = clock;
     }
 
     void setEnabled(boolean enabled) {
@@ -69,46 +105,90 @@ public final class ConsentGate {
         return enabled;
     }
 
-    /** Consent gathering has started; {@code source} answers canRequestAds from now on. */
-    void begin(@NonNull ConsentSource source) {
-        this.source = source;
-        this.gatheringStarted = true;
-        this.resolved = false;
+    void setChangeListener(@Nullable ChangeListener listener) {
+        this.changeListener = listener;
     }
 
-    /** UMP finished (form dismissed, not required, or failed). Replays or fails parked loads. */
-    void complete() {
+    /** Consent gathering has started; {@code source} answers canRequestAds from now on. */
+    void begin(@NonNull ConsentSource source, @Nullable RetryHandler retryHandler) {
+        this.source = source;
+        this.retryHandler = retryHandler;
+        this.gatheringStarted = true;
+        this.flowFinished = false;
+        this.decided = false;
+        this.retryInProgress = false;
+        this.lastCanRequest = source.canRequestAds();
+    }
+
+    /**
+     * The UMP flow finished (form dismissed, not required, or failed).
+     *
+     * @param error true if the consent-info update or the form failed
+     */
+    void complete(boolean error) {
         if (!gatheringStarted) {
             return;
         }
-        resolved = true;
-        flush(canRequestAds());
-        List<Runnable> waiters = new ArrayList<>(resolvedWaiters);
-        resolvedWaiters.clear();
+        flowFinished = true;
+        retryInProgress = false;
+        boolean can = canRequestAds();
+        if (can || !error) {
+            decided = true;
+            flush(can);
+        }
+        // else: consent info is unavailable (offline first launch). Stay undecided: keep loads
+        // parked and retry on connectivity / next load instead of failing every load all session.
+        notifyChange(can);
+        List<Runnable> waiters = new ArrayList<>(finishedWaiters);
+        finishedWaiters.clear();
         for (Runnable r : waiters) {
             r.run();
         }
     }
 
-    boolean isResolved() {
-        return resolved;
+    /** Re-evaluates after something may have changed consent (privacy-options form). */
+    void onConsentMaybeChanged() {
+        if (!gatheringStarted) {
+            return;
+        }
+        boolean can = canRequestAds();
+        if (can && !decided) {
+            decided = true;
+            flush(true);
+        }
+        notifyChange(can);
+    }
+
+    /** Connectivity came back: retry a failed consent-info update right away. */
+    void onConnectivityAvailable() {
+        maybeRetry(true);
+    }
+
+    /** True once the UMP flow has finished at least once (with or without error). */
+    boolean isFlowFinished() {
+        return flowFinished;
+    }
+
+    boolean isDecided() {
+        return decided;
     }
 
     boolean isGatheringStarted() {
         return gatheringStarted;
     }
 
-    /** Runs {@code r} once consent has resolved (immediately if it already has). */
-    void runWhenResolved(@NonNull Runnable r) {
-        if (resolved) {
+    /** Runs {@code r} once the UMP flow has finished (immediately if it already has). */
+    void runWhenFlowFinished(@NonNull Runnable r) {
+        if (flowFinished) {
             r.run();
         } else {
-            resolvedWaiters.add(r);
+            finishedWaiters.add(r);
         }
     }
 
     private boolean canRequestAds() {
-        return source != null && source.canRequestAds();
+        ConsentSource s = source;
+        return s != null && s.canRequestAds();
     }
 
     /** True if an ad request may be sent right now. */
@@ -119,14 +199,31 @@ public final class ConsentGate {
         return canRequestAds();
     }
 
-    /** True if a refused load should be parked (consent still being gathered) rather than failed. */
+    /** True if a refused load should be parked (consent not decided yet) rather than failed. */
     public boolean shouldPark() {
-        return enabled && gatheringStarted && !resolved && !canRequestAds();
+        return enabled && gatheringStarted && !decided && !canRequestAds();
     }
 
-    /** Parks a load until consent resolves. */
-    public void park(@NonNull Runnable onAllowed, @NonNull Runnable onDenied) {
-        parked.add(new Parked(onAllowed, onDenied));
+    /** Parks a load until consent is decided. May trigger a (throttled) consent retry. */
+    public void park(@NonNull ParkedLoad load) {
+        parked.add(load);
+        maybeRetry(false);
+    }
+
+    private void maybeRetry(boolean force) {
+        if (!enabled || !gatheringStarted || !flowFinished || decided || retryHandler == null) {
+            return;
+        }
+        long now = clock.getAsLong();
+        // a retry whose UMP callback never came (activity destroyed under the form) expires
+        if (retryInProgress && now - lastRetryAt < RETRY_STUCK_MS) {
+            return;
+        }
+        if (!force && now - lastRetryAt < RETRY_THROTTLE_MS) {
+            return;
+        }
+        lastRetryAt = now;
+        retryInProgress = retryHandler.retryConsent();
     }
 
     @VisibleForTesting
@@ -134,21 +231,44 @@ public final class ConsentGate {
         return parked.size();
     }
 
-    private void flush(boolean allowed) {
-        List<Parked> copy = new ArrayList<>(parked);
-        parked.clear();
-        for (Parked p : copy) {
-            (allowed ? p.onAllowed : p.onDenied).run();
+    private void notifyChange(boolean can) {
+        if (lastCanRequest != null && lastCanRequest == can) {
+            return;
+        }
+        lastCanRequest = can;
+        ChangeListener l = changeListener;
+        if (l != null) {
+            l.onCanRequestAdsChanged(can);
         }
     }
 
-    /** Drops all state (used by {@link AdsManager#clear()}). Parked loads are dropped silently. */
-    void reset() {
+    private void flush(boolean allowed) {
+        List<ParkedLoad> copy = new ArrayList<>(parked);
         parked.clear();
-        resolvedWaiters.clear();
+        for (ParkedLoad p : copy) {
+            if (allowed) {
+                p.replay();
+            } else {
+                p.deny();
+            }
+        }
+    }
+
+    /**
+     * Used by {@link AdsManager#clear()}: fails parked loads (their callbacks get
+     * CODE_CONSENT_NOT_OBTAINED) and forgets the consent flow. The app's on/off choice
+     * ({@link #setEnabled}) and change listener are kept.
+     */
+    void reset() {
+        flush(false);
+        finishedWaiters.clear();
         source = null;
+        retryHandler = null;
         gatheringStarted = false;
-        resolved = false;
-        enabled = true;
+        flowFinished = false;
+        decided = false;
+        retryInProgress = false;
+        lastRetryAt = Long.MIN_VALUE / 2;
+        lastCanRequest = null;
     }
 }

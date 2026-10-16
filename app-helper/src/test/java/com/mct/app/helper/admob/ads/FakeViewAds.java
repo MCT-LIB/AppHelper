@@ -13,6 +13,8 @@ import androidx.annotation.NonNull;
 public class FakeViewAds extends BaseViewAds<View> {
 
     public LoadSession lastSession;
+    /** Context handed to the last onLoad (consent-gate tests). */
+    public Context lastLoadContext;
     public int destroyed;
 
     public FakeViewAds() {
@@ -21,6 +23,7 @@ public class FakeViewAds extends BaseViewAds<View> {
 
     @Override
     protected void onLoad(@NonNull Context context, @NonNull LoadSession session) {
+        lastLoadContext = context;
         lastSession = session;
     }
 

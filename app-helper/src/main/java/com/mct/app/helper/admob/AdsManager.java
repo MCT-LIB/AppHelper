@@ -3,6 +3,9 @@ package com.mct.app.helper.admob;
 import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -32,6 +35,7 @@ import com.mct.app.helper.admob.listener.ShowMode;
 import com.mct.app.helper.admob.listener.SkipReason;
 import com.mct.app.helper.admob.utils.DVC;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -70,6 +74,13 @@ public final class AdsManager {
     private final Map<String, BaseAds<?>> mAds = new LinkedHashMap<>();
     private final List<NativeAdsAdapter> mNativeAdsAdapters = new ArrayList<>();
     private volatile String lastConsentError;
+    private final Handler mMainHandler = new Handler(Looper.getMainLooper());
+    @Nullable
+    private volatile Runnable mInitializeSdk;
+    @Nullable
+    private volatile WeakReference<Activity> mConsentActivity;
+    @Nullable
+    private Application.ActivityLifecycleCallbacks mConsentActivityTracker;
 
     public static AdsManager getInstance() {
         if (instance == null) {
@@ -107,28 +118,20 @@ public final class AdsManager {
         }
         mApplication = activity.getApplication();
         configuratorConsumer.accept(new AdsConfigurator(this, () -> {
-            // Mirror initAsync: explicitly initialize the GMS SDK once consent allows it
-            // (on a background thread, per Google's guidance). Relying on the SDK's lazy
-            // init makes the first ad load slower and behaves differently from initAsync.
+            // Mirror initAsync: explicitly initialize the GMS SDK (on a background thread, per
+            // Google's guidance) once consent gathering finishes or stored consent allows it.
+            // Relying on the SDK's lazy init makes the first ad load slower.
             AtomicReference<Thread> initThreadAtomic = new AtomicReference<>(new Thread(() ->
                     MobileAds.initialize(mApplication, status -> {
                     })));
-            Runnable initialize = () -> Optional.ofNullable(initThreadAtomic.getAndSet(null)).ifPresent(Thread::start);
-            GoogleMobileAdsConsentManager manager = GoogleMobileAdsConsentManager.getInstance(mApplication);
-            ConsentGate.get().begin(manager::canRequestAds);
-            manager.gatherConsent(activity, e -> {
-                lastConsentError = e == null ? null : e.getMessage();
-                ConsentGate.get().complete();
-                initialize.run();
-            });
-            if (manager.canRequestAds()) {
-                initialize.run();
-            }
+            startConsent(activity, () -> Optional.ofNullable(initThreadAtomic.getAndSet(null)).ifPresent(Thread::start));
         }));
     }
 
     /**
-     * Initialize ads
+     * Initialize ads. {@code onReady} runs on the main thread once the GMS SDK is initialized,
+     * which happens when the UMP flow finishes (with or without consent, or with an error) or
+     * immediately when consent stored from a previous launch allows requests.
      *
      * @param activity             activity
      * @param configuratorConsumer configurator
@@ -146,18 +149,103 @@ public final class AdsManager {
                 // Initialize the Google Mobile Ads SDK on a background thread.
                 MobileAds.initialize(mApplication, status -> activity.runOnUiThread(onReady));
             }));
-            Runnable initialize = () -> Optional.ofNullable(initThreadAtomic.getAndSet(null)).ifPresent(Thread::start);
-            GoogleMobileAdsConsentManager manager = GoogleMobileAdsConsentManager.getInstance(mApplication);
-            ConsentGate.get().begin(manager::canRequestAds);
-            manager.gatherConsent(activity, e -> {
-                lastConsentError = e == null ? null : e.getMessage();
-                ConsentGate.get().complete();
-                initialize.run();
-            });
-            if (manager.canRequestAds()) {
-                initialize.run();
-            }
+            startConsent(activity, () -> Optional.ofNullable(initThreadAtomic.getAndSet(null)).ifPresent(Thread::start));
         }));
+    }
+
+    /**
+     * Starts UMP consent gathering and arms the {@link ConsentGate}. The SDK init runs when the
+     * flow finishes (always, as before) or right away if stored consent already allows requests.
+     */
+    private void startConsent(@NonNull Activity activity, @NonNull Runnable initializeSdk) {
+        mInitializeSdk = initializeSdk;
+        trackActivities(activity);
+        GoogleMobileAdsConsentManager manager = GoogleMobileAdsConsentManager.getInstance(mApplication);
+        ConsentGate.get().begin(manager::canRequestAds, this::retryConsent);
+        gatherConsent(activity);
+        if (manager.canRequestAds()) {
+            initializeSdk.run();
+        }
+    }
+
+    private void gatherConsent(@NonNull Activity activity) {
+        GoogleMobileAdsConsentManager.getInstance(activity.getApplicationContext()).gatherConsent(activity, e -> {
+            lastConsentError = e == null ? null : e.getMessage();
+            // an error with canRequestAds() false (offline first launch) keeps the gate undecided:
+            // loads stay parked and the update is retried on connectivity / next load
+            ConsentGate.get().complete(e != null);
+            Runnable init = mInitializeSdk;
+            if (init != null) {
+                init.run();
+            }
+        });
+    }
+
+    /** Re-runs the consent-info update after a failed one, on the latest resumed activity. */
+    private boolean retryConsent() {
+        WeakReference<Activity> ref = mConsentActivity;
+        Activity activity = ref == null ? null : ref.get();
+        if (activity == null || activity.isFinishing() || activity.isDestroyed() || mApplication == null) {
+            return false;
+        }
+        Log.d(TAG, "retrying consent info update");
+        gatherConsent(activity);
+        return true;
+    }
+
+    private void trackActivities(@NonNull Activity activity) {
+        mConsentActivity = new WeakReference<>(activity);
+        if (mConsentActivityTracker != null || mApplication == null) {
+            return;
+        }
+        mConsentActivityTracker = new Application.ActivityLifecycleCallbacks() {
+            @Override
+            public void onActivityResumed(@NonNull Activity a) {
+                mConsentActivity = new WeakReference<>(a);
+            }
+
+            @Override
+            public void onActivityDestroyed(@NonNull Activity a) {
+                WeakReference<Activity> ref = mConsentActivity;
+                if (ref != null && ref.get() == a) {
+                    mConsentActivity = null;
+                }
+            }
+
+            @Override
+            public void onActivityCreated(@NonNull Activity a, @Nullable Bundle b) {
+            }
+
+            @Override
+            public void onActivityStarted(@NonNull Activity a) {
+            }
+
+            @Override
+            public void onActivityPaused(@NonNull Activity a) {
+            }
+
+            @Override
+            public void onActivityStopped(@NonNull Activity a) {
+            }
+
+            @Override
+            public void onActivitySaveInstanceState(@NonNull Activity a, @NonNull Bundle b) {
+            }
+        };
+        mApplication.registerActivityLifecycleCallbacks(mConsentActivityTracker);
+    }
+
+    /** Called by the connectivity observer: retry a consent-info update that failed offline. */
+    void onConnectivityAvailable() {
+        runOnMain(() -> ConsentGate.get().onConnectivityAvailable());
+    }
+
+    private void runOnMain(@NonNull Runnable r) {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            r.run();
+        } else {
+            mMainHandler.post(r);
+        }
     }
 
     /**
@@ -176,8 +264,14 @@ public final class AdsManager {
         if (mApplication != null) {
             mObserverConnection.release(mApplication);
             mObserverLifecycle.release(mApplication);
+            if (mConsentActivityTracker != null) {
+                mApplication.unregisterActivityLifecycleCallbacks(mConsentActivityTracker);
+            }
             mApplication = null;
         }
+        mConsentActivityTracker = null;
+        mConsentActivity = null;
+        mInitializeSdk = null;
         mAds.values().forEach(BaseAds::clear);
         mAds.clear();
         mNativeAdsAdapters.clear();
@@ -186,6 +280,7 @@ public final class AdsManager {
         mDebug.set(false);
         mIsPremium.set(false);
         mFullScreenAdsGapMs.set(DEFAULT_FULL_SCREEN_ADS_GAP_MS);
+        // fails parked loads (callbacks get CODE_CONSENT_NOT_OBTAINED); keeps the app's on/off choice
         ConsentGate.get().reset();
         lastConsentError = null;
         mIsInitialized.set(false);
@@ -210,7 +305,8 @@ public final class AdsManager {
 
     /**
      * Whether UMP currently allows ad requests. Reads the consent stored by UMP, so it is meaningful
-     * even before {@link #init} on a returning user. Returns {@code false} if no context is known yet.
+     * even before {@link #init} on a returning user. Note that UMP also returns {@code true} when
+     * the user declined personalised ads (non-personalised ads are allowed).
      *
      * @param context any context (used only to reach UMP's ConsentInformation)
      */
@@ -230,40 +326,47 @@ public final class AdsManager {
     /**
      * Whether the app must offer an entry point to the UMP privacy-options form
      * (PrivacyOptionsRequirementStatus == REQUIRED). Show a "Privacy options" row only when true.
-     * Only reliable after consent has resolved (see {@link #runWhenConsentResolved}).
+     * Only reliable after the consent flow finished (see {@link #runWhenConsentResolved}).
      */
     public boolean isPrivacyOptionsRequired(@NonNull Context context) {
         return GoogleMobileAdsConsentManager.getInstance(context.getApplicationContext()).isPrivacyOptionsRequired();
     }
 
     /**
-     * Shows the UMP privacy-options form so the user can change their consent choice.
+     * Shows the UMP privacy-options form so the user can change their consent choice. Safe to call
+     * from any thread (runs on the main thread). If the new choice allows ads, loads parked by the
+     * gate are sent and the {@link #setOnConsentChangedListener listener} is told; loads that
+     * already failed with {@code CODE_CONSENT_NOT_OBTAINED} are not retried, so reload them when
+     * {@code canRequestAds} is true in the callback.
      *
      * @param activity the current activity
-     * @param callback called when the form is dismissed; {@code errorMessage} is null on success
+     * @param callback called on the main thread when the form is dismissed
      */
     public void showPrivacyOptionsForm(@NonNull Activity activity, @Nullable OnPrivacyOptionsFormDismissListener callback) {
-        GoogleMobileAdsConsentManager.getInstance(activity.getApplicationContext())
+        runOnMain(() -> GoogleMobileAdsConsentManager.getInstance(activity.getApplicationContext())
                 .showPrivacyOptionsForm(activity, formError -> {
+                    ConsentGate.get().onConsentMaybeChanged();
                     if (callback != null) {
-                        callback.onDismissed(formError == null ? null : formError.getMessage());
+                        callback.onDismissed(formError == null ? null : formError.getMessage(), canRequestAds(activity));
                     }
-                });
+                }));
     }
 
     /**
-     * True once the UMP flow started by {@link #init}/{@link #initAsync} has finished (consent form
-     * dismissed, not required, or failed). After that, {@link #canRequestAds()} is final for this
-     * launch until the user changes it in the privacy-options form.
+     * True once the UMP flow started by {@link #init}/{@link #initAsync} has finished: the consent
+     * form was dismissed, was not required, or the consent-info update failed (see
+     * {@link #getLastConsentError()}). After a failure, ads may still become allowed later, when the
+     * update is retried on reconnect.
      */
     public boolean isConsentResolved() {
-        return ConsentGate.get().isResolved();
+        return ConsentGate.get().isFlowFinished();
     }
 
     /**
      * Error message from the last consent gathering, or {@code null} if it succeeded / has not run.
      * A non-null value usually means no network: {@link #canRequestAds()} then reflects the
-     * consent stored from a previous launch.
+     * consent stored from a previous launch (false on a first launch), and loads stay parked until
+     * a retry succeeds.
      */
     @Nullable
     public String getLastConsentError() {
@@ -271,23 +374,38 @@ public final class AdsManager {
     }
 
     /**
-     * Runs {@code action} on the main thread once consent has resolved (immediately if it already
-     * has). Use it to delay the splash / first ad show until the consent form is gone. If
-     * {@link #init} is never called, {@code action} never runs.
+     * Runs {@code action} on the main thread once the consent flow has finished (immediately if it
+     * already has), with or without an error. Use it to delay the splash / first ad show until the
+     * consent form is gone. If {@link #init} is never called, {@code action} never runs.
      */
     public void runWhenConsentResolved(@NonNull Runnable action) {
-        ConsentGate.get().runWhenResolved(action);
+        runOnMain(() -> ConsentGate.get().runWhenFlowFinished(action));
     }
 
     /**
-     * When {@code true} (default) every ad load waits for the UMP consent flow started by
-     * {@link #init}/{@link #initAsync} and is only sent if {@link #canRequestAds()} is true; loads
-     * issued while consent is still being gathered are replayed once it resolves, and loads issued
-     * after a "no" fail with {@link com.mct.app.helper.admob.listener.LoadError#CODE_CONSENT_NOT_OBTAINED}.
-     * Turn it off only if the app runs its own consent platform.
+     * Notified on the main thread whenever {@link #canRequestAds()} changes as seen by the library:
+     * when consent is first gathered, after a successful retry of a failed (offline) update, and
+     * after the privacy-options form. Reload placements when it becomes {@code true}. The listener
+     * survives {@link #clear()}. Pass null to remove it.
+     */
+    public void setOnConsentChangedListener(@Nullable OnConsentChangedListener listener) {
+        runOnMain(() -> ConsentGate.get().setChangeListener(listener == null ? null : listener::onCanRequestAdsChanged));
+    }
+
+    /**
+     * When {@code true} (default) every ad load (and the device-check request) waits for the UMP
+     * consent flow started by {@link #init}/{@link #initAsync} and is only sent if
+     * {@link #canRequestAds()} is true. Loads issued before consent is known are parked and sent
+     * once it is; if the consent-info update fails offline they stay parked and the update is
+     * retried when connectivity returns. Loads issued after consent was decided with
+     * {@code canRequestAds()} false fail with
+     * {@link com.mct.app.helper.admob.listener.LoadError#CODE_CONSENT_NOT_OBTAINED} (consent
+     * information not available; not the same as "declined personalised ads", which still allows
+     * non-personalised ads). Turn it off only if the app runs its own consent platform. Safe to
+     * call from any thread (applied on the main thread); the choice survives {@link #clear()}.
      */
     public void setConsentRequiredBeforeLoad(boolean required) {
-        ConsentGate.get().setEnabled(required);
+        runOnMain(() -> ConsentGate.get().setEnabled(required));
     }
 
     public boolean isConsentRequiredBeforeLoad() {
@@ -299,9 +417,17 @@ public final class AdsManager {
      */
     public interface OnPrivacyOptionsFormDismissListener {
         /**
-         * @param errorMessage null if the form was shown and dismissed normally
+         * @param errorMessage  null if the form was shown and dismissed normally
+         * @param canRequestAds UMP's answer after the form; reload ads when true
          */
-        void onDismissed(@Nullable String errorMessage);
+        void onDismissed(@Nullable String errorMessage, boolean canRequestAds);
+    }
+
+    /**
+     * Listener for {@link #setOnConsentChangedListener}.
+     */
+    public interface OnConsentChangedListener {
+        void onCanRequestAdsChanged(boolean canRequestAds);
     }
 
     ///////////////////////////////////////////////////////////////////////////

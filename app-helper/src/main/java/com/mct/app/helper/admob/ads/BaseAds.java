@@ -2,6 +2,7 @@ package com.mct.app.helper.admob.ads;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.os.Looper;
 import android.text.TextUtils;
 import android.util.Log;
@@ -23,6 +24,7 @@ import com.mct.app.helper.admob.listener.LoadError;
 import com.mct.app.helper.admob.listener.ShowError;
 import com.mct.app.helper.admob.utils.AdUnitTestIds;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -182,11 +184,9 @@ public abstract class BaseAds<Ads> {
         ConsentGate gate = ConsentGate.get();
         if (!gate.allowsLoad()) {
             if (gate.shouldPark()) {
-                // UMP is still gathering consent: replay this load once it resolves
-                Log.d(TAG, "load parked until consent resolves: " + getClass().getSimpleName());
-                gate.park(() -> load(context, callback), () -> failConsent(callback));
+                park(gate, context, callback);
             } else {
-                failConsent(callback);
+                failParked(callback, LoadError.CODE_CONSENT_NOT_OBTAINED, "Consent information does not allow ad requests");
             }
             return;
         }
@@ -205,10 +205,117 @@ public abstract class BaseAds<Ads> {
         onLoad(context, new LoadSession(loadGeneration));
     }
 
-    private void failConsent(@Nullable LoadCallback callback) {
+    /**
+     * Whether {@link #onLoad} needs a UI (Activity / themed) context, e.g. to build an AdView or
+     * inflate a template. Such loads are parked with a weak reference to the caller's context and
+     * fail with {@link LoadError#CODE_CONTEXT_GONE} if it died meanwhile. Loads that return
+     * {@code false} are parked with the application context only.
+     */
+    protected boolean needsUiContextToLoad() {
+        return true;
+    }
+
+    // --- consent parking (main thread) ---
+    private boolean parkedInGate;
+    private final List<LoadCallback> parkedCallbacks = new ArrayList<>();
+    @Nullable
+    private WeakReference<Context> parkedUiContext;
+    @Nullable
+    private Context parkedAppContext;
+
+    private void park(@NonNull ConsentGate gate, @NonNull Context context, @Nullable LoadCallback callback) {
         if (callback != null) {
-            callback.onAdFailedToLoad(this, new LoadError(
-                    LoadError.CODE_CONSENT_NOT_OBTAINED, "Ad request not allowed by consent", "com.mct.app.helper"));
+            parkedCallbacks.add(callback);
+        }
+        // the latest caller's context wins; never hold an Activity strongly in the static gate
+        if (needsUiContextToLoad()) {
+            parkedUiContext = new WeakReference<>(context);
+            parkedAppContext = null;
+        } else {
+            parkedAppContext = context.getApplicationContext();
+            parkedUiContext = null;
+        }
+        if (parkedInGate) {
+            return; // one gate entry per ad, however many loads were requested
+        }
+        parkedInGate = true;
+        Log.d(TAG, "load parked until consent allows ad requests: " + getClass().getSimpleName());
+        gate.park(new ConsentGate.ParkedLoad() {
+            @Override
+            public void replay() {
+                replayParked();
+            }
+
+            @Override
+            public void deny() {
+                List<LoadCallback> callbacks = drainParked();
+                for (LoadCallback c : callbacks) {
+                    failParked(c, LoadError.CODE_CONSENT_NOT_OBTAINED, "Consent information does not allow ad requests");
+                }
+            }
+        });
+    }
+
+    private void replayParked() {
+        Context context = resolveParkedContext();
+        List<LoadCallback> callbacks = drainParked();
+        if (context == null) {
+            for (LoadCallback c : callbacks) {
+                failParked(c, LoadError.CODE_CONTEXT_GONE, "Context of the parked load is gone; load again from a live screen");
+            }
+            return;
+        }
+        if (callbacks.isEmpty()) {
+            load(context, null);
+        } else {
+            // the first starts the load, the rest queue onto it
+            for (LoadCallback c : callbacks) {
+                load(context, c);
+            }
+        }
+    }
+
+    private List<LoadCallback> drainParked() {
+        parkedInGate = false;
+        List<LoadCallback> copy = new ArrayList<>(parkedCallbacks);
+        parkedCallbacks.clear();
+        return copy;
+    }
+
+    @Nullable
+    private Context resolveParkedContext() {
+        if (parkedAppContext != null) {
+            Context c = parkedAppContext;
+            parkedAppContext = null;
+            return c;
+        }
+        Context c = parkedUiContext != null ? parkedUiContext.get() : null;
+        parkedUiContext = null;
+        if (c == null) {
+            return null;
+        }
+        Activity activity = findActivity(c);
+        if (activity != null && (activity.isFinishing() || activity.isDestroyed())) {
+            return null;
+        }
+        return c;
+    }
+
+    @Nullable
+    private static Activity findActivity(@NonNull Context context) {
+        Context c = context;
+        while (c instanceof ContextWrapper) {
+            if (c instanceof Activity) {
+                return (Activity) c;
+            }
+            c = ((ContextWrapper) c).getBaseContext();
+        }
+        return null;
+    }
+
+    private void failParked(@Nullable LoadCallback callback, int code, @NonNull String message) {
+        if (callback != null) {
+            callback.onAdFailedToLoad(this, new LoadError(code, message, "com.mct.app.helper"));
         }
     }
 

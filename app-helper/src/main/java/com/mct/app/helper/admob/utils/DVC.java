@@ -11,6 +11,7 @@ import androidx.core.util.Consumer;
 
 import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdLoader;
+import com.mct.app.helper.admob.ConsentGate;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.VideoOptions;
@@ -143,6 +144,13 @@ public class DVC {
 
             // ad is already loading
             if (adLoader != null && adLoader.isLoading()) {
+                return;
+            }
+
+            // the device check is an ad request too: never send it before consent allows it.
+            // Failing resets the checker, so the next connectivity event tries again.
+            if (!ConsentGate.get().allowsLoad()) {
+                onFailure.accept(new IllegalStateException("Consent does not allow ad requests yet"));
                 return;
             }
 
