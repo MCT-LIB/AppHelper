@@ -10,10 +10,25 @@ final class FakeScheduler implements PurchasesRefresher.Scheduler {
     private long now = 1_000_000L;
     private final List<long[]> times = new ArrayList<>();
     private final List<Runnable> delayed = new ArrayList<>();
+    private final List<Runnable> held = new ArrayList<>();
+    /** When true, posts wait in a queue until {@link #runHeld()} (a busy main thread). */
+    boolean holdPosts;
 
     @Override
     public void post(@NonNull Runnable r) {
-        r.run();
+        if (holdPosts) {
+            held.add(r);
+        } else {
+            r.run();
+        }
+    }
+
+    void runHeld() {
+        List<Runnable> copy = new ArrayList<>(held);
+        held.clear();
+        for (Runnable r : copy) {
+            r.run();
+        }
     }
 
     @NonNull

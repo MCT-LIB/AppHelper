@@ -1,6 +1,7 @@
 package com.mct.app.helper.iap.billing;
 
 import static com.android.billingclient.api.BillingClient.BillingResponseCode.DEVELOPER_ERROR;
+import static com.android.billingclient.api.BillingClient.BillingResponseCode.ERROR;
 import static com.android.billingclient.api.BillingClient.BillingResponseCode.ITEM_NOT_OWNED;
 import static com.android.billingclient.api.BillingClient.BillingResponseCode.OK;
 import static com.android.billingclient.api.BillingClient.BillingResponseCode.SERVICE_DISCONNECTED;
@@ -16,6 +17,7 @@ import com.mct.app.helper.iap.billing.models.PurchasesResult;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -24,11 +26,23 @@ import java.util.Set;
  * <ul>
  * <li>Each call reports exactly once. A call for a token that is already being consumed joins that
  * call; a token consumed earlier in the session answers OK without calling Play.</li>
- * <li>Tokens given with {@code retryOnFailure} that fail (anything but OK / ITEM_NOT_OWNED), or are
- * still PENDING, are kept. They are consumed again after each delivered refresh that shows them
- * PURCHASED. A token that a fully successful refresh no longer lists is dropped and reported as
- * ITEM_NOT_OWNED. Retry results go to the global {@link ConsumeListener}.</li>
- * <li>{@link #release()} answers in-flight calls with SERVICE_DISCONNECTED and forgets the retries.</li>
+ * <li>Grant before consume: the library only consumes tokens the app passed in (which it must
+ * have granted). A PENDING purchase is refused and never kept, so a purchase that clears later is
+ * reported by the refresh, granted by the app and only then passed in again.</li>
+ * <li>Tokens given with {@code retryOnFailure} that fail (anything but OK / ITEM_NOT_OWNED) are
+ * kept. After each delivered refresh, a kept token is:
+ * <ul>
+ * <li>consumed again if the refresh shows it PURCHASED and verified;</li>
+ * <li>kept and reported {@link ConsumeResult#isRejected() rejected} (not consumed) while signature
+ * verification rejects it;</li>
+ * <li>dropped and reported {@link ConsumeResult#isPending() pending} if the refresh shows it PENDING
+ * (the app passed a token it should not have granted yet);</li>
+ * <li>dropped and reported ITEM_NOT_OWNED if a fully successful refresh no longer lists it;</li>
+ * <li>left alone if the refresh failed and does not list it.</li>
+ * </ul>
+ * Retry results go to the global {@link ConsumeListener}.</li>
+ * <li>{@link #release()} answers in-flight calls, and calls posted but not started, with
+ * SERVICE_DISCONNECTED and forgets the kept tokens.</li>
  * </ul>
  * Main thread only (public entry points go through {@link PurchasesRefresher.Scheduler#post}).
  */
@@ -49,6 +63,19 @@ final class PurchaseConsumer {
     private final AcknowledgeTracker tracker = new AcknowledgeTracker();
     private final Set<String> retry = new LinkedHashSet<>();
     private int generation;
+    /** Calls posted to the main thread but not started yet; any thread. */
+    private final List<Queued> queued = new ArrayList<>();
+
+    private static final class Queued {
+        final String token;
+        @Nullable
+        final ConsumeListener callback;
+
+        Queued(@NonNull String token, @Nullable ConsumeListener callback) {
+            this.token = token;
+            this.callback = callback;
+        }
+    }
 
     PurchaseConsumer(@NonNull Backend backend, @NonNull PurchasesRefresher.Scheduler scheduler) {
         this.backend = backend;
@@ -56,12 +83,12 @@ final class PurchaseConsumer {
     }
 
     void consume(@NonNull String token, boolean retryOnFailure, @Nullable ConsumeListener callback) {
-        scheduler.post(() -> run(token, retryOnFailure, callback, false));
+        enqueue(token, callback, () -> run(token, retryOnFailure, callback, false));
     }
 
     /**
-     * Checks the purchase first: a subscription is refused with DEVELOPER_ERROR, and so is a
-     * PENDING purchase (kept for retry when {@code retryOnFailure}).
+     * Checks the purchase first: a subscription or a PENDING purchase is refused with
+     * DEVELOPER_ERROR and never kept.
      */
     void consume(@NonNull OwnedPurchase purchase, boolean retryOnFailure, @Nullable ConsumeListener callback) {
         String token = purchase.getPurchaseToken();
@@ -70,12 +97,23 @@ final class PurchaseConsumer {
             consume(token, retryOnFailure, callback);
             return;
         }
-        boolean keep = retryOnFailure && !purchase.isSubscription();
+        boolean pending = purchase.isPending();
+        enqueue(token, callback, () ->
+                report(callback, new ConsumeResult(token, DEVELOPER_ERROR, refusal, false, pending, false)));
+    }
+
+    private void enqueue(@NonNull String token, @Nullable ConsumeListener callback, @NonNull Runnable work) {
+        Queued q = new Queued(token, callback);
+        synchronized (queued) {
+            queued.add(q);
+        }
         scheduler.post(() -> {
-            if (keep) {
-                retry.add(token); // consumed once a refresh shows it PURCHASED
+            synchronized (queued) {
+                if (!queued.remove(q)) {
+                    return; // release() already answered it
+                }
             }
-            report(callback, new ConsumeResult(token, DEVELOPER_ERROR, refusal, keep));
+            work.run();
         });
     }
 
@@ -88,9 +126,15 @@ final class PurchaseConsumer {
             if (tracker.isInFlight(token)) {
                 continue;
             }
-            OwnedPurchase p = findToken(result, token);
+            OwnedPurchase p = findToken(result.getPurchases(), token);
             if (p == null) {
-                if (result.isSuccess()) {
+                OwnedPurchase rejected = findToken(result.getRejected(), token);
+                if (rejected != null) {
+                    // not "not owned": verification failed (wrong licence key?). Keep it and let the
+                    // app decide; consuming an unverified purchase is not the library's call
+                    report(backend.globalListener(), new ConsumeResult(token, ERROR,
+                            "Signature verification rejected this purchase", true, false, true));
+                } else if (result.isSuccess()) {
                     // Play lists every owned purchase and this one is gone: consumed or refunded
                     retry.remove(token);
                     report(backend.globalListener(), new ConsumeResult(token, ITEM_NOT_OWNED, "No longer owned", false));
@@ -103,7 +147,10 @@ final class PurchaseConsumer {
                 continue;
             }
             if (!p.isPurchased()) {
-                continue; // still PENDING
+                // never granted: the app passes it again after granting it as PURCHASED
+                retry.remove(token);
+                report(backend.globalListener(), new ConsumeResult(token, DEVELOPER_ERROR, refusal(p), false, true, false));
+                continue;
             }
             backend.log("Consume retry: " + p.getProducts());
             run(token, true, null, true);
@@ -113,7 +160,15 @@ final class PurchaseConsumer {
     void release() {
         generation++;
         retry.clear();
+        List<Queued> notStarted;
+        synchronized (queued) {
+            notStarted = new ArrayList<>(queued);
+            queued.clear();
+        }
         tracker.failInFlight(SERVICE_DISCONNECTED, "Billing connector released");
+        for (Queued q : notStarted) {
+            report(q.callback, new ConsumeResult(q.token, SERVICE_DISCONNECTED, "Billing connector released", false));
+        }
     }
 
     @NonNull
@@ -161,8 +216,8 @@ final class PurchaseConsumer {
     }
 
     @Nullable
-    private static OwnedPurchase findToken(@NonNull PurchasesResult result, @NonNull String token) {
-        for (OwnedPurchase p : result.getPurchases()) {
+    private static OwnedPurchase findToken(@NonNull List<OwnedPurchase> purchases, @NonNull String token) {
+        for (OwnedPurchase p : purchases) {
             if (token.equals(p.getPurchaseToken())) {
                 return p;
             }

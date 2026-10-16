@@ -52,9 +52,11 @@ import com.mct.app.helper.iap.billing.models.RefreshResult;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -126,6 +128,8 @@ public class BillingConnector {
     @Nullable
     private volatile ConsumeListener consumeListener;
     private final PurchaseConsumer consumer = new PurchaseConsumer(new ConsumerBackend(), new UiScheduler());
+    /** Tokens already reported through the legacy onPurchaseConsumed (main thread only). */
+    private final Set<String> legacyConsumedReported = new HashSet<>();
     @Nullable
     private volatile String lastLaunchedProductId;
 
@@ -572,10 +576,15 @@ public class BillingConnector {
                 if (purchaseInfo.getPurchase().getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
                     // through the shared consumer: an app consume() of the same token at the same
                     // time joins this call instead of racing it into ITEM_NOT_OWNED
-                    consumer.consume(purchaseInfo.getPurchase().getPurchaseToken(), false, result -> {
+                    String token = purchaseInfo.getPurchase().getPurchaseToken();
+                    consumer.consume(token, false, result -> {
                         if (result.isSuccess()) {
                             purchasedProductsList.remove(purchaseInfo);
-                            billingEventListener.onPurchaseConsumed(purchaseInfo);
+                            // joined calls and the "already consumed" cache all answer OK: report
+                            // each token once, so an app crediting here cannot credit twice
+                            if (legacyConsumedReported.add(token)) {
+                                billingEventListener.onPurchaseConsumed(purchaseInfo);
+                            }
                         } else {
                             Log("Handling consumables: error during consumption attempt: " + result.getDebugMessage());
                             billingEventListener.onBillingError(BillingConnector.this,
@@ -825,6 +834,10 @@ public class BillingConnector {
      * refunds a consumable that is not consumed within 3 days. Grant the content <b>before</b>
      * consuming: once consumed, the purchase no longer appears in any query.
      * <p>
+     * Pass only the token of a purchase that is PURCHASED (not PENDING) and that you have granted:
+     * this overload cannot check the state. Use {@link #consume(OwnedPurchase, ConsumeListener)} to
+     * have it checked.
+     * <p>
      * {@code listener} is called exactly once, on the main thread. Concurrent calls for the same
      * token (including the legacy {@link #consumePurchase}/{@link #autoConsume()} path) share one Play
      * call and its result; a token already consumed in this session answers OK without calling Play.
@@ -846,13 +859,24 @@ public class BillingConnector {
 
     /**
      * Consumes each token like {@link #consume(String, ConsumeListener)} ({@code listener} gets one
-     * result per token) and keeps every token that failed. After each refresh that is delivered
-     * (manual, on connection, after a purchase update) the kept tokens that the refresh shows
-     * PURCHASED are consumed again, and the result goes to the listener set with
-     * {@link #setConsumeListener}. A token that a fully successful refresh no longer lists is
-     * dropped and reported as ITEM_NOT_OWNED. The kept tokens live in memory only; to survive a
-     * restart, persist your own list of granted-but-unconsumed tokens and pass it again after
-     * {@link #connect()}.
+     * result per token) and keeps every token that failed. Pass only tokens of PURCHASED purchases
+     * that you have granted: passing a token is the grant confirmation, and the library never
+     * consumes a token you did not pass.
+     * <p>
+     * After each refresh that is delivered (manual, on connection, after a purchase update), each
+     * kept token is handled as follows, with the result going to the listener set with
+     * {@link #setConsumeListener}:
+     * <ul>
+     * <li>PURCHASED and verified: consumed again;</li>
+     * <li>rejected by signature verification: not consumed, still kept, reported with
+     * {@link ConsumeResult#isRejected()} (the app decides; usually the licence key is wrong);</li>
+     * <li>PENDING (it should not have been passed): dropped, reported with
+     * {@link ConsumeResult#isPending()}; grant it when it becomes PURCHASED and pass it again;</li>
+     * <li>missing from a fully successful refresh: dropped, reported as ITEM_NOT_OWNED;</li>
+     * <li>missing from a failed refresh: kept, nothing reported.</li>
+     * </ul>
+     * The kept tokens live in memory only. To survive a restart, persist your own list of
+     * granted-but-unconsumed tokens and pass it again after {@link #connect()}.
      */
     public final void consumeWithRetry(@NonNull Collection<String> purchaseTokens, @Nullable ConsumeListener listener) {
         for (String token : new ArrayList<>(purchaseTokens)) {
@@ -861,9 +885,10 @@ public class BillingConnector {
     }
 
     /**
-     * Like {@link #consumeWithRetry(Collection, ConsumeListener)} for owned purchases. A PENDING
-     * purchase is answered with DEVELOPER_ERROR and kept: it is consumed when a refresh shows it
-     * PURCHASED. A subscription is refused and not kept.
+     * Like {@link #consumeWithRetry(Collection, ConsumeListener)} for owned purchases, with the state
+     * checked. A PENDING purchase is answered with DEVELOPER_ERROR and
+     * {@link ConsumeResult#isPending()}, and is <b>not</b> kept: when a refresh reports it
+     * PURCHASED, grant it and pass it again. A subscription is refused and not kept.
      */
     public final void consumePurchasesWithRetry(@NonNull Collection<OwnedPurchase> purchases, @Nullable ConsumeListener listener) {
         for (OwnedPurchase p : new ArrayList<>(purchases)) {
@@ -1122,6 +1147,9 @@ public class BillingConnector {
      * To avoid leaks this method should be called when BillingConnector is no longer needed
      */
     public void release() {
+        // first, while their queued calls are still known: every consume listener is answered
+        // (SERVICE_DISCONNECTED), including calls posted but not started yet
+        consumer.release();
         if (disposable != null) {
             disposable.dispose();
             disposable = null;
@@ -1134,7 +1162,6 @@ public class BillingConnector {
         // spinner) and ignore anything that still arrives from it
         refresher.release();
         acknowledgeTracker.clearInFlight();
-        consumer.release();
         if (billingClient != null && billingClient.isReady()) {
             Log("BillingConnector instance release: ending connection...");
             billingClient.endConnection();

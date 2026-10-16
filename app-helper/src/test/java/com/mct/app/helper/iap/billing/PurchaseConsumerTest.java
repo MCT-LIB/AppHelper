@@ -159,20 +159,62 @@ public class PurchaseConsumerTest {
     }
 
     @Test
-    public void pendingPurchaseIsRefusedAndConsumedOnceRefreshShowsPurchased() {
+    public void pendingPurchaseIsRefusedNotKeptAndNeverConsumedWithoutTheApp() {
+        // R3: grant before consume
         List<ConsumeResult> r = new ArrayList<>();
         consumer.consume(pack("t", PurchaseState.PENDING), true, r::add);
         assertEquals(0, play.total);
         assertEquals(DEVELOPER_ERROR, r.get(0).getResponseCode());
-        assertTrue(r.get(0).isRetryScheduled());
-
-        consumer.onRefreshDelivered(ok(pack("t", PurchaseState.PENDING)));
-        assertEquals("still pending: no call", 0, play.total);
+        assertTrue(r.get(0).isPending());
+        assertFalse(r.get(0).isRetryScheduled());
+        assertTrue(consumer.getRetryTokens().isEmpty());
 
         consumer.onRefreshDelivered(ok(pack("t", PurchaseState.PURCHASED)));
+        assertEquals("cleared purchase is not consumed before the app grants it", 0, play.total);
+        assertTrue(global.isEmpty());
+
+        // the app saw PURCHASED in the refresh, granted it, and passes it again
+        consumer.consume(pack("t", PurchaseState.PURCHASED), true, r::add);
         assertEquals(1, play.total);
         play.answer("t", OK);
-        assertTrue(global.get(0).isSuccess());
+        assertTrue(r.get(1).isSuccess());
+    }
+
+    @Test
+    public void keptTokenSeenPendingIsDroppedAndReportedNotConsumed() {
+        // R3: a token passed by string that turns out PENDING is never consumed on its own
+        consumer.consume("t", true, null);
+        play.answer("t", ERROR);
+        consumer.onRefreshDelivered(ok(pack("t", PurchaseState.PENDING)));
+        assertEquals(1, play.total);
+        assertTrue(global.get(0).isPending());
+        assertTrue(consumer.getRetryTokens().isEmpty());
+
+        consumer.onRefreshDelivered(ok(pack("t", PurchaseState.PURCHASED)));
+        assertEquals("not consumed after it clears either", 1, play.total);
+    }
+
+    @Test
+    public void rejectedTokenStaysKeptIsReportedAndIsNotConsumed() {
+        // R1
+        consumer.consume("t", true, null);
+        play.answer("t", ERROR);
+
+        PurchasesResult rejected = new PurchasesResult(OK, null, OK, null, Collections.emptyList(),
+                Collections.singletonList(pack("t", PurchaseState.PURCHASED)), true);
+        consumer.onRefreshDelivered(rejected);
+        assertEquals("not consumed while unverified", 1, play.total);
+        assertEquals(1, global.size());
+        assertTrue(global.get(0).isRejected());
+        assertFalse("not reported as not owned", global.get(0).isNotOwned());
+        assertTrue(global.get(0).isRetryScheduled());
+        assertEquals(Collections.singleton("t"), consumer.getRetryTokens());
+
+        // licence key fixed: the next refresh verifies it and the kept token is consumed
+        consumer.onRefreshDelivered(ok(pack("t", PurchaseState.PURCHASED)));
+        assertEquals(2, play.total);
+        play.answer("t", OK);
+        assertTrue(global.get(1).isSuccess());
     }
 
     @Test
@@ -218,6 +260,25 @@ public class PurchaseConsumerTest {
         play.answer("t", OK);
         assertEquals("late Play answer ignored", 1, r.size());
         assertFalse(consumer.isConsumed("t"));
+    }
+
+    @Test
+    public void releaseAnswersQueuedCallsThatHaveNotStarted() {
+        // R4: posted to a busy main thread, then released before they ran
+        scheduler.holdPosts = true;
+        List<ConsumeResult> r = new ArrayList<>();
+        consumer.consume("a", true, r::add);
+        consumer.consume(pack("b", PurchaseState.PENDING), false, r::add);
+        assertTrue(r.isEmpty());
+
+        consumer.release();
+        assertEquals(2, r.size());
+        assertEquals(SERVICE_DISCONNECTED, r.get(0).getResponseCode());
+        assertEquals(SERVICE_DISCONNECTED, r.get(1).getResponseCode());
+
+        scheduler.runHeld();
+        assertEquals("answered once only", 2, r.size());
+        assertEquals("never sent to Play", 0, play.total);
     }
 
     // --- fakes ---
