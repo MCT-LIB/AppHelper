@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.android.billingclient.api.BillingClient;
+import com.mct.app.helper.iap.billing.enums.SubscriptionStatus;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -85,7 +86,7 @@ public final class PurchasesResult {
         return inAppResponseCode;
     }
 
-    /** All accepted purchases (subscriptions first, then in-app), in any state. */
+    /** All accepted purchases (subscriptions first, then in-app), in any state, including on hold. */
     @NonNull
     public List<OwnedPurchase> getPurchases() {
         return purchases;
@@ -124,11 +125,56 @@ public final class PurchasesResult {
     }
 
     /**
+     * Accepted subscriptions on hold (account hold: the renewal payment failed). They grant nothing,
+     * but the user still owns them: do not sell another plan, send them to Play to fix the payment.
+     */
+    @NonNull
+    public List<OwnedPurchase> getSuspendedSubscriptions() {
+        List<OwnedPurchase> out = new ArrayList<>();
+        for (OwnedPurchase p : purchases) {
+            if (p.isSubscription() && p.isSuspended()) out.add(p);
+        }
+        return out;
+    }
+
+    /**
+     * True if the subscriptions query succeeded and an accepted subscription is on hold. Can be true
+     * together with {@link #hasActiveSubscription()} when the user owns two plans.
+     */
+    public boolean hasSuspendedSubscription() {
+        return isSubscriptionsQueryOk() && !getSuspendedSubscriptions().isEmpty();
+    }
+
+    /**
+     * Richer form of {@link #isSubscribed()}, checked in this order: {@code UNKNOWN} if the
+     * subscriptions query failed; {@code ACTIVE}; {@code SUSPENDED}; {@code PENDING}; {@code UNKNOWN}
+     * if verification rejected a subscription; otherwise {@code NONE}.
+     */
+    @NonNull
+    public SubscriptionStatus getSubscriptionStatus() {
+        if (!isSubscriptionsQueryOk()) {
+            return SubscriptionStatus.UNKNOWN;
+        }
+        if (hasActiveSubscription()) {
+            return SubscriptionStatus.ACTIVE;
+        }
+        if (hasSuspendedSubscription()) {
+            return SubscriptionStatus.SUSPENDED;
+        }
+        for (OwnedPurchase p : purchases) {
+            if (p.isSubscription() && p.isPending()) return SubscriptionStatus.PENDING;
+        }
+        return hasRejectedSubscriptions() ? SubscriptionStatus.UNKNOWN : SubscriptionStatus.NONE;
+    }
+
+    /**
      * The revocation-safe answer:
      * <ul>
      * <li>{@code TRUE}: an accepted subscription is active.</li>
      * <li>{@code FALSE}: the subscriptions query succeeded, nothing active, and signature
-     * verification rejected no subscription. Only this value may revoke an entitlement.</li>
+     * verification rejected no subscription. Only this value may revoke an entitlement. A
+     * subscription on hold also gives {@code FALSE}: check {@link #hasSuspendedSubscription()} or
+     * {@link #getSubscriptionStatus()} before offering a new plan.</li>
      * <li>{@code null}: unknown. Play failed, or verification rejected a subscription (wrong
      * licence key, or a forged purchase). Keep the cached entitlement, do not revoke.</li>
      * </ul>

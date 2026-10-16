@@ -83,6 +83,10 @@ final class PurchasesMapper {
         if (p.isPending()) {
             return AcknowledgeOutcome.PENDING;
         }
+        if (p.isSuspended()) {
+            // on hold: Play acknowledged it when it was bought; never touch it while held
+            return AcknowledgeOutcome.NOT_REQUIRED;
+        }
         if (!acknowledgeable || !p.isPurchased()) {
             return AcknowledgeOutcome.NOT_REQUIRED;
         }

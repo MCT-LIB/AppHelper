@@ -36,6 +36,9 @@ public final class OwnedPurchase {
      * Public so apps can build fakes in their own tests.
      *
      * @param productType       {@code BillingClient.ProductType.SUBS} ("subs") or {@code INAPP} ("inapp")
+     * @param state             a PURCHASED state with {@code suspended} true is stored as
+     *                          {@link PurchaseState#SUSPENDED}, and {@link PurchaseState#SUSPENDED}
+     *                          always reports {@link #isSuspended()} true
      * @param signatureVerified true only if the signature was checked against a licence key and matched
      */
     public OwnedPurchase(@NonNull String productType,
@@ -54,10 +57,11 @@ public final class OwnedPurchase {
         this.products = Collections.unmodifiableList(new ArrayList<>(products));
         this.purchaseToken = purchaseToken;
         this.orderId = orderId;
-        this.state = state;
+        boolean held = suspended || state == PurchaseState.SUSPENDED;
+        this.state = held && state == PurchaseState.PURCHASED ? PurchaseState.SUSPENDED : state;
         this.acknowledged = acknowledged;
         this.autoRenewing = autoRenewing;
-        this.suspended = suspended;
+        this.suspended = held;
         this.quantity = quantity;
         this.purchaseTime = purchaseTime;
         this.signatureVerified = signatureVerified;
@@ -69,7 +73,7 @@ public final class OwnedPurchase {
         String orderId = p.getOrderId();
         return new OwnedPurchase(productType, p.getProducts(), p.getPurchaseToken(),
                 orderId == null || orderId.isEmpty() ? null : orderId,
-                PurchaseState.fromPlay(p.getPurchaseState()), p.isAcknowledged(), p.isAutoRenewing(),
+                PurchaseState.fromPlay(p.getPurchaseState(), p.isSuspended()), p.isAcknowledged(), p.isAutoRenewing(),
                 p.isSuspended(), p.getQuantity(), p.getPurchaseTime(), signatureVerified, p);
     }
 
@@ -108,6 +112,7 @@ public final class OwnedPurchase {
         return state;
     }
 
+    /** PURCHASED and not on hold. A suspended subscription reports {@link PurchaseState#SUSPENDED}. */
     public boolean isPurchased() {
         return state == PurchaseState.PURCHASED;
     }
@@ -124,7 +129,10 @@ public final class OwnedPurchase {
         return autoRenewing;
     }
 
-    /** Subscription on hold / paused for a payment problem: owned but must not grant access. */
+    /**
+     * Subscription on hold for a payment problem (state {@link PurchaseState#SUSPENDED}): owned, but
+     * must not grant access, and is never acknowledged or consumed.
+     */
     public boolean isSuspended() {
         return suspended;
     }

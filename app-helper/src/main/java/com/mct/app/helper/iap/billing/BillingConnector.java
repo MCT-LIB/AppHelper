@@ -961,6 +961,10 @@ public class BillingConnector {
             if (owned.isSubscription() ? !subsOk : !inAppOk) {
                 continue;
             }
+            if (owned.isSuspended()) {
+                // on hold: the legacy isPurchased() never saw these and must not report YES
+                continue;
+            }
             Purchase raw = owned.getPurchase();
             if (raw == null) {
                 continue;

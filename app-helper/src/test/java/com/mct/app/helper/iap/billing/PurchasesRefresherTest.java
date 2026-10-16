@@ -65,6 +65,20 @@ public class PurchasesRefresherTest {
     // --- tests ---
 
     @Test
+    public void suspendedSubscriptionIsReportedButNotAcknowledged() {
+        OwnedPurchase held = new OwnedPurchase("subs", Collections.singletonList("annual"), "tok-held", null,
+                PurchaseState.PURCHASED, false, false, true, 1, 0L, false, null);
+        refresher.request(RefreshReason.MANUAL, null, null);
+        backend.answer(ok(held));
+
+        assertTrue("no acknowledge call", backend.acks.isEmpty());
+        assertEquals(1, global.size());
+        assertEquals(AcknowledgeOutcome.NOT_REQUIRED, global.get(0).getOutcome("tok-held").getAcknowledgeOutcome());
+        assertEquals(Boolean.FALSE, global.get(0).getPurchases().isSubscribed());
+        assertTrue(global.get(0).getPurchases().hasSuspendedSubscription());
+    }
+
+    @Test
     public void concurrentRequestsShareOneQueryAndResult() {
         List<RefreshResult> a = new ArrayList<>();
         List<RefreshResult> b = new ArrayList<>();

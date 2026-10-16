@@ -159,6 +159,17 @@ public class PurchaseConsumerTest {
     }
 
     @Test
+    public void suspendedSubscriptionIsNeverConsumed() {
+        OwnedPurchase held = new OwnedPurchase("subs", Collections.singletonList("annual"), "held", null,
+                PurchaseState.SUSPENDED, true, false, true, 1, 0L, false, null);
+        List<ConsumeResult> r = new ArrayList<>();
+        consumer.consume(held, true, r::add);
+        assertEquals(0, play.total);
+        assertEquals(DEVELOPER_ERROR, r.get(0).getResponseCode());
+        assertTrue(consumer.getRetryTokens().isEmpty());
+    }
+
+    @Test
     public void pendingPurchaseIsRefusedNotKeptAndNeverConsumedWithoutTheApp() {
         // R3: grant before consume
         List<ConsumeResult> r = new ArrayList<>();

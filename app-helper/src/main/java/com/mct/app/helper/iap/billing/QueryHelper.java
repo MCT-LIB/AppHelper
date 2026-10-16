@@ -113,8 +113,7 @@ class QueryHelper {
                     return;
                 }
             }
-            QueryPurchasesParams params = QueryPurchasesParams.newBuilder().setProductType(productType).build();
-            client.queryPurchasesAsync(params, (billingResult, purchases) -> {
+            client.queryPurchasesAsync(typedParams(productType), (billingResult, purchases) -> {
                 if (emitter.isDisposed()) {
                     return;
                 }
@@ -122,6 +121,20 @@ class QueryHelper {
                         billingResult.getResponseCode(), billingResult.getDebugMessage(), purchases));
             });
         });
+    }
+
+    /**
+     * Params for the result-keeping query. Subscriptions include those on hold (billing 8+), so a
+     * subscriber in account hold is reported as SUSPENDED instead of owning nothing. The legacy
+     * {@link #queryPurchases(BillingClient, Consumer)} path keeps Play's default and never sees them.
+     */
+    @NonNull
+    static QueryPurchasesParams typedParams(@BillingClient.ProductType String productType) {
+        QueryPurchasesParams.Builder builder = QueryPurchasesParams.newBuilder().setProductType(productType);
+        if (Objects.equals(productType, SUBS)) {
+            builder.includeSuspendedSubscriptions(true);
+        }
+        return builder.build();
     }
 
     @NonNull

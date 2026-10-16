@@ -8,9 +8,11 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import com.android.billingclient.api.BillingClient;
 import com.android.billingclient.api.Purchase;
 import com.mct.app.helper.iap.billing.enums.AcknowledgeOutcome;
 import com.mct.app.helper.iap.billing.enums.PurchaseState;
+import com.mct.app.helper.iap.billing.enums.SubscriptionStatus;
 import com.mct.app.helper.iap.billing.models.OwnedPurchase;
 import com.mct.app.helper.iap.billing.models.PurchasesResult;
 
@@ -34,11 +36,18 @@ public class PurchasesMapperTest {
 
     // JSON purchaseState: 0 = purchased, 4 = pending
     private static Purchase purchase(String productId, String token, int jsonState, boolean ack) throws JSONException {
+        return purchase(productId, token, jsonState, ack, false);
+    }
+
+    // "suspended" is the JSON key Purchase.isSuspended() reads (billing 9.0.0)
+    private static Purchase purchase(String productId, String token, int jsonState, boolean ack,
+                                     boolean suspended) throws JSONException {
         String json = "{\"orderId\":\"" + (jsonState == 0 ? "GPA.1-" + token : "") + "\","
                 + "\"packageName\":\"com.example\",\"productId\":\"" + productId + "\","
                 + "\"purchaseTime\":1700000000000,\"purchaseState\":" + jsonState + ","
                 + "\"purchaseToken\":\"" + token + "\",\"quantity\":1,"
-                + "\"acknowledged\":" + ack + ",\"autoRenewing\":true}";
+                + "\"acknowledged\":" + ack + ",\"autoRenewing\":" + !suspended
+                + ",\"suspended\":" + suspended + "}";
         return new Purchase(json, "sig-" + token);
     }
 
@@ -141,5 +150,41 @@ public class PurchasesMapperTest {
         assertEquals(AcknowledgeOutcome.PENDING, PurchasesMapper.acknowledgeDecision(r.find("c"), true));
         assertEquals("consumables are left to the app",
                 AcknowledgeOutcome.NOT_REQUIRED, PurchasesMapper.acknowledgeDecision(r.find("a"), false));
+    }
+
+    @Test
+    public void suspendedSubscription_mapsToSuspendedNotEntitledAndOwned() throws Exception {
+        PurchasesResult r = PurchasesMapper.map(ok(purchase("pro_annual", "held", 0, true, true)), ok(), null);
+
+        OwnedPurchase held = r.find("pro_annual");
+        assertEquals(PurchaseState.SUSPENDED, held.getState());
+        assertTrue(held.isSuspended());
+        assertFalse(held.isPurchased());
+        assertFalse(held.isEntitled());
+        assertTrue(r.getActiveSubscriptions().isEmpty());
+        assertEquals(Collections.singletonList(held), r.getSuspendedSubscriptions());
+        assertTrue(r.hasSuspendedSubscription());
+        assertEquals("on hold grants nothing", Boolean.FALSE, r.isSubscribed());
+        assertEquals(SubscriptionStatus.SUSPENDED, r.getSubscriptionStatus());
+    }
+
+    @Test
+    public void suspendedSubscription_isNeverAcknowledged() throws Exception {
+        PurchasesResult r = PurchasesMapper.map(ok(purchase("pro_annual", "held", 0, false, true)), ok(), null);
+        assertEquals(AcknowledgeOutcome.NOT_REQUIRED, PurchasesMapper.acknowledgeDecision(r.find("pro_annual"), true));
+    }
+
+    @Test
+    public void suspendedSubscriptionRejectedBySignature_isUnknown() throws Exception {
+        PurchasesResult r = PurchasesMapper.map(ok(purchase("pro_annual", "held", 0, true, true)), ok(), p -> false);
+        assertFalse(r.hasSuspendedSubscription());
+        assertNull(r.isSubscribed());
+        assertEquals(SubscriptionStatus.UNKNOWN, r.getSubscriptionStatus());
+    }
+
+    @Test
+    public void subscriptionsQueryAsksForSuspended_inAppDoesNot() {
+        assertTrue(QueryHelper.typedParams(BillingClient.ProductType.SUBS).getIncludeSuspendedSubscriptions());
+        assertFalse(QueryHelper.typedParams(BillingClient.ProductType.INAPP).getIncludeSuspendedSubscriptions());
     }
 }
